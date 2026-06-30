@@ -66,7 +66,7 @@ npm install
 依赖来自本目录 `package.json`：
 
 - `pptxgenjs`: 生成可编辑 `.pptx` 的核心库，负责文本框、形状、图片、表格和原生图表输出。
-- `lucide`: 分点、卡片、指标等位置使用的 Lucide SVG 图标库；缺失时只有少量内置 fallback 图标可用。
+- `lucide`: 分点、卡片、指标等位置使用的 Lucide SVG 图标库；缺失时只有少量内置 fallback 图标可用。`n- `jszip`: 读取用户上传的 `.pptx` OOXML 包，用于导入模板、抽取文本/图片槽位并生成本技能 JSON spec。
 
 环境要求：
 
@@ -81,6 +81,27 @@ npm install
 ```bash
 node scripts/generate-pptx.js --spec path/to/deck.json --out path/to/deck.pptx
 ```
+
+### 导入用户 PPTX 模板
+
+用户上传 `.pptx` 并要求“按这个模板生成新 PPT”时，先把源 PPTX 解析成本技能可用的 JSON spec：
+
+```bash
+node scripts/import-pptx-template.js --pptx path/to/template.pptx --out-spec outputs/imported-template.json
+```
+
+需要同时基于解析出的 spec 生成一版新 PPTX 时：
+
+```bash
+node scripts/import-pptx-template.js --pptx path/to/template.pptx --out-spec outputs/imported-template.json --out-pptx outputs/imported-template.pptx
+```
+
+可选参数：
+- `--style swiss|magazine`: 指定目标技能风格；未指定时脚本会根据文本、图表、表格特征推断。
+- `--theme ikb|ink|cmb|...`: 指定主题；未指定时按风格选择默认主题。
+- `--asset-dir path/to/assets`: 指定从 PPTX 中抽取图片的输出目录；默认写到 `out-spec` 同级的 `<文件名>.assets/`。
+
+导入脚本会读取 `ppt/slides/*.xml`、关系文件和 `ppt/media/*`，抽取每页文本框、图片、表格/图表信号和大致位置，然后推断为现有 layout，例如 `cover`、`mediaGrid`、`imageHero`、`dataSheet`、`chart`、`textGrid`、`fourCards`。这是结构化迁移，不是像素级复刻；生成前必须打开 `out-spec` 检查每页 `layout`、`title`、`items`、`images` 是否符合预期，必要时手工调整后再运行 `generate-pptx.js`。
 
 没有 spec、只想验证环境时运行样例：
 
@@ -244,7 +265,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 
 ## 资源导览
 
-- `scripts/generate-pptx.js`: pptxgenjs 生成器，内置主题、版式函数和样例 spec；`READABILITY.minFontSize` 控制普通文本最小可读字号。
+- `scripts/generate-pptx.js`: pptxgenjs 生成器，内置主题、版式函数和样例 spec；`READABILITY.minFontSize` 控制普通文本最小可读字号。`n- `scripts/import-pptx-template.js`: 用户上传 PPTX 的模板导入器，抽取文本/图片/表格/图表特征，推断为本技能 JSON spec，并可选直接生成新 PPTX。
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。
 - `assets/template-swiss.js`: 瑞士国际主义完整示例模板，可直接运行生成 `assets/outputs/deck-swiss.pptx`。
 - `assets/template-cmb.js`: 招商银行红灰白完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "swiss"`、`theme: "cmb"`、`logoHeader: "logos/cmb-logo-lockup.png"`，logo 会自动从技能内置 `assets/logos/` 解析。
