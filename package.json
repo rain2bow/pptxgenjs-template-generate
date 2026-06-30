@@ -1,0 +1,16 @@
+{
+  "name": "guizang-pptxgenjs-ppt-skill",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "sample": "node scripts/generate-pptx.js --sample --out outputs/sample-guizang.pptx",
+    "sample:swiss": "node scripts/generate-pptx.js --sample --sample-style swiss --out outputs/sample-guizang.pptx",
+    "sample:magazine": "node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sample-magazine.pptx",
+    "validate:native": "node scripts/validate-pptx-native.js",
+    "validate:layout": "node scripts/validate-pptx-layout.js"
+  },
+  "dependencies": {
+    "lucide": "^0.468.0",
+    "pptxgenjs": "^3.12.0"
+  }
+}
