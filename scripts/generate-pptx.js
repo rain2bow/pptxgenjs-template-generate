@@ -1443,15 +1443,17 @@ function magazineRadial(slide, ctx, s) {
   const items = normalizeSections(data.items || data.nodes || data.sections || []).slice(0, 8);
   const cx = 6.55;
   const cy = 4.05;
-  slide.addShape(pptx.ShapeType.ellipse, { x: cx - 1.12, y: cy - 0.62, w: 2.24, h: 1.24, fill: { color: ctx.theme.paperTint, transparency: 8 }, line: { color: s.fg, transparency: 45, width: 0.8 } });
+  const centerBox = { x: cx - 1.12, y: cy - 0.62, w: 2.24, h: 1.24 };
+  slide.addShape(pptx.ShapeType.ellipse, { ...centerBox, fill: { color: ctx.theme.paperTint, transparency: 8 }, line: { color: s.fg, transparency: 45, width: 0.8 } });
   slide.addText(data.center || data.label || data.title || '', { x: cx - 0.9, y: cy - 0.24, w: 1.8, h: 0.42, fontFace: FONTS.serifZh, fontSize: 15.5, bold: true, color: s.fg, align: 'center', margin: 0, fit: 'shrink' });
   items.forEach((item, i) => {
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(items.length, 1);
     const x = cx + Math.cos(angle) * 4.45;
     const y = cy + Math.sin(angle) * 1.75;
-    slide.addShape(pptx.ShapeType.line, { x: cx, y: cy, w: x - cx, h: y - cy, line: { color: s.fg, transparency: 72, width: 0.45 } });
     const boxX = clamp(x - 1.05, 0.75, 10.95);
     const boxY = clamp(y - 0.38, 2.05, 5.75);
+    const nodeBox = { x: boxX, y: boxY, w: 2.1, h: 0.8 };
+    addRadialConnector(slide, centerBox, nodeBox, { color: s.fg, transparency: 72, width: 0.45 });
     const hasIcon = addInlineIcon(slide, item, boxX, boxY + 0.06, 0.24, s.fg, 'magazine', { fallback: defaultContentIcon(i, 'magazine'), pad: 0.04 });
     const tx = hasIcon ? boxX + 0.32 : boxX;
     slide.addText(item.title || item.label || '', { x: tx, y: boxY, w: 1.95, h: 0.28, fontFace: FONTS.serifZh, fontSize: 12.4, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
@@ -1459,7 +1461,6 @@ function magazineRadial(slide, ctx, s) {
   });
   addFoot(slide, ctx, s.fg, 'magazine');
 }
-
 function magazineRoadmap(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'magazine', 0.82);
@@ -1830,22 +1831,23 @@ function swissRadial(slide, ctx, s) {
   const items = normalizeSections(data.items || data.nodes || data.sections || []).slice(0, 8);
   const cx = 6.62;
   const cy = 4.08;
-  slide.addShape(pptx.ShapeType.rect, { x: cx - 1.08, y: cy - 0.52, w: 2.16, h: 1.04, fill: { color: ctx.theme.accent }, line: { color: ctx.theme.accent, transparency: 100 } });
+  const centerBox = { x: cx - 1.08, y: cy - 0.52, w: 2.16, h: 1.04 };
+  slide.addShape(pptx.ShapeType.rect, { ...centerBox, fill: { color: ctx.theme.accent }, line: { color: ctx.theme.accent, transparency: 100 } });
   slide.addText(data.center || data.label || data.title || '', { x: cx - 0.88, y: cy - 0.18, w: 1.76, h: 0.34, fontFace: FONTS.sansZh, fontSize: 13.8, bold: true, color: ctx.theme.accentOn, align: 'center', margin: 0, fit: 'shrink' });
   items.forEach((item, i) => {
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(items.length, 1);
     const x = cx + Math.cos(angle) * 4.25;
     const y = cy + Math.sin(angle) * 1.82;
-    slide.addShape(pptx.ShapeType.line, { x: cx, y: cy, w: x - cx, h: y - cy, line: { color: ctx.theme.grey3, transparency: 60, width: 0.45 } });
     const boxX = clamp(x - 0.92, 0.72, 11.05);
     const boxY = clamp(y - 0.33, 2.1, 5.78);
-    slide.addShape(pptx.ShapeType.rect, { x: boxX, y: boxY, w: 1.85, h: 0.76, fill: { color: ctx.theme.grey1 }, line: { color: ctx.theme.grey1, transparency: 100 } });
+    const nodeBox = { x: boxX, y: boxY, w: 1.85, h: 0.76 };
+    addRadialConnector(slide, centerBox, nodeBox, { color: ctx.theme.grey3, transparency: 60, width: 0.45 });
+    slide.addShape(pptx.ShapeType.rect, { ...nodeBox, fill: { color: ctx.theme.grey1 }, line: { color: ctx.theme.grey1, transparency: 100 } });
     slide.addText(item.title || item.label || '', { x: boxX + 0.14, y: boxY + 0.14, w: 1.57, h: 0.22, fontFace: FONTS.sansZh, fontSize: 10.6, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
     slide.addText(item.body || item.desc || '', { x: boxX + 0.14, y: boxY + 0.42, w: 1.57, h: 0.22, fontFace: FONTS.sansZh, fontSize: 9.2, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
-
 function swissRoadmap(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'swiss', 0.82);
@@ -2820,6 +2822,43 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function rectCenter(box) {
+  return { x: box.x + box.w / 2, y: box.y + box.h / 2 };
+}
+
+function rectEdgePoint(box, dx, dy, inset = 0) {
+  const c = rectCenter(box);
+  if (!dx && !dy) return c;
+  const scaleX = dx ? ((box.w / 2) - inset) / Math.abs(dx) : Infinity;
+  const scaleY = dy ? ((box.h / 2) - inset) / Math.abs(dy) : Infinity;
+  const scale = Math.max(0, Math.min(scaleX, scaleY));
+  return { x: c.x + dx * scale, y: c.y + dy * scale };
+}
+
+function connectorBetweenRects(fromBox, toBox, gap = 0.05) {
+  const from = rectCenter(fromBox);
+  const to = rectCenter(toBox);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (!dx && !dy) return null;
+  const length = Math.hypot(dx, dy) || 1;
+  const ux = dx / length;
+  const uy = dy / length;
+  const start = rectEdgePoint(fromBox, dx, dy);
+  const end = rectEdgePoint(toBox, -dx, -dy);
+  return {
+    x: start.x + ux * gap,
+    y: start.y + uy * gap,
+    w: end.x - start.x - ux * gap * 2,
+    h: end.y - start.y - uy * gap * 2,
+  };
+}
+
+function addRadialConnector(slide, fromBox, toBox, line) {
+  const connector = connectorBetweenRects(fromBox, toBox);
+  if (!connector) return;
+  slide.addShape(pptx.ShapeType.line, { ...connector, line });
+}
 function fail(message) {
   console.error(message);
   process.exit(2);
@@ -2998,12 +3037,3 @@ module.exports = {
   buildDeck,
   sampleSpec,
 };
-
-
-
-
-
-
-
-
-
