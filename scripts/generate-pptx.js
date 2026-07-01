@@ -111,6 +111,47 @@ const THEMES = {
       accentOn: 'FFFFFF',
     },
   },
+  cmb: {
+    classic: {
+      name: '招商银行经典红',
+      paper: 'FFFFFF',
+      paperTint: 'F8F1F1',
+      ink: '111111',
+      grey1: 'F6F3F2',
+      grey2: 'DED8D6',
+      grey3: '6F6663',
+      accent: 'C8102E',
+      accent2: '8A1538',
+      accentSoft: 'F7DDE2',
+      accentOn: 'FFFFFF',
+    },
+    pearl: {
+      name: '招商银行珍珠白',
+      paper: 'FFFFFF',
+      paperTint: 'F7F4F2',
+      ink: '171313',
+      grey1: 'F2EFED',
+      grey2: 'D8D0CD',
+      grey3: '6E625F',
+      accent: 'B5122B',
+      accent2: '5C111C',
+      accentSoft: 'F5E4E7',
+      accentOn: 'FFFFFF',
+    },
+    graphite: {
+      name: '招商银行石墨红',
+      paper: 'FBFAF9',
+      paperTint: 'F0ECEA',
+      ink: '1C1A19',
+      grey1: 'ECE7E5',
+      grey2: 'CFC6C2',
+      grey3: '5D5552',
+      accent: 'C8102E',
+      accent2: '3A2629',
+      accentSoft: 'F4D9DE',
+      accentOn: 'FFFFFF',
+    },
+  },
 };
 
 const FONTS = {
@@ -218,8 +259,8 @@ function parseArgs(argv) {
 
 function normalizeSpec(spec, options = {}) {
   spec.style = spec.style || 'magazine';
-  if (!['magazine', 'swiss'].includes(spec.style)) fail(`Unsupported style: ${spec.style}`);
-  spec.theme = spec.theme || (spec.style === 'swiss' ? 'ikb' : 'ink');
+  if (!['magazine', 'swiss', 'cmb'].includes(spec.style)) fail(`Unsupported style: ${spec.style}`);
+  spec.theme = spec.theme || (spec.style === 'swiss' ? 'ikb' : spec.style === 'cmb' ? 'classic' : 'ink');
   if (!THEMES[spec.style][spec.theme]) fail(`Unsupported theme "${spec.theme}" for style "${spec.style}"`);
   if (!Array.isArray(spec.slides) || spec.slides.length === 0) fail('Spec must include a non-empty slides array.');
   const shouldDiversify = options.diversifyLayouts || spec.diversifyLayouts === true;
@@ -251,8 +292,8 @@ async function buildDeck(spec, specDir, outPath) {
   pptx.company = spec.company || '';
   pptx.lang = 'zh-CN';
   pptx.theme = {
-    headFontFace: spec.style === 'swiss' ? FONTS.sans : FONTS.serifZh,
-    bodyFontFace: spec.style === 'swiss' ? FONTS.sans : FONTS.sansZh,
+    headFontFace: spec.style === 'magazine' ? FONTS.serifZh : FONTS.sans,
+    bodyFontFace: spec.style === 'magazine' ? FONTS.sansZh : FONTS.sansZh,
     lang: 'zh-CN',
   };
   pptx.defineLayout({ name: 'CUSTOM_WIDE', width: SLIDE.w, height: SLIDE.h });
@@ -264,6 +305,7 @@ async function buildDeck(spec, specDir, outPath) {
     enforceReadableSlideText(slide);
     const ctx = { spec, slideSpec, theme, specDir, index, total: spec.slides.length };
     if (spec.style === 'swiss') renderSwiss(slide, ctx);
+    else if (spec.style === 'cmb') renderCmb(slide, ctx);
     else renderMagazine(slide, ctx);
   });
 
@@ -393,6 +435,149 @@ function renderSwiss(slide, ctx) {
   const state = { accent, dark, bg, fg };
   (renderers[layout] || swissStatement)(slide, ctx, state);
   renderDataBlocks(slide, ctx, state, 'swiss');
+}
+
+function renderCmb(slide, ctx) {
+  const data = ctx.slideSpec;
+  const layout = data.layout || 'statement';
+  const accentLayouts = ['cover', 'section', 'closing'];
+  const accent = accentLayouts.includes(layout) && data.tone !== 'light';
+  const bg = accent ? ctx.theme.accent : ctx.theme.paper;
+  const fg = accent ? ctx.theme.accentOn : ctx.theme.ink;
+  if (data.headY == null) data.headY = Number(ctx.spec.headY) || 1.06;
+  addCmbBackground(slide, ctx, accent);
+  addCmbChrome(slide, ctx, fg);
+
+  const state = { accent, dark: accent, bg, fg };
+  const renderers = {
+    cover: cmbCover,
+    section: cmbSection,
+    statement: cmbStatement,
+    closing: cmbClosing,
+    dashboard: swissDashboard,
+    dataSheet: swissDataSheet,
+    chart: swissChart,
+    kpiTower: swissKpiTower,
+    bigNumbers: swissKpiTower,
+    media: swissMedia,
+    mediaGrid: swissMediaGrid,
+    gallery: swissMediaGrid,
+    imageGrid: swissImageGridCompat,
+    compare: swissDuoCompare,
+    duoCompare: swissDuoCompare,
+    timeline: swissTimeline,
+    pipeline: swissTimeline,
+    roadmap: swissRoadmap,
+    textGrid: swissTextGrid,
+    article: swissTextGrid,
+    fourCards: swissFourCards,
+    matrix: swissMatrix,
+    agenda: swissAgenda,
+    caseStudy: swissCaseStudy,
+    pyramid: swissPyramid,
+    radial: swissRadial,
+    swimlane: swissSwimlane,
+    imageHero: swissImageHero,
+    quoteImage: swissQuoteImageCompat,
+    bigQuote: swissBigQuoteCompat,
+    textImage: swissTextImageCompat,
+  };
+  (renderers[layout] || cmbStatement)(slide, ctx, state);
+  renderDataBlocks(slide, ctx, state, 'swiss');
+}
+
+function addCmbBackground(slide, ctx, emphasized = false) {
+  const theme = ctx.theme;
+  const svg = cmbBackgroundSvg(ctx, emphasized);
+  slide.background = { path: 'background-cmb.svg', data: svgDataUri(svg) };
+  const headerH = Number(ctx.slideSpec.logoHeaderBandH || ctx.spec.logoHeaderBandH) || 0.82;
+  slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SLIDE.w, h: headerH, fill: { color: 'FFFFFF', transparency: 0 }, line: { color: 'FFFFFF', transparency: 100 } });
+  slide.addShape(pptx.ShapeType.line, { x: 0, y: headerH, w: SLIDE.w, h: 0, line: { color: theme.accent, transparency: 7, width: 1.2 } });
+}
+
+function cmbBackgroundSvg(ctx, emphasized = false) {
+  const scale = 120;
+  const w = Math.round(SLIDE.w * scale);
+  const h = Math.round(SLIDE.h * scale);
+  const headerH = Math.round((Number(ctx.slideSpec.logoHeaderBandH || ctx.spec.logoHeaderBandH) || 0.82) * scale);
+  const theme = ctx.theme;
+  const base = normalizeHex(emphasized ? theme.accent : theme.paper);
+  const tint = normalizeHex(emphasized ? theme.accent2 : theme.paperTint || theme.grey1 || 'F8F1F1');
+  const accent = normalizeHex(theme.accent || 'C8102E');
+  const accent2 = normalizeHex(theme.accent2 || '8A1538');
+  const grid = emphasized ? 'FFFFFF' : normalizeHex(theme.grey2 || 'DED8D6');
+  const bodyOpacity = emphasized ? 0.2 : 0.16;
+  const gridOpacity = emphasized ? 0.08 : 0.18;
+  const lines = [];
+  const gridLeft = Math.round(0.78 * scale);
+  const gridRight = Math.round((SLIDE.w - 0.78) * scale);
+  for (let x = gridLeft; x <= gridRight + 1; x += 0.78 * scale) lines.push(`<line x1="${Math.round(x)}" y1="${headerH}" x2="${Math.round(x)}" y2="${h}"/>`);
+  for (let y = headerH; y <= h + 1; y += 0.54 * scale) lines.push(`<line x1="${gridLeft}" y1="${Math.round(y)}" x2="${gridRight}" y2="${Math.round(y)}"/>`);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+<defs>
+  <linearGradient id="body" x1="0" y1="${headerH}" x2="0" y2="${h}" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#${svgEsc(base)}"/>
+    <stop offset="58%" stop-color="#${svgEsc(tint)}" stop-opacity="${emphasized ? 0.72 : 0.42}"/>
+    <stop offset="100%" stop-color="#${svgEsc(accent2)}" stop-opacity="${emphasized ? 0.34 : 0.12}"/>
+  </linearGradient>
+</defs>
+<rect x="0" y="0" width="${w}" height="${h}" fill="#${svgEsc(base)}"/>
+<rect x="0" y="0" width="${w}" height="${headerH}" fill="#FFFFFF"/>
+<rect x="0" y="${headerH}" width="${w}" height="${h - headerH}" fill="url(#body)"/>
+<rect x="0" y="${h - Math.round(0.18 * scale)}" width="${w}" height="${Math.round(0.18 * scale)}" fill="#${svgEsc(accent2)}" opacity="${emphasized ? 0.42 : 0.18}"/>
+<rect x="0" y="${headerH}" width="${Math.round(0.16 * scale)}" height="${h - headerH}" fill="#${svgEsc(accent)}" opacity="${emphasized ? 0.9 : 0.78}"/>
+<g fill="none" stroke="#${svgEsc(grid)}" stroke-width="0.7" stroke-opacity="${gridOpacity}">${lines.join('\n')}</g>
+<circle cx="${Math.round(w * 0.86)}" cy="${Math.round(h * 0.2)}" r="${Math.round(1.1 * scale)}" fill="#${svgEsc(accent)}" opacity="${bodyOpacity}"/>
+</svg>`;
+}
+
+function addCmbChrome(slide, ctx, color) {
+  const headerH = Number(ctx.slideSpec.logoHeaderBandH || ctx.spec.logoHeaderBandH) || 0.82;
+  const logoPath = resolveImage(ctx.specDir, ctx.slideSpec.logoHeader || ctx.spec.logoHeader || ctx.slideSpec.logoFull || ctx.spec.logoFull || 'logos/cmb-logo-lockup.png');
+  const logoW = Number(ctx.slideSpec.logoHeaderW || ctx.spec.logoHeaderW) || 1.92;
+  const logoH = Number(ctx.slideSpec.logoHeaderH || ctx.spec.logoHeaderH) || 0.48;
+  if (logoPath) slide.addImage({ path: logoPath, x: SLIDE.marginX, y: 0.16, w: logoW, h: logoH });
+  const left = ctx.slideSpec.chromeLeft || ctx.spec.chromeLeft || ctx.spec.title || 'China Merchants Bank';
+  const right = ctx.slideSpec.chromeRight || `${String(ctx.index + 1).padStart(2, '0')} / ${String(ctx.total).padStart(2, '0')}`;
+  slide.addText(left, { x: SLIDE.marginX + logoW + 0.28, y: 0.34, w: 5.5, h: 0.2, fontFace: FONTS.sans, fontSize: 7.6, bold: true, charSpace: 0.8, color: ctx.theme.ink, transparency: 8, margin: 0, fit: 'shrink' });
+  slide.addText(right, { x: SLIDE.w - SLIDE.marginX - 2.2, y: 0.34, w: 2.2, h: 0.2, fontFace: FONTS.sans, fontSize: 7.4, bold: true, charSpace: 0.8, color: ctx.theme.accent, align: 'right', margin: 0, fit: 'shrink' });
+  slide.addShape(pptx.ShapeType.rect, { x: 0, y: headerH - 0.035, w: 1.85, h: 0.035, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
+}
+
+function cmbCover(slide, ctx, s) {
+  const data = ctx.slideSpec;
+  const headY = pageHeadY(ctx, 1.08);
+  addCmbLogoMark(slide, ctx, { x: 10.1, y: 1.22, w: 1.92, h: 0.5 });
+  slide.addText(data.kicker || 'CHINA MERCHANTS BANK', { x: 0.78, y: headY, w: 6.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8.6, bold: true, charSpace: 1.5, color: s.fg, transparency: 18, margin: 0, fit: 'shrink' });
+  slide.addText(data.title || ctx.spec.title, { x: 0.78, y: headY + 0.6, w: 10.2, h: 2.15, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || ctx.spec.title, 47, 31), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+  slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: headY + 3.15, w: 1.55, h: 0.09, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
+  slide.addText(data.subtitle || ctx.spec.subtitle || '', { x: 0.78, y: headY + 3.5, w: 6.7, h: 0.72, fontFace: FONTS.sansZh, fontSize: 15.2, color: s.fg, transparency: 10, margin: 0, fit: 'shrink' });
+  addFoot(slide, ctx, s.fg, 'swiss');
+}
+
+function cmbSection(slide, ctx, s) {
+  cmbCover(slide, ctx, s);
+}
+
+function cmbStatement(slide, ctx, s) {
+  const data = ctx.slideSpec;
+  const headY = pageHeadY(ctx, 1.06);
+  slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: headY - 0.02, w: 0.12, h: 0.7, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
+  slide.addText(data.kicker || 'Executive Summary', { x: 1.05, y: headY, w: 5.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8, bold: true, charSpace: 1.1, color: ctx.theme.accent, margin: 0, fit: 'shrink' });
+  slide.addText(data.title || '', { x: 1.02, y: headY + 0.48, w: 10.45, h: 1.58, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || '', 37, 27), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+  if (data.body || data.subtitle) slide.addText(data.body || data.subtitle, { x: 1.05, y: headY + 2.42, w: 6.55, h: 0.92, fontFace: FONTS.sansZh, fontSize: 14.2, color: s.fg, transparency: 14, margin: 0, fit: 'shrink' });
+  slide.addShape(pptx.ShapeType.rect, { x: 8.25, y: headY + 2.22, w: 3.65, h: 2.3, fill: { color: ctx.theme.accentSoft || ctx.theme.grey1, transparency: 18 }, line: { color: ctx.theme.accent, transparency: 62, width: 0.7 } });
+  slide.addText(data.callout || data.takeaway || '稳健经营\n价值增长\n风险可控', { x: 8.58, y: headY + 2.55, w: 3.0, h: 1.65, fontFace: FONTS.sansZh, fontSize: 21, bold: true, color: ctx.theme.accent, margin: 0, fit: 'shrink', breakLine: false });
+  addFoot(slide, ctx, s.fg, 'swiss');
+}
+
+function cmbClosing(slide, ctx, s) {
+  cmbCover(slide, { ...ctx, slideSpec: { ...ctx.slideSpec, kicker: ctx.slideSpec.kicker || 'THANK YOU', title: ctx.slideSpec.title || '谢谢观看', subtitle: ctx.slideSpec.subtitle || 'CHINA MERCHANTS BANK' } }, s);
+}
+
+function addCmbLogoMark(slide, ctx, box) {
+  const logoPath = resolveImage(ctx.specDir, ctx.slideSpec.logoFull || ctx.spec.logoFull || ctx.slideSpec.logoHeader || ctx.spec.logoHeader || 'logos/cmb-logo-lockup.png');
+  if (logoPath) slide.addImage({ path: logoPath, ...box });
 }
 
 function hasBrandHeader(ctx) {
@@ -2254,7 +2439,7 @@ function diversifyRepeatedLayouts(spec, options = {}) {
   const diversifyCounts = new Map();
   const changes = [];
   spec.slides.forEach((slide, index) => {
-    const layout = slide.layout || (spec.style === 'swiss' ? 'statement' : 'textImage');
+    const layout = slide.layout || (spec.style === 'magazine' ? 'textImage' : 'statement');
     if (slide.lockLayout || slide.preserveLayout) {
       previous = layout;
       runLength = 1;
@@ -2306,7 +2491,7 @@ function warnLayoutVariety(spec) {
   let runStart = 0;
   let runLength = 0;
   spec.slides.forEach((slide, index) => {
-    const layout = slide.layout || (spec.style === 'swiss' ? 'statement' : 'textImage');
+    const layout = slide.layout || (spec.style === 'magazine' ? 'textImage' : 'statement');
     if (layout === runLayout) {
       runLength += 1;
     } else {
@@ -2381,6 +2566,50 @@ function fail(message) {
 }
 
 function sampleSpec(style = 'swiss') {
+  if (style === 'cmb') {
+    return {
+      title: '招商银行经营汇报',
+      subtitle: 'Business Review / Customer Operation / Risk Control',
+      author: 'China Merchants Bank',
+      style: 'cmb',
+      theme: 'classic',
+      logoHeader: 'logos/cmb-logo-lockup.png',
+      logoFull: 'logos/cmb-logo-lockup.png',
+      headY: 1.06,
+      slides: [
+        { layout: 'cover', kicker: 'CHINA MERCHANTS BANK / 2026', title: '招商银行业务增长与数字化经营汇报', subtitle: '围绕客户经营、风险控制与效率提升的阶段性复盘' },
+        { layout: 'statement', kicker: 'Executive Summary', title: '以客户价值为核心，形成增长、风控与效率的闭环。', body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。', callout: '稳健经营\n价值增长\n风险可控' },
+        { layout: 'kpiTower', kicker: 'Performance Snapshot', title: '关键经营指标保持稳健改善', items: [
+          { label: '零售客户增长', value: '+18%', valueNum: 18, note: '同比保持双位数增长。' },
+          { label: '活跃客户提升', value: '+32%', valueNum: 32, note: '数字渠道贡献主要增量。' },
+          { label: '风险预警覆盖', value: '96%', valueNum: 96, note: '重点客群实现全面监测。' },
+          { label: '流程时效缩短', value: '-24%', valueNum: 24, note: '自动化处置压缩等待时间。' },
+        ] },
+        { layout: 'dashboard', kicker: 'Risk & Efficiency Dashboard', title: '风险与效率指标联动监控', metrics: [
+          { label: '风险命中', value: '87%' },
+          { label: '处置时效', value: '2.4h' },
+          { label: '自动化率', value: '68%' },
+          { label: '复核准确', value: '95%' },
+
+        ], charts: [
+          { chartType: 'column', title: '风险事件处置量', labels: ['1月', '2月', '3月', '4月'], values: [120, 148, 176, 214] },
+          { chartType: 'doughnut', title: '渠道结构', labels: ['App', '网点', '远程', '客户经理'], values: [46, 18, 21, 15], showLegend: true },
+        ] },
+        { layout: 'media', kicker: 'Customer Operation', title: '客户经营从单点触达转向分层运营', body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。', chart: { chartType: 'line', title: '客户活跃趋势', labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [42, 51, 63, 78], showValue: true }, items: [
+          { icon: 'users', title: '客群分层', body: '按资产、行为与生命周期拆分运营策略。' },
+          { icon: 'scan-search', title: '信号识别', body: '捕捉高价值触点与潜在流失风险。' },
+          { icon: 'workflow', title: '渠道协同', body: '联动 App、网点、远程服务与客户经理。' },
+        ] },
+        { layout: 'roadmap', kicker: 'Implementation Roadmap', title: '下一阶段推进路径', steps: [
+          { label: '01', title: '统一指标', body: '明确经营、风险和体验的核心口径。' },
+          { label: '02', title: '试点验证', body: '选择重点客群和重点分行进行闭环验证。' },
+          { label: '03', title: '规模推广', body: '沉淀可复制流程并接入自动化运营。' },
+          { label: '04', title: '持续评估', body: '按月复盘指标并优化模型和策略。' },
+        ] },
+        { layout: 'closing', kicker: 'THANK YOU', title: '稳健经营，持续创造客户价值。', subtitle: 'CHINA MERCHANTS BANK' },
+      ],
+    };
+  }
   if (style === 'magazine') {
     return {
       title: '杂志风 PPTX 样例',

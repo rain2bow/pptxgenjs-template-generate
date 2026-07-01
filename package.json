@@ -6,6 +6,7 @@
     "sample": "node scripts/generate-pptx.js --sample --out outputs/sample-guizang.pptx",
     "sample:swiss": "node scripts/generate-pptx.js --sample --sample-style swiss --out outputs/sample-guizang.pptx",
     "sample:magazine": "node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sample-magazine.pptx",
+    "sample:cmb": "node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-cmb.pptx",
     "validate:native": "node scripts/validate-pptx-native.js",
     "validate:layout": "node scripts/validate-pptx-layout.js"
   },

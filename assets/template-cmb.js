@@ -2,46 +2,31 @@
 const path = require('node:path');
 const { buildDeck } = require('../scripts/generate-pptx.js');
 
-/* ============================================================================
-   China Merchants Bank / 招商银行风格 PPTX Seed
+/*
+  China Merchants Bank independent style seed.
 
-   视觉方向：白底、招商红、黑灰正文、直角网格、克制分割线、可编辑图表。
-   适合银行经营分析、数字化转型、风险管理、客户经营、项目汇报。
-
-   Logo：
-   - logoHeader: 白底 PNG 图片+中英文文字 logo，用于每页页眉。
-   - logoFull: 白底 PNG 图片+中英文文字 logo，用于封面或收束页。
-   - 页眉区域整条保持白色，避免红色页面中只出现局部白底 logo。
-   - 不在招商银行模板页眉使用 SVG logo。
-
-   规则：
-   - 使用 style: 'swiss' + theme: 'cmb'。
-   - 不把 logo 做成整页背景图；logo 只作为品牌识别元素。
-   - 业务页优先使用 statement / kpiTower / chart / dashboard / dataSheet / media / roadmap。
-   - 所有图表和表格保持 PowerPoint 原生可编辑。
-   ============================================================================ */
+  This template uses style: 'cmb', not style: 'swiss' + theme: 'cmb'.
+  It keeps the CMB white header band, red/grey/white financial palette,
+  editable native charts/tables, and the bundled white-background PNG logo.
+*/
 
 const deckSpec = {
   title: '招商银行经营汇报模板',
   subtitle: 'China Merchants Bank / Business Review',
   author: '招商银行 / 项目团队',
-  style: 'swiss',
-  theme: 'cmb',
+  style: 'cmb',
+  theme: 'classic',
   logoHeader: 'logos/cmb-logo-lockup.png',
-  logoHeaderW: 1.72,
-  logoHeaderH: 0.54,
-  logoHeaderBand: true,
-  logoHeaderBandH: 0.78,
-  logoHeaderBandColor: 'FFFFFF',
-  logoHeaderTextColor: '111111',
-  headY: 1.12,
   logoFull: 'logos/cmb-logo-lockup.png',
+  logoHeaderW: 1.92,
+  logoHeaderH: 0.48,
+  logoHeaderBandH: 0.82,
+  headY: 1.06,
 
   slides: [
     {
       layout: 'cover',
       chromeLeft: 'CMB / Business Review',
-      chromeRight: 'CMB / 01',
       kicker: 'CHINA MERCHANTS BANK / 2026',
       title: '招商银行业务增长与数字化经营汇报',
       subtitle: '围绕客户经营、风险控制与效率提升的阶段性复盘',
@@ -53,6 +38,7 @@ const deckSpec = {
       kicker: 'Executive Summary',
       title: '以客户价值为核心，形成增长、风控与效率的闭环。',
       body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。',
+      callout: '稳健经营\n价值增长\n风险可控',
     },
     {
       layout: 'kpiTower',
@@ -60,10 +46,10 @@ const deckSpec = {
       kicker: 'Performance Snapshot',
       title: '关键经营指标保持稳健改善',
       items: [
-        { label: '零售客户增长', value: '+18%', valueNum: 18 },
-        { label: '活跃客户提升', value: '+32%', valueNum: 32 },
-        { label: '风险预警覆盖', value: '96%', valueNum: 96 },
-        { label: '流程时效缩短', value: '-24%', valueNum: 24 },
+        { label: '零售客户增长', value: '+18%', valueNum: 18, note: '同比保持双位数增长。' },
+        { label: '活跃客户提升', value: '+32%', valueNum: 32, note: '数字渠道贡献主要增量。' },
+        { label: '风险预警覆盖', value: '96%', valueNum: 96, note: '重点客群实现全面监测。' },
+        { label: '流程时效缩短', value: '-24%', valueNum: 24, note: '自动化处置压缩等待时间。' },
       ],
     },
     {
@@ -71,7 +57,7 @@ const deckSpec = {
       chromeLeft: 'Customer / Insight',
       kicker: 'Customer Operation',
       title: '客户经营从单点触达转向分层运营',
-      body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。没有用户图片且显式提供 chart 时，右侧媒体区会插入可编辑图表；否则显示 IMAGE SLOT 占位符。',
+      body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。没有用户图片且显式提供 chart 时，媒体区会插入可编辑图表；否则显示 IMAGE SLOT 占位符。',
       chart: {
         chartType: 'line',
         title: '客户活跃趋势',
@@ -95,7 +81,6 @@ const deckSpec = {
         { label: '处置时效', value: '2.4h' },
         { label: '自动化率', value: '68%' },
         { label: '复核准确', value: '95%' },
-        { label: '客户满意', value: '91' },
       ],
       charts: [
         { chartType: 'column', title: '风险事件处置量', labels: ['1月', '2月', '3月', '4月'], values: [120, 148, 176, 214] },
@@ -137,7 +122,7 @@ const deckSpec = {
     {
       layout: 'closing',
       chromeLeft: 'Closing / CMB',
-      kicker: 'Takeaway',
+      kicker: 'THANK YOU',
       title: '稳健经营，持续创造客户价值。',
       subtitle: 'CHINA MERCHANTS BANK',
     },

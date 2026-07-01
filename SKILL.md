@@ -1,6 +1,6 @@
 ---
 name: guizang-pptxgenjs-ppt-skill
-description: 使用 pptxgenjs 原生生成可编辑 .pptx 文件的归藏风格演示文稿技能，禁止通过 HTML 截图、浏览器导出或整页图片转换来交付。目标是用 PowerPoint 原生文本、形状、线条、图片和图表复刻原 guizang-ppt-skill 的两套视觉系统：电子杂志 × 电子墨水（衬线标题、纸感底色、图文网格、大数字）和瑞士国际主义（无衬线、单一高亮色、直角网格、发丝线、强字号对比）。当用户需要“杂志风 PPT”“瑞士风 PPT”“Swiss Style”“直接生成 PPTX”“pptxgenjs 版本”或希望把长文/大纲/素材做成可编辑 PowerPoint 文件时使用。
+description: 使用 pptxgenjs 原生生成可编辑 .pptx 文件的归藏风格演示文稿技能，禁止通过 HTML 截图、浏览器导出或整页图片转换来交付。目标是用 PowerPoint 原生文本、形状、线条、图片和图表复刻原 guizang-ppt-skill 的视觉系统，并扩展为三套可切换风格：电子杂志 × 电子墨水（衬线标题、纸感底色、图文网格、大数字）、瑞士国际主义（无衬线、单一高亮色、直角网格、发丝线、强字号对比）和招商银行品牌风格（白色页眉、招商红、灰白金融商务版式、内置 PNG logo）。当用户需要“杂志风 PPT”“瑞士风 PPT”“Swiss Style”“招商银行风格 PPT”“CMB 模板”“直接生成 PPTX”“pptxgenjs 版本”或希望把长文/大纲/素材做成可编辑 PowerPoint 文件时使用。
 ---
 
 # Guizang PPTXGenJS PPT
@@ -46,6 +46,7 @@ node scripts/generate-pptx.js --spec path/to/deck.json --out path/to/deck.pptx
 ```bash
 node scripts/generate-pptx.js --sample --out outputs/sample-guizang.pptx
 node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sample-magazine.pptx
+node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-cmb.pptx
 ```
 
 5. 生成后检查文件存在、可打开、页数正确。复杂项目应打开 PPTX 做视觉检查，重点看标题是否溢出、图片是否裁切错误、底部页脚是否挡内容。
@@ -87,9 +88,10 @@ node scripts/generate-pptx.js --spec path/to/deck.json --out path/to/deck.pptx
 ```bash
 node scripts/generate-pptx.js --sample --sample-style swiss --out outputs/sample-swiss.pptx
 node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sample-magazine.pptx
+node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-cmb.pptx
 ```
 
-`--sample-style` 只能取 `swiss` 或 `magazine`。输出路径建议放到项目 `outputs/` 下，避免覆盖技能自带模板或用户源文件。
+`--sample-style` 只能取 `swiss`、`magazine` 或 `cmb`。输出路径建议放到项目 `outputs/` 下，避免覆盖技能自带模板或用户源文件。
 
 ### 内置模板入口
 
@@ -103,7 +105,7 @@ node assets/template-cmb.js
 
 - `assets/template-magazine.js`：电子杂志 / 电子墨水风格。
 - `assets/template-swiss.js`：瑞士国际主义风格。
-- `assets/template-cmb.js`：招商银行红灰白品牌模板，内置白底 PNG logo，适合银行、金融、经营汇报场景。用户要求招商银行、CMB、银行品牌配色或红灰白商务汇报时，优先参考此模板，而不是从 `--sample-style` 生成。
+- `assets/template-cmb.js`：独立招商银行品牌风格模板，使用 `style: "cmb"`，内置白底 PNG logo，适合银行、金融、经营汇报场景。用户要求招商银行、CMB、银行品牌配色或红灰白商务汇报时，优先参考此模板或 `--sample-style cmb`。
 
 ### 校验 PPTX
 
@@ -163,8 +165,8 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 
 字段约定：
 
-- `style`: `magazine` 或 `swiss`。
-- `theme`: 风格 A 可用 `ink`、`indigo`、`forest`、`kraft`、`dune`、`cmb`；风格 B 可用 `ikb`、`lemon`、`green`、`orange`、`cmb`。
+- `style`: `magazine`、`swiss` 或 `cmb`。
+- `theme`: 风格 A 可用 `ink`、`indigo`、`forest`、`kraft`、`dune`、`cmb`；风格 B 可用 `ikb`、`lemon`、`green`、`orange`、`cmb`；招商银行独立风格可用 `classic`、`pearl`、`graphite`。
 - `slides[].layout`: 使用下方支持的版式名。
 - 图片/logo 路径解析顺序：绝对路径、相对 spec 文件、相对当前工作目录、相对技能 `assets/`、相对技能根目录。内置素材可直接写 `logos/cmb-logo-lockup.png` 或 `assets/logos/cmb-logo-lockup.png`，不需要复制到用户项目目录；脚本会按实际文件插入。
 - 文本太长时先改写或拆页，不要压到很小字号。
@@ -217,7 +219,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 - `radial`: 中心概念 + 周边节点关系图。
 - `roadmap`: 路线图/阶段计划/里程碑页。
 - `swimlane`: 泳道矩阵，适合角色 × 阶段、团队 × 任务、模块 × 时间。
-跨模板兼容：`magazine` 与 `swiss` 都必须接受上述两套 layout 名称。切换模板时优先只改顶层 `style` / `theme`，不要批量改每页 `layout`；生成器会把另一套模板的 layout 映射为当前风格中语义最接近的页面：`bigNumbers` ↔ `kpiTower`、`compare` ↔ `duoCompare`、`pipeline` ↔ `timeline`、`article` ↔ `textGrid`、`quoteImage`/`textImage` ↔ `imageHero`、`bigQuote`/`section` ↔ `statement`/`cover`。如果某页切换后信息密度明显不合适，再人工换成同风格推荐版式。
+跨模板兼容：`magazine`、`swiss` 与 `cmb` 都必须接受上述两套 layout 名称。切换模板时优先只改顶层 `style` / `theme`，不要批量改每页 `layout`；生成器会把另一套模板的 layout 映射为当前风格中语义最接近的页面：`bigNumbers` ↔ `kpiTower`、`compare` ↔ `duoCompare`、`pipeline` ↔ `timeline`、`article` ↔ `textGrid`、`quoteImage`/`textImage` ↔ `imageHero`、`bigQuote`/`section` ↔ `statement`/`cover`。如果某页切换后信息密度明显不合适，再人工换成同风格推荐版式。
 媒体区规则：两个模板都使用同名 `media` / `mediaGrid` / `gallery` layout 留出统一放图区域。用户提供 `image` / `images` / `gallery` 时优先插入用户图片；`mediaGrid` / `gallery` / `imageGrid` 未显式设置 `mediaCount` 时，槽位数自动等于图片数、显式图表数或 caption 数，不再用默认 4 格。若显式设置 `mediaCount`，必须与用户图片数一致；例如 3 张图就用 3 个槽位，不要生成 4 个槽位。没有用户图片且显式提供 `chart` / `charts` 时才用 PowerPoint 原生图表填充；没有图片和显式图表时显示 `IMAGE SLOT` 占位符，表示这里可以放图。
 槽位校验：生成器会在生成前检查每页图片槽位、文本槽位和字段格式。超过布局最大数量的 `items` / `sections` / `steps` / `charts` 会直接报错，避免内容被静默截断；同一组同义字段（如 `sections`、`items`、`columns`）不要同时填写，否则只有第一个字段会被使用并打印警告；分点对象必须至少包含 `text` / `title` / `label` / `body` / `desc` / `note` / `summary` / `value` 之一，避免格式不匹配导致内容不显示。
 内容完整性：每个分点、卡片、栏目不能只写标题，至少补 `body` / `desc` / `note` / `summary` 之一。生成器会对大多数分点只有标题的页面打印警告；生成大纲和 spec 时必须把“标题 + 一句解释/证据/结论”作为最小单元。
@@ -235,7 +237,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 - 不允许通过负坐标、负 margin、任意绝对偏移来“救布局”。内容过多时先删减、拆页或换版式。
 - 图片是内容证据，不是背景装饰。截图和信息图用标准比例：21:9、16:10、16:9、4:3、3:2、1:1。
 - 风格 A 可以使用轻微纸感背景和大衬线标题；风格 B 禁止渐变、阴影、圆角、多个 accent。
-招商银行风格：使用 `style: "swiss"` + `theme: "cmb"`，并设置 `logoHeader` / `logoFull`。推荐复用 `assets/template-cmb.js`。招商银行模板每页页眉必须整条保持白色，并使用白底 PNG 完整 logo：`logos/cmb-logo-lockup.png`；该路径会自动解析到技能内置 `assets/logos/cmb-logo-lockup.png`，不要提示用户手动复制素材。不要只在红色页面上放一个局部白底 logo，也不要用 SVG 纯图 logo 作为页眉品牌标识。
+招商银行风格：优先使用独立 `style: "cmb"`，主题可选 `classic`、`pearl`、`graphite`，并设置 `logoHeader` / `logoFull`。推荐复用 `assets/template-cmb.js` 或运行 `--sample-style cmb`。不要把它仅当作 `swiss` 的一个主题变体。招商银行模板每页页眉必须整条保持白色，并使用白底 PNG 完整 logo：`logos/cmb-logo-lockup.png`；该路径会自动解析到技能内置 `assets/logos/cmb-logo-lockup.png`，不要提示用户手动复制素材。不要只在红色页面上放一个局部白底 logo，也不要用 SVG 纯图 logo 作为页眉品牌标识。
 所有模板都必须保持页首信息位置稳定：同一 deck 内每页 kicker/顶部小标题默认使用统一 headY 基线，避免翻页时顶部文字上下跳动。纯色强调页不能是无层次纯色块，应叠加低透明浅色层、暗色层、线性/弧线纹理或其它 PPT 原生形状做柔化。
 - 不要使用 emoji 作为页面视觉元素；图标需求优先用简单线条/形状，或由用户提供图标资产。
 - 投影可读性优先：页眉、页脚、标签、旁注、图表坐标轴、表格正文等小字必须保持可阅读，生成器会把普通文本最小字号抬到约 9.8pt；内容放不下时拆页、换版式或删减，不要继续压小字。
@@ -247,7 +249,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 - `scripts/generate-pptx.js`: pptxgenjs 生成器，内置主题、版式函数和样例 spec；`READABILITY.minFontSize` 控制普通文本最小可读字号。
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。
 - `assets/template-swiss.js`: 瑞士国际主义完整示例模板，可直接运行生成 `assets/outputs/deck-swiss.pptx`。
-- `assets/template-cmb.js`: 招商银行红灰白完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "swiss"`、`theme: "cmb"`、`logoHeader: "logos/cmb-logo-lockup.png"`，logo 会自动从技能内置 `assets/logos/` 解析。
+- `assets/template-cmb.js`: 招商银行独立品牌风格完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "cmb"`、`theme: "classic"`、`logoHeader: "logos/cmb-logo-lockup.png"`，logo 会自动从技能内置 `assets/logos/` 解析。
 - `references/themes.md`: 风格 A 主题色来源。
 - `references/themes-swiss.md`: 风格 B 主题色来源。
 - `references/layouts.md`: 原 HTML 风格 A 的视觉参考。
