@@ -1964,6 +1964,7 @@ function swissImageGridCompat(slide, ctx, s) {
 function swissMedia(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'swiss', 0.82);
+  const isCmb = ctx.spec.style === 'cmb' || data.style === 'cmb';
   const headY = pageHeadY(ctx, 0.82);
   const hasSubtitle = !!data.subtitle;
   const contentTop = Math.max(2.58, headY + (hasSubtitle ? 2.04 : 1.72));
@@ -1971,20 +1972,25 @@ function swissMedia(slide, ctx, s) {
   const mediaBox = { x: 0.78, y: contentTop, w: 6.25, h: Math.max(2.55, contentBottom - contentTop) };
   addMediaOrChart(slide, ctx, data, mediaBox, s, 'swiss', 'MEDIA');
   const panelX = 7.42;
-  slide.addText(data.body || data.story || data.note || '', { x: panelX, y: contentTop + 0.05, w: 4.65, h: 0.92, fontFace: FONTS.sansZh, fontSize: 11.7, color: s.fg, transparency: 15, margin: 0.03, fit: 'shrink', valign: 'top' });
-  const items = normalizeSections(data.items || data.insights || data.points || []).slice(0, 5);
-  const itemStartY = contentTop + 1.18;
-  const rowH = items.length ? clamp((contentBottom - itemStartY) / items.length, 0.42, 0.56) : 0.52;
+  const summaryH = isCmb ? 1.08 : 0.92;
+  slide.addText(data.body || data.story || data.note || '', { x: panelX, y: contentTop + 0.05, w: 4.65, h: summaryH, fontFace: FONTS.sansZh, fontSize: isCmb ? 12 : 11.7, color: s.fg, transparency: 15, margin: 0.03, fit: 'shrink', valign: 'top' });
+  const sideLimit = isCmb ? 4 : 5;
+  const items = normalizeSections(data.items || data.insights || data.points || []).slice(0, sideLimit);
+  const itemStartY = contentTop + (isCmb ? 1.42 : 1.18);
+  const rowMin = isCmb ? 0.58 : 0.42;
+  const rowMax = isCmb ? 0.8 : 0.56;
+  const rowH = items.length ? clamp((contentBottom - itemStartY) / items.length, rowMin, rowMax) : (isCmb ? 0.66 : 0.52);
   items.forEach((item, i) => {
     const y = itemStartY + i * rowH;
-    slide.addShape(pptx.ShapeType.line, { x: panelX, y, w: 4.4, h: 0, line: { color: s.fg, transparency: 68, width: 0.5 } });
-    const hasIcon = addInlineIcon(slide, item, panelX, y + 0.1, 0.21, i === 0 ? ctx.theme.accent : s.fg, 'swiss', { fallback: defaultContentIcon(i, 'swiss'), pad: 0.04 });
-    slide.addText(item.title || item.label || item.body || '', { x: hasIcon ? panelX + 0.34 : panelX, y: y + 0.07, w: hasIcon ? 4.05 : 4.4, h: 0.23, fontFace: FONTS.sansZh, fontSize: 10.4, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
-    slide.addText(item.body || item.desc || item.note || '', { x: hasIcon ? panelX + 0.34 : panelX, y: y + 0.32, w: hasIcon ? 4.05 : 4.4, h: Math.max(0.16, rowH - 0.34), fontFace: FONTS.sansZh, fontSize: 8.4, color: s.fg, transparency: 32, margin: 0, fit: 'shrink' });
+    slide.addShape(pptx.ShapeType.line, { x: panelX, y, w: 4.4, h: 0, line: { color: s.fg, transparency: isCmb ? 74 : 68, width: 0.5 } });
+    const hasIcon = addInlineIcon(slide, item, panelX, y + (isCmb ? 0.12 : 0.1), 0.21, i === 0 ? ctx.theme.accent : s.fg, 'swiss', { fallback: defaultContentIcon(i, 'swiss'), pad: 0.04 });
+    const textX = hasIcon ? panelX + 0.34 : panelX;
+    const textW = hasIcon ? 4.05 : 4.4;
+    slide.addText(item.title || item.label || item.body || '', { x: textX, y: y + 0.08, w: textW, h: isCmb ? 0.28 : 0.23, fontFace: FONTS.sansZh, fontSize: isCmb ? 10.8 : 10.4, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+    slide.addText(item.body || item.desc || item.note || '', { x: textX, y: y + (isCmb ? 0.42 : 0.32), w: textW, h: Math.max(isCmb ? 0.22 : 0.16, rowH - (isCmb ? 0.48 : 0.34)), fontFace: FONTS.sansZh, fontSize: isCmb ? 8.8 : 8.4, color: s.fg, transparency: 32, margin: 0.01, fit: 'shrink', valign: 'top' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
-
 function swissMediaGrid(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'swiss', 0.82);
@@ -2586,7 +2592,7 @@ function validateMediaSlots(slide, index, errors, warnings, specDir) {
 
 function validateTextSlots(slide, index, style, errors, warnings) {
   const layout = slide.layout || '';
-  const sideMax = style === 'swiss' ? 5 : 3;
+  const sideMax = style === 'swiss' ? 5 : style === 'cmb' ? 4 : 3;
   const rules = {
     bigNumbers: [{ keys: ['items'], max: 6, min: 1, label: 'number cards' }],
     kpiTower: [{ keys: ['items'], max: 4, min: 1, label: 'KPI cards' }],
