@@ -533,7 +533,7 @@ function cmbBackgroundSvg(ctx, emphasized = false) {
 
 function addCmbChrome(slide, ctx, color) {
   const headerH = Number(ctx.slideSpec.logoHeaderBandH || ctx.spec.logoHeaderBandH) || 0.82;
-  const logoPath = resolveImage(ctx.specDir, ctx.slideSpec.logoHeader || ctx.spec.logoHeader || ctx.slideSpec.logoFull || ctx.spec.logoFull || 'logos/cmb-logo-lockup.png');
+  const logoPath = resolveImage(ctx.specDir, ctx.slideSpec.logoHeader || ctx.slideSpec.brandLogoHeader || ctx.spec.logoHeader || ctx.spec.brandLogoHeader || 'logos/cmb-logo-lockup.png');
   const logoW = Number(ctx.slideSpec.logoHeaderW || ctx.spec.logoHeaderW) || 1.92;
   const logoH = Number(ctx.slideSpec.logoHeaderH || ctx.spec.logoHeaderH) || 0.48;
   if (logoPath) slide.addImage({ path: logoPath, x: SLIDE.marginX, y: 0.16, w: logoW, h: logoH });
@@ -576,8 +576,16 @@ function cmbClosing(slide, ctx, s) {
 }
 
 function addCmbLogoMark(slide, ctx, box) {
-  const logoPath = resolveImage(ctx.specDir, ctx.slideSpec.logoFull || ctx.spec.logoFull || ctx.slideSpec.logoHeader || ctx.spec.logoHeader || 'logos/cmb-logo-lockup.png');
-  if (logoPath) slide.addImage({ path: logoPath, ...box });
+  const logoPath = resolveImage(ctx.specDir, ctx.slideSpec.logoMark || ctx.slideSpec.logoSymbol || ctx.slideSpec.brandLogoSymbol || ctx.spec.logoMark || ctx.spec.logoSymbol || ctx.spec.brandLogoSymbol || 'logos/cmb-logo-mark.svg');
+  if (logoPath) addImageAsset(slide, logoPath, box);
+}
+
+function addImageAsset(slide, imagePath, box) {
+  if (path.extname(imagePath).toLowerCase() === '.svg') {
+    slide.addImage({ data: svgDataUri(fs.readFileSync(imagePath, 'utf8')), ...box });
+  } else {
+    slide.addImage({ path: imagePath, ...box });
+  }
 }
 
 function hasBrandHeader(ctx) {
@@ -731,7 +739,7 @@ function addBrandLogo(slide, ctx, box, options = {}) {
       line: { color: options.backplateColor || 'FFFFFF', transparency: 100 },
     });
   }
-  slide.addImage({ path: logoPath, x: box.x, y: box.y, w: box.w, h: box.h });
+  addImageAsset(slide, logoPath, { x: box.x, y: box.y, w: box.w, h: box.h });
   return true;
 }
 
@@ -741,8 +749,8 @@ function resolveBrandLogo(ctx, variant = 'symbol') {
   const raw = variant === 'header'
     ? data.logoHeader || data.brandLogoHeader || spec.logoHeader || spec.brandLogoHeader || data.logoFull || data.brandLogoFull || spec.logoFull || spec.brandLogoFull || data.logo || spec.logo || data.brandLogo || spec.brandLogo
     : variant === 'full'
-      ? data.logoFull || data.brandLogoFull || spec.logoFull || spec.brandLogoFull || data.logo || spec.logo || data.brandLogo || spec.brandLogo
-      : data.logoSymbol || data.brandLogoSymbol || spec.logoSymbol || spec.brandLogoSymbol || data.logo || spec.logo || data.brandLogo || spec.brandLogo;
+      ? data.logoFull || data.brandLogoFull || spec.logoFull || spec.brandLogoFull || data.logoMark || spec.logoMark || data.logoSymbol || data.brandLogoSymbol || spec.logoSymbol || spec.brandLogoSymbol || data.logo || spec.logo || data.brandLogo || spec.brandLogo
+      : data.logoMark || spec.logoMark || data.logoSymbol || data.brandLogoSymbol || spec.logoSymbol || spec.brandLogoSymbol || data.logo || spec.logo || data.brandLogo || spec.brandLogo;
   return resolveImage(ctx.specDir, raw);
 }
 function addFoot(slide, ctx, color, mode, text) {
@@ -2574,7 +2582,7 @@ function sampleSpec(style = 'swiss') {
       style: 'cmb',
       theme: 'classic',
       logoHeader: 'logos/cmb-logo-lockup.png',
-      logoFull: 'logos/cmb-logo-lockup.png',
+      logoMark: 'logos/cmb-logo-mark.svg',
       headY: 1.06,
       slides: [
         { layout: 'cover', kicker: 'CHINA MERCHANTS BANK / 2026', title: '招商银行业务增长与数字化经营汇报', subtitle: '围绕客户经营、风险控制与效率提升的阶段性复盘' },

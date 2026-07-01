@@ -7,7 +7,8 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 
   This template uses style: 'cmb', not style: 'swiss' + theme: 'cmb'.
   It keeps the CMB white header band, red/grey/white financial palette,
-  editable native charts/tables, and the bundled white-background PNG logo.
+  editable native charts/tables, the bundled white-background PNG header logo,
+  and the transparent SVG mark outside the header band.
 */
 
 const deckSpec = {
@@ -17,7 +18,7 @@ const deckSpec = {
   style: 'cmb',
   theme: 'classic',
   logoHeader: 'logos/cmb-logo-lockup.png',
-  logoFull: 'logos/cmb-logo-lockup.png',
+  logoMark: 'logos/cmb-logo-mark.svg',
   logoHeaderW: 1.92,
   logoHeaderH: 0.48,
   logoHeaderBandH: 0.82,
