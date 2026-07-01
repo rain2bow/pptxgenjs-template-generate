@@ -168,7 +168,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 - `style`: `magazine`、`swiss` 或 `cmb`。
 - `theme`: 风格 A 可用 `ink`、`indigo`、`forest`、`kraft`、`dune`、`cmb`；风格 B 可用 `ikb`、`lemon`、`green`、`orange`、`cmb`；招商银行独立风格可用 `classic`、`pearl`、`graphite`。
 - `slides[].layout`: 使用下方支持的版式名。
-- 图片/logo 路径解析顺序：绝对路径、相对 spec 文件、相对当前工作目录、相对技能 `assets/`、相对技能根目录。内置素材可直接写 `logos/cmb-logo-lockup.png`、`logos/cmb-logo-mark.svg` 或对应的 `assets/logos/...` 路径，不需要复制到用户项目目录；脚本会按实际文件插入。
+- 图片/logo 路径解析顺序：绝对路径、相对 spec 文件、相对当前工作目录、相对技能 `assets/`、相对技能根目录。内置素材可直接写 `logos/cmb-logo-lockup.png`、`logos/cmb-logo-mark.svg` 或对应的 `assets/logos/...` 路径，不需要复制到用户项目目录；脚本会按实际文件插入。所有 logo 必须保持素材原始比例，不能为了填满指定 `w/h` 而横向或纵向压扁；生成器会在给定框内等比居中放置。
 - 文本太长时先改写或拆页，不要压到很小字号。
 
 ## 支持版式
@@ -237,7 +237,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 - 不允许通过负坐标、负 margin、任意绝对偏移来“救布局”。内容过多时先删减、拆页或换版式。
 - 图片是内容证据，不是背景装饰。截图和信息图用标准比例：21:9、16:10、16:9、4:3、3:2、1:1。
 - 风格 A 可以使用轻微纸感背景和大衬线标题；风格 B 禁止渐变、阴影、圆角、多个 accent。
-招商银行风格：优先使用独立 `style: "cmb"`，主题可选 `classic`、`pearl`、`graphite`，并设置 `logoHeader` / `logoMark`。推荐复用 `assets/template-cmb.js` 或运行 `--sample-style cmb`。不要把它仅当作 `swiss` 的一个主题变体。招商银行模板每页页眉必须整条保持白色，并使用白底 PNG 完整 logo：`logos/cmb-logo-lockup.png`；页眉以外的封面、收尾页或装饰性品牌标识必须使用透明背景 SVG 纯图 logo：`logos/cmb-logo-mark.svg`。两者都会自动解析到技能内置 `assets/logos/`，不要提示用户手动复制素材。不要只在红色页面上放一个局部白底 logo，也不要用 SVG 纯图 logo 作为页眉品牌标识。
+招商银行风格：优先使用独立 `style: "cmb"`，主题可选 `classic`、`pearl`、`graphite`，并设置 `logoHeader` / `logoMark`。推荐复用 `assets/template-cmb.js` 或运行 `--sample-style cmb`。不要把它仅当作 `swiss` 的一个主题变体。招商银行模板每页页眉必须整条保持白色，并使用白底 PNG 完整 logo：`logos/cmb-logo-lockup.png`；页眉以外的封面、收尾页或装饰性品牌标识必须使用透明背景 SVG 纯图 logo：`logos/cmb-logo-mark.svg`。封面保留清晰 SVG 纯图 logo；所有内容页右上角的原圆形装饰必须替换为不透明度 20% 的 SVG 纯图 logo 水印。两者都会自动解析到技能内置 `assets/logos/`，不要提示用户手动复制素材。所有 logo 都必须等比显示，不要只在红色页面上放一个局部白底 logo，也不要用 SVG 纯图 logo 作为页眉品牌标识。
 所有模板都必须保持页首信息位置稳定：同一 deck 内每页 kicker/顶部小标题默认使用统一 headY 基线，避免翻页时顶部文字上下跳动。纯色强调页不能是无层次纯色块，应叠加低透明浅色层、暗色层、线性/弧线纹理或其它 PPT 原生形状做柔化。
 - 不要使用 emoji 作为页面视觉元素；图标需求优先用简单线条/形状，或由用户提供图标资产。
 - 投影可读性优先：页眉、页脚、标签、旁注、图表坐标轴、表格正文等小字必须保持可阅读，生成器会把普通文本最小字号抬到约 9.8pt；内容放不下时拆页、换版式或删减，不要继续压小字。

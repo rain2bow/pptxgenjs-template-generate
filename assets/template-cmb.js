@@ -19,8 +19,8 @@ const deckSpec = {
   theme: 'classic',
   logoHeader: 'logos/cmb-logo-lockup.png',
   logoMark: 'logos/cmb-logo-mark.svg',
-  logoHeaderW: 1.92,
-  logoHeaderH: 0.48,
+  logoHeaderW: 1.58,
+  logoHeaderH: 0.5,
   logoHeaderBandH: 0.82,
   headY: 1.06,
 

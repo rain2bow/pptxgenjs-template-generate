@@ -181,6 +181,7 @@ const CHART_TYPES = {
 const BASIC_ICON_NAMES = ['dot', 'square', 'diamond', 'plus', 'minus', 'cross', 'number'];
 const LUCIDE_STATIC_ICON_DIR = path.join(__dirname, '..', 'node_modules', 'lucide-static', 'icons');
 const LUCIDE_ICON_CACHE = new Map();
+const IMAGE_ASPECT_CACHE = new Map();
 let LUCIDE_MODULE = undefined;
 const ICON_ALIASES = {
   check: 'check-circle',
@@ -493,6 +494,7 @@ function addCmbBackground(slide, ctx, emphasized = false) {
   const headerH = Number(ctx.slideSpec.logoHeaderBandH || ctx.spec.logoHeaderBandH) || 0.82;
   slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SLIDE.w, h: headerH, fill: { color: 'FFFFFF', transparency: 0 }, line: { color: 'FFFFFF', transparency: 100 } });
   slide.addShape(pptx.ShapeType.line, { x: 0, y: headerH, w: SLIDE.w, h: 0, line: { color: theme.accent, transparency: 7, width: 1.2 } });
+  if (!emphasized) addCmbLogoWatermark(slide, ctx);
 }
 
 function cmbBackgroundSvg(ctx, emphasized = false) {
@@ -506,7 +508,6 @@ function cmbBackgroundSvg(ctx, emphasized = false) {
   const accent = normalizeHex(theme.accent || 'C8102E');
   const accent2 = normalizeHex(theme.accent2 || '8A1538');
   const grid = emphasized ? 'FFFFFF' : normalizeHex(theme.grey2 || 'DED8D6');
-  const bodyOpacity = emphasized ? 0.2 : 0.16;
   const gridOpacity = emphasized ? 0.08 : 0.18;
   const lines = [];
   const gridLeft = Math.round(0.78 * scale);
@@ -527,16 +528,15 @@ function cmbBackgroundSvg(ctx, emphasized = false) {
 <rect x="0" y="${h - Math.round(0.18 * scale)}" width="${w}" height="${Math.round(0.18 * scale)}" fill="#${svgEsc(accent2)}" opacity="${emphasized ? 0.42 : 0.18}"/>
 <rect x="0" y="${headerH}" width="${Math.round(0.16 * scale)}" height="${h - headerH}" fill="#${svgEsc(accent)}" opacity="${emphasized ? 0.9 : 0.78}"/>
 <g fill="none" stroke="#${svgEsc(grid)}" stroke-width="0.7" stroke-opacity="${gridOpacity}">${lines.join('\n')}</g>
-<circle cx="${Math.round(w * 0.86)}" cy="${Math.round(h * 0.2)}" r="${Math.round(1.1 * scale)}" fill="#${svgEsc(accent)}" opacity="${bodyOpacity}"/>
 </svg>`;
 }
 
 function addCmbChrome(slide, ctx, color) {
   const headerH = Number(ctx.slideSpec.logoHeaderBandH || ctx.spec.logoHeaderBandH) || 0.82;
   const logoPath = resolveImage(ctx.specDir, ctx.slideSpec.logoHeader || ctx.slideSpec.brandLogoHeader || ctx.spec.logoHeader || ctx.spec.brandLogoHeader || 'logos/cmb-logo-lockup.png');
-  const logoW = Number(ctx.slideSpec.logoHeaderW || ctx.spec.logoHeaderW) || 1.92;
-  const logoH = Number(ctx.slideSpec.logoHeaderH || ctx.spec.logoHeaderH) || 0.48;
-  if (logoPath) slide.addImage({ path: logoPath, x: SLIDE.marginX, y: 0.16, w: logoW, h: logoH });
+  const logoW = Number(ctx.slideSpec.logoHeaderW || ctx.spec.logoHeaderW) || 1.58;
+  const logoH = Number(ctx.slideSpec.logoHeaderH || ctx.spec.logoHeaderH) || 0.5;
+  if (logoPath) addImageAsset(slide, logoPath, { x: SLIDE.marginX, y: 0.16, w: logoW, h: logoH });
   const left = ctx.slideSpec.chromeLeft || ctx.spec.chromeLeft || ctx.spec.title || 'China Merchants Bank';
   const right = ctx.slideSpec.chromeRight || `${String(ctx.index + 1).padStart(2, '0')} / ${String(ctx.total).padStart(2, '0')}`;
   slide.addText(left, { x: SLIDE.marginX + logoW + 0.28, y: 0.34, w: 5.5, h: 0.2, fontFace: FONTS.sans, fontSize: 7.6, bold: true, charSpace: 0.8, color: ctx.theme.ink, transparency: 8, margin: 0, fit: 'shrink' });
@@ -547,7 +547,7 @@ function addCmbChrome(slide, ctx, color) {
 function cmbCover(slide, ctx, s) {
   const data = ctx.slideSpec;
   const headY = pageHeadY(ctx, 1.08);
-  addCmbLogoMark(slide, ctx, { x: 10.1, y: 1.22, w: 1.92, h: 0.5 });
+  addCmbLogoMark(slide, ctx, { x: 10.62, y: 1.18, w: 1.06, h: 1.06 });
   slide.addText(data.kicker || 'CHINA MERCHANTS BANK', { x: 0.78, y: headY, w: 6.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8.6, bold: true, charSpace: 1.5, color: s.fg, transparency: 18, margin: 0, fit: 'shrink' });
   slide.addText(data.title || ctx.spec.title, { x: 0.78, y: headY + 0.6, w: 10.2, h: 2.15, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || ctx.spec.title, 47, 31), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
   slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: headY + 3.15, w: 1.55, h: 0.09, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
@@ -576,18 +576,97 @@ function cmbClosing(slide, ctx, s) {
 }
 
 function addCmbLogoMark(slide, ctx, box) {
-  const logoPath = resolveImage(ctx.specDir, ctx.slideSpec.logoMark || ctx.slideSpec.logoSymbol || ctx.slideSpec.brandLogoSymbol || ctx.spec.logoMark || ctx.spec.logoSymbol || ctx.spec.brandLogoSymbol || 'logos/cmb-logo-mark.svg');
+  const logoPath = resolveCmbLogoMark(ctx);
   if (logoPath) addImageAsset(slide, logoPath, box);
 }
 
-function addImageAsset(slide, imagePath, box) {
-  if (path.extname(imagePath).toLowerCase() === '.svg') {
-    slide.addImage({ data: svgDataUri(fs.readFileSync(imagePath, 'utf8')), ...box });
-  } else {
-    slide.addImage({ path: imagePath, ...box });
-  }
+function addCmbLogoWatermark(slide, ctx) {
+  const logoPath = resolveCmbLogoMark(ctx);
+  if (!logoPath) return;
+  addImageAsset(slide, logoPath, { x: 10.62, y: 1.02, w: 1.72, h: 1.72 }, { opacity: 0.2 });
 }
 
+function resolveCmbLogoMark(ctx) {
+  return resolveImage(ctx.specDir, ctx.slideSpec.logoMark || ctx.slideSpec.logoSymbol || ctx.slideSpec.brandLogoSymbol || ctx.spec.logoMark || ctx.spec.logoSymbol || ctx.spec.brandLogoSymbol || 'logos/cmb-logo-mark.svg');
+}
+
+function addImageAsset(slide, imagePath, box, options = {}) {
+  const placedBox = fitImageBoxToAspect(imagePath, box);
+  if (path.extname(imagePath).toLowerCase() === '.svg') {
+    const svg = readSvgWithOpacity(imagePath, options.opacity);
+    slide.addImage({ data: svgDataUri(svg), ...placedBox });
+  } else {
+    slide.addImage({ path: imagePath, ...placedBox });
+  }
+  return placedBox;
+}
+
+function fitImageBoxToAspect(imagePath, box) {
+  const next = { ...box };
+  const aspect = imageAspectRatio(imagePath);
+  if (!aspect || aspect <= 0) return next;
+  const hasW = Number(next.w) > 0;
+  const hasH = Number(next.h) > 0;
+  if (hasW && hasH) {
+    const target = next.w / next.h;
+    if (Math.abs(target - aspect) < 0.01) return next;
+    if (target > aspect) {
+      const fittedW = next.h * aspect;
+      next.x += (next.w - fittedW) / 2;
+      next.w = fittedW;
+    } else {
+      const fittedH = next.w / aspect;
+      next.y += (next.h - fittedH) / 2;
+      next.h = fittedH;
+    }
+  } else if (hasW) {
+    next.h = next.w / aspect;
+  } else if (hasH) {
+    next.w = next.h * aspect;
+  }
+  return next;
+}
+
+function imageAspectRatio(imagePath) {
+  if (!imagePath) return null;
+  if (IMAGE_ASPECT_CACHE.has(imagePath)) return IMAGE_ASPECT_CACHE.get(imagePath);
+  let ratio = null;
+  const ext = path.extname(imagePath).toLowerCase();
+  try {
+    if (ext === '.svg') ratio = svgAspectRatio(fs.readFileSync(imagePath, 'utf8'));
+    else if (ext === '.png') ratio = pngAspectRatio(fs.readFileSync(imagePath));
+  } catch (_) {
+    ratio = null;
+  }
+  IMAGE_ASPECT_CACHE.set(imagePath, ratio);
+  return ratio;
+}
+
+function svgAspectRatio(svg) {
+  const viewBox = String(svg).match(/viewBox=["']\s*[-\d.]+\s+[-\d.]+\s+([\d.]+)\s+([\d.]+)\s*["']/i);
+  if (viewBox) return Number(viewBox[1]) / Number(viewBox[2]);
+  const width = String(svg).match(/\swidth=["']([\d.]+)(?:px)?["']/i);
+  const height = String(svg).match(/\sheight=["']([\d.]+)(?:px)?["']/i);
+  if (width && height) return Number(width[1]) / Number(height[1]);
+  return null;
+}
+
+function pngAspectRatio(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 24) return null;
+  const isPng = buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47;
+  if (!isPng) return null;
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+  return width && height ? width / height : null;
+}
+
+function readSvgWithOpacity(imagePath, opacity) {
+  let svg = fs.readFileSync(imagePath, 'utf8');
+  if (opacity == null) return svg;
+  const value = Math.max(0, Math.min(1, Number(opacity)));
+  svg = svg.replace(/<\?xml[^>]*>\s*/i, '').replace(/<!DOCTYPE[^>]*>\s*/i, '').trim();
+  return svg.replace(/<svg\b/i, `<svg opacity="${value}"`);
+}
 function hasBrandHeader(ctx) {
   return !!(ctx?.slideSpec?.logoHeader || ctx?.slideSpec?.brandLogoHeader || ctx?.spec?.logoHeader || ctx?.spec?.brandLogoHeader);
 }
