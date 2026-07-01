@@ -101,11 +101,12 @@ node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-c
 node assets/template-magazine.js
 node assets/template-swiss.js
 node assets/template-cmb.js
+node assets/template-cmb-all-layouts.js
 ```
 
 - `assets/template-magazine.js`：电子杂志 / 电子墨水风格。
 - `assets/template-swiss.js`：瑞士国际主义风格。
-- `assets/template-cmb.js`：独立招商银行品牌风格模板，使用 `style: "cmb"`，内置页眉白底 PNG logo 和页眉外透明 SVG 纯图 logo，适合银行、金融、经营汇报场景。用户要求招商银行、CMB、银行品牌配色或红灰白商务汇报时，优先参考此模板或 `--sample-style cmb`。
+- `assets/template-cmb.js`：独立招商银行品牌风格模板，使用 `style: "cmb"`，内置页眉白底 PNG logo 和页眉外透明 SVG 纯图 logo，适合银行、金融、经营汇报场景。用户要求招商银行、CMB、银行品牌配色或红灰白商务汇报时，优先参考此模板或 `--sample-style cmb`。`assets/template-cmb-all-layouts.js` 会生成覆盖 CMB 当前全部支持 layout 的 31 页检查文件，用于人工检查排版。
 
 ### 校验 PPTX
 
@@ -120,7 +121,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 
 ### 需要读取哪些文件
 
-优先读取本 `SKILL.md`、用户提供的素材、生成用 JSON spec，以及必要的 `assets/template-magazine.js`、`assets/template-swiss.js` 或 `assets/template-cmb.js` 示例。招商银行/银行品牌风格任务优先使用 `assets/template-cmb.js`。不要为了普通生成任务读取 `scripts/*.js`。
+优先读取本 `SKILL.md`、用户提供的素材、生成用 JSON spec，以及必要的 `assets/template-magazine.js`、`assets/template-swiss.js`、`assets/template-cmb.js` 或 `assets/template-cmb-all-layouts.js` 示例。招商银行/银行品牌风格任务优先使用 `assets/template-cmb.js`。不要为了普通生成任务读取 `scripts/*.js`。
 
 仅在这些情况下读取脚本源码：
 - 要新增或修改版式、图表、图标、布局算法。
@@ -170,6 +171,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 - `slides[].layout`: 使用下方支持的版式名。
 - 图片/logo 路径解析顺序：绝对路径、相对 spec 文件、相对当前工作目录、相对技能 `assets/`、相对技能根目录。内置素材可直接写 `logos/cmb-logo-lockup.png`、`logos/cmb-logo-mark.svg` 或对应的 `assets/logos/...` 路径，不需要复制到用户项目目录；脚本会按实际文件插入。所有 logo 必须保持素材原始比例，不能为了填满指定 `w/h` 而横向或纵向压扁；生成器会在给定框内等比居中放置。
 - 文本太长时先改写或拆页，不要压到很小字号。
+JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 时优先由程序对象调用 `JSON.stringify(data, null, 2)` 写出，不要手写拼接字符串。普通中文内容里的引号优先使用 `「」` 或中文弯引号；如果必须在 JSON 字符串中使用英文直引号 `"`，必须写成 `\"`。生成器读取 `--spec` 时会自动尝试修复常见问题：Markdown fenced code block、UTF-8 BOM、`//`/`/* */` 注释、尾逗号、用作 JSON 结构分隔符的中英文弯引号。若自动修复成功，会打印 warning；需要落盘为严格 JSON 时，继续使用 `--write-normalized-spec path/to/normalized.json`。无法可靠判断的未转义英文直引号仍会报错，此时必须人工改成 `\"` 或改用 `「」`。
 
 ## 支持版式
 
@@ -249,7 +251,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 - `scripts/generate-pptx.js`: pptxgenjs 生成器，内置主题、版式函数和样例 spec；`READABILITY.minFontSize` 控制普通文本最小可读字号。
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。
 - `assets/template-swiss.js`: 瑞士国际主义完整示例模板，可直接运行生成 `assets/outputs/deck-swiss.pptx`。
-- `assets/template-cmb.js`: 招商银行独立品牌风格完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "cmb"`、`theme: "classic"`、`logoHeader: "logos/cmb-logo-lockup.png"`、`logoMark: "logos/cmb-logo-mark.svg"`，logo 会自动从技能内置 `assets/logos/` 解析。
+- `assets/template-cmb.js`: 招商银行独立品牌风格完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "cmb"`、`theme: "classic"`、`logoHeader: "logos/cmb-logo-lockup.png"`、`logoMark: "logos/cmb-logo-mark.svg"`，logo 会自动从技能内置 `assets/logos/` 解析。`assets/template-cmb-all-layouts.js` 可直接生成 `assets/outputs/deck-cmb-all-layouts.pptx`，包含 CMB 当前全部 31 个支持 layout 的排版检查页。
 - `references/themes.md`: 风格 A 主题色来源。
 - `references/themes-swiss.md`: 风格 B 主题色来源。
 - `references/layouts.md`: 原 HTML 风格 A 的视觉参考。
