@@ -1445,18 +1445,22 @@ function magazineRadial(slide, ctx, s) {
   const centerBox = { x: cx - 1.12, y: cy - 0.62, w: 2.24, h: 1.24 };
   slide.addShape(pptx.ShapeType.ellipse, { ...centerBox, fill: { color: ctx.theme.paperTint, transparency: 8 }, line: { color: s.fg, transparency: 45, width: 0.8 } });
   slide.addText(data.center || data.label || data.title || '', { x: cx - 0.9, y: cy - 0.24, w: 1.8, h: 0.42, fontFace: FONTS.serifZh, fontSize: 15.5, bold: true, color: s.fg, align: 'center', margin: 0, fit: 'shrink' });
+  const nodeW = 2.55;
+  const nodeH = 1.08;
   items.forEach((item, i) => {
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(items.length, 1);
-    const x = cx + Math.cos(angle) * 4.45;
-    const y = cy + Math.sin(angle) * 1.75;
-    const boxX = clamp(x - 1.05, 0.75, 10.95);
-    const boxY = clamp(y - 0.38, 2.05, 5.75);
-    const nodeBox = { x: boxX, y: boxY, w: 2.1, h: 0.8 };
-    addRadialConnector(slide, centerBox, nodeBox, { color: s.fg, transparency: 72, width: 0.45 });
-    const hasIcon = addInlineIcon(slide, item, boxX, boxY + 0.06, 0.24, s.fg, 'magazine', { fallback: defaultContentIcon(i, 'magazine'), pad: 0.04 });
-    const tx = hasIcon ? boxX + 0.32 : boxX;
-    slide.addText(item.title || item.label || '', { x: tx, y: boxY, w: 1.95, h: 0.28, fontFace: FONTS.serifZh, fontSize: 12.4, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
-    slide.addText(item.body || item.desc || '', { x: tx, y: boxY + 0.34, w: 1.95, h: 0.38, fontFace: FONTS.sansZh, fontSize: 9.1, color: s.fg, transparency: 28, margin: 0, fit: 'shrink' });
+    const x = cx + Math.cos(angle) * 4.05;
+    const y = cy + Math.sin(angle) * 1.55;
+    const boxX = clamp(x - nodeW / 2, 0.72, 10.08);
+    const boxY = clamp(y - nodeH / 2, 1.95, 5.45);
+    const nodeBox = { x: boxX, y: boxY, w: nodeW, h: nodeH };
+    addRadialConnector(slide, centerBox, nodeBox, { color: s.fg, transparency: 74, width: 0.45 });
+    slide.addShape(pptx.ShapeType.rect, { ...nodeBox, fill: { color: ctx.theme.paperTint, transparency: 28 }, line: { color: s.fg, transparency: 82, width: 0.4 } });
+    const hasIcon = addInlineIcon(slide, item, boxX + 0.14, boxY + 0.13, 0.25, s.fg, 'magazine', { fallback: defaultContentIcon(i, 'magazine'), pad: 0.04 });
+    const tx = hasIcon ? boxX + 0.48 : boxX + 0.18;
+    const textW = boxX + nodeW - 0.18 - tx;
+    slide.addText(item.title || item.label || '', { x: tx, y: boxY + 0.12, w: textW, h: 0.3, fontFace: FONTS.serifZh, fontSize: 12.2, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+    slide.addText(item.body || item.desc || '', { x: tx, y: boxY + 0.48, w: textW, h: 0.42, fontFace: FONTS.sansZh, fontSize: 9.2, color: s.fg, transparency: 28, margin: 0.01, fit: 'shrink', valign: 'top' });
   });
   addFoot(slide, ctx, s.fg, 'magazine');
 }
@@ -1872,17 +1876,19 @@ function swissRadial(slide, ctx, s) {
   const centerBox = { x: cx - 1.08, y: cy - 0.52, w: 2.16, h: 1.04 };
   slide.addShape(pptx.ShapeType.rect, { ...centerBox, fill: { color: ctx.theme.accent }, line: { color: ctx.theme.accent, transparency: 100 } });
   slide.addText(data.center || data.label || data.title || '', { x: cx - 0.88, y: cy - 0.18, w: 1.76, h: 0.34, fontFace: FONTS.sansZh, fontSize: 13.8, bold: true, color: ctx.theme.accentOn, align: 'center', margin: 0, fit: 'shrink' });
+  const nodeW = 2.35;
+  const nodeH = 1.0;
   items.forEach((item, i) => {
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(items.length, 1);
-    const x = cx + Math.cos(angle) * 4.25;
-    const y = cy + Math.sin(angle) * 1.82;
-    const boxX = clamp(x - 0.92, 0.72, 11.05);
-    const boxY = clamp(y - 0.33, 2.1, 5.78);
-    const nodeBox = { x: boxX, y: boxY, w: 1.85, h: 0.76 };
-    addRadialConnector(slide, centerBox, nodeBox, { color: ctx.theme.grey3, transparency: 60, width: 0.45 });
+    const x = cx + Math.cos(angle) * 3.95;
+    const y = cy + Math.sin(angle) * 1.58;
+    const boxX = clamp(x - nodeW / 2, 0.68, 10.3);
+    const boxY = clamp(y - nodeH / 2, 2.02, 5.48);
+    const nodeBox = { x: boxX, y: boxY, w: nodeW, h: nodeH };
+    addRadialConnector(slide, centerBox, nodeBox, { color: ctx.theme.grey3, transparency: 64, width: 0.45 });
     slide.addShape(pptx.ShapeType.rect, { ...nodeBox, fill: { color: ctx.theme.grey1 }, line: { color: ctx.theme.grey1, transparency: 100 } });
-    slide.addText(item.title || item.label || '', { x: boxX + 0.14, y: boxY + 0.14, w: 1.57, h: 0.22, fontFace: FONTS.sansZh, fontSize: 10.6, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
-    slide.addText(item.body || item.desc || '', { x: boxX + 0.14, y: boxY + 0.42, w: 1.57, h: 0.22, fontFace: FONTS.sansZh, fontSize: 9.2, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' });
+    slide.addText(item.title || item.label || '', { x: boxX + 0.16, y: boxY + 0.14, w: nodeW - 0.32, h: 0.28, fontFace: FONTS.sansZh, fontSize: 10.8, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+    slide.addText(item.body || item.desc || '', { x: boxX + 0.16, y: boxY + 0.5, w: nodeW - 0.32, h: 0.38, fontFace: FONTS.sansZh, fontSize: 9.1, color: s.fg, transparency: 35, margin: 0.01, fit: 'shrink', valign: 'top' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
