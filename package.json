@@ -8,7 +8,8 @@
                     "sample:magazine":  "node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sample-magazine.pptx",
                     "validate:native":  "node scripts/validate-pptx-native.js",
                     "validate:layout":  "node scripts/validate-pptx-layout.js",
-                    "import:template":  "node scripts/import-pptx-template.js"
+                    "import:template":  "node scripts/import-pptx-template.js",
+                    "derive:template-style":  "node scripts/import-pptx-template.js"
                 },
     "dependencies":  {
                          "lucide":  "^0.468.0",

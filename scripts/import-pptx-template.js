@@ -97,18 +97,21 @@ async function parsePptx(zip, pptxPath, assetDir, specDir) {
 async function parseSlide(zip, xml, relationships, slideNo, slideSize, assetDir, specDir) {
   const texts = parseTextShapes(xml, slideSize);
   const pictures = await parsePictureShapes(zip, xml, relationships, slideNo, slideSize, assetDir, specDir);
+  const decorations = parseDecorativeShapes(xml, slideSize);
   const hasTable = /<a:tbl[\s>]/.test(xml);
   const hasChart = /<c:chart\b|chart\/chart\d+\.xml/i.test(xml);
   return {
     slideNo,
     texts,
     pictures,
+    decorations,
     hasTable,
     hasChart,
     slideSize,
     rawStats: {
       shapeCount: countMatches(xml, /<p:sp[\s>]/g),
       pictureCount: pictures.length,
+      decorationCount: decorations.length,
       textBoxCount: texts.length,
     },
   };
@@ -174,11 +177,13 @@ function buildSpec(parsed, options) {
     author: 'Guizang PPTXGenJS Skill',
     style: options.style,
     theme: options.theme,
+    themeTokens: deriveThemeTokens(parsed, options.style),
     sourceTemplate: {
       file: parsed.source,
       slideSize: parsed.slideSize,
       importedAt: new Date().toISOString(),
       note: 'Inferred from editable PPTX XML. Review layout/content before final delivery.',
+      styleExtraction: 'Extracts dominant colors and non-text decorative shapes as editable PPTXGenJS overlays.',
     },
     slides,
   };
@@ -199,6 +204,8 @@ function inferSlideSpec(slide, index, total, style) {
     kicker: inferKicker(slide, index),
     title,
   };
+  const templateDecorations = normalizeTemplateDecorations(slide.decorations);
+  if (templateDecorations.length) base.templateDecorations = templateDecorations;
 
   if (layout === 'cover' || layout === 'closing' || layout === 'statement') {
     base.subtitle = paragraphs[0] || '';
@@ -343,6 +350,107 @@ function looksSequential(paragraphs) {
   return paragraphs.length >= 3 && paragraphs.slice(0, 4).some((text) => /(^|\s)(0?1|1|step|phase|阶段|步骤|里程碑)/i.test(text));
 }
 
+function parseDecorativeShapes(xml, slideSize) {
+  return blocks(xml, 'p:sp')
+    .filter((block) => !block.includes('<p:txBody'))
+    .map((block, index) => {
+      const box = parseXfrm(block, slideSize);
+      const fillColor = firstHexColor(block.match(/<a:solidFill[\s\S]*?<\/a:solidFill>/)?.[0] || '');
+      const lineBlock = block.match(/<a:ln\b[\s\S]*?<\/a:ln>/)?.[0] || '';
+      const lineColor = firstHexColor(lineBlock);
+      const area = Number(box.w || 0) * Number(box.h || 0);
+      const isLarge = area >= 0.18 || box.w >= slideSize.w * 0.4 || box.h >= slideSize.h * 0.18;
+      if (!isLarge || (!fillColor && !lineColor)) return null;
+      return {
+        kind: lineColor && !fillColor && (box.h < 0.08 || box.w < 0.08) ? 'line' : 'rect',
+        sourceShapeId: attr(block, /<p:cNvPr\b[^>]*\bid="([^"]+)"/),
+        name: decodeXml(attr(block, /<p:cNvPr\b[^>]*\bname="([^"]*)"/) || `Decoration ${index + 1}`),
+        fillColor,
+        lineColor,
+        transparency: suggestedDecorationTransparency(fillColor, area, slideSize),
+        box,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => ((b.box.w * b.box.h) - (a.box.w * a.box.h)))
+    .slice(0, 16);
+}
+
+function normalizeTemplateDecorations(decorations) {
+  if (!Array.isArray(decorations)) return [];
+  return decorations.map((item) => ({
+    kind: item.kind || 'rect',
+    fillColor: item.fillColor,
+    lineColor: item.lineColor,
+    transparency: item.transparency,
+    box: item.box,
+  })).filter((item) => item.box && (item.fillColor || item.lineColor)).slice(0, 12);
+}
+
+function deriveThemeTokens(parsed, style) {
+  const colors = new Map();
+  parsed.slides.forEach((slide) => {
+    (slide.decorations || []).forEach((decoration) => {
+      [decoration.fillColor, decoration.lineColor].filter(Boolean).forEach((color) => {
+        colors.set(color, (colors.get(color) || 0) + Math.max(1, Number(decoration.box?.w || 1) * Number(decoration.box?.h || 1)));
+      });
+    });
+  });
+  const palette = Array.from(colors.entries())
+    .filter(([color]) => !isNearWhite(color) && !isNearBlack(color))
+    .sort((a, b) => b[1] - a[1])
+    .map(([color]) => color)
+    .slice(0, 5);
+  if (!palette.length) return {};
+  const vivid = palette.find((color) => !isLowChroma(color)) || palette[0];
+  const neutral = palette.find((color) => color !== vivid && isLowChroma(color)) || palette.find((color) => color !== vivid) || vivid;
+  if (style === 'swiss') return { accent: vivid, grey2: neutral, templatePalette: palette };
+  return { inkTint: vivid, paperTint: neutral, templatePalette: palette };
+}
+
+function firstHexColor(block) {
+  const srgb = block.match(/<a:srgbClr\b[^>]*\bval="([0-9A-Fa-f]{6})"/);
+  if (srgb) return srgb[1].toUpperCase();
+  const scheme = block.match(/<a:schemeClr\b[^>]*\bval="([^"]+)"/);
+  return scheme ? schemeColorFallback(scheme[1]) : '';
+}
+
+function schemeColorFallback(name) {
+  const map = {
+    accent1: '2F5597', accent2: 'C55A11', accent3: '70AD47', accent4: '5B9BD5', accent5: '8064A2', accent6: 'A5A5A5',
+    tx1: '111111', tx2: '444444', bg1: 'FFFFFF', bg2: 'F2F2F2', dk1: '111111', dk2: '444444', lt1: 'FFFFFF', lt2: 'F2F2F2',
+  };
+  return map[name] || '';
+}
+
+function suggestedDecorationTransparency(color, area, slideSize) {
+  const slideArea = slideSize.w * slideSize.h;
+  if (!color) return 100;
+  if (area > slideArea * 0.55) return 88;
+  if (area > slideArea * 0.22) return 78;
+  return 66;
+}
+
+function isLowChroma(color) {
+  const rgb = hexToRgb(color);
+  if (!rgb) return true;
+  return Math.max(...rgb) - Math.min(...rgb) < 24;
+}
+
+function isNearWhite(color) {
+  const rgb = hexToRgb(color);
+  return rgb && rgb.every((v) => v >= 235);
+}
+
+function isNearBlack(color) {
+  const rgb = hexToRgb(color);
+  return rgb && rgb.every((v) => v <= 30);
+}
+
+function hexToRgb(color) {
+  const m = String(color || '').match(/^([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})([0-9A-Fa-f]{2})$/);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
+}
 function parseSlideSize(xml) {
   const m = xml.match(/<p:sldSz\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)"/);
   if (!m) return DEFAULT_SLIDE;

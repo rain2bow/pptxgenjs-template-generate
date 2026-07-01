@@ -258,7 +258,7 @@ async function buildDeck(spec, specDir, outPath) {
   pptx.defineLayout({ name: 'CUSTOM_WIDE', width: SLIDE.w, height: SLIDE.h });
   pptx.layout = 'CUSTOM_WIDE';
 
-  const theme = THEMES[spec.style][spec.theme];
+  const theme = { ...THEMES[spec.style][spec.theme], ...sanitizeThemeTokens(spec.themeTokens || spec.templateTheme || {}) };
   spec.slides.forEach((slideSpec, index) => {
     const slide = pptx.addSlide();
     enforceReadableSlideText(slide);
@@ -306,6 +306,7 @@ function renderMagazine(slide, ctx) {
   const fg = dark ? ctx.theme.paper : ctx.theme.ink;
   if (ctx.slideSpec.headY == null) ctx.slideSpec.headY = Number(ctx.spec.headY) || 1.05;
   addDecorativeBackground(slide, ctx, 'magazine', bg, dark);
+  renderTemplateDecorations(slide, ctx);
   addChrome(slide, ctx, fg, 'magazine');
 
   const renderers = {
@@ -355,6 +356,7 @@ function renderSwiss(slide, ctx) {
   const fg = accent ? ctx.theme.accentOn : dark ? ctx.theme.paper : ctx.theme.ink;
   if (ctx.slideSpec.headY == null) ctx.slideSpec.headY = Number(ctx.spec.headY) || 1.12;
   addDecorativeBackground(slide, ctx, 'swiss', bg, accent || dark);
+  renderTemplateDecorations(slide, ctx);
   addChrome(slide, ctx, fg, 'swiss');
 
   const renderers = {
@@ -407,6 +409,46 @@ function pageHeadSafeBottom(ctx, fallback, gap = 0.24) {
   const y = pageHeadY(ctx, fallback);
   const hasSubtitle = !!ctx?.slideSpec?.subtitle;
   return y + (hasSubtitle ? 1.78 : 1.35) + gap;
+}
+function sanitizeThemeTokens(tokens) {
+  if (!tokens || typeof tokens !== 'object') return {};
+  const allowed = ['paper', 'paperTint', 'ink', 'inkTint', 'grey1', 'grey2', 'grey3', 'accent', 'accentOn'];
+  return Object.fromEntries(allowed
+    .filter((key) => typeof tokens[key] === 'string' && /^[0-9A-Fa-f]{6}$/.test(tokens[key]))
+    .map((key) => [key, tokens[key].toUpperCase()]));
+}
+
+function optionalHex(color) {
+  const raw = String(color || '').replace('#', '').trim();
+  return /^[0-9A-Fa-f]{6}$/.test(raw) ? raw.toUpperCase() : '';
+}
+
+function renderTemplateDecorations(slide, ctx) {
+  const decorations = Array.isArray(ctx.slideSpec.templateDecorations)
+    ? ctx.slideSpec.templateDecorations
+    : Array.isArray(ctx.spec.templateDecorations) ? ctx.spec.templateDecorations : [];
+  decorations.slice(0, 16).forEach((decoration) => {
+    const box = safeBox({ ...(decoration.box || {}), allowUnsafe: true }, { x: 0, y: 0.78, w: SLIDE.w, h: SLIDE.h - 0.78, allowUnsafe: true });
+    const fillColor = optionalHex(decoration.fillColor || decoration.color || '');
+    const lineColor = optionalHex(decoration.lineColor || decoration.strokeColor || fillColor || '');
+    const transparency = clamp(Number(decoration.transparency ?? 80), 35, 100);
+    if ((decoration.kind || '').toLowerCase() === 'line' || box.h < 0.08 || box.w < 0.08) {
+      slide.addShape(pptx.ShapeType.line, {
+        x: box.x,
+        y: box.y,
+        w: Math.max(0.01, box.w),
+        h: Math.max(0.01, box.h),
+        line: { color: lineColor || fillColor || ctx.theme.accent || ctx.theme.ink, transparency: Math.min(92, transparency), width: Number(decoration.lineWidth || 1) },
+      });
+      return;
+    }
+    if (!fillColor && !lineColor) return;
+    slide.addShape(pptx.ShapeType.rect, {
+      ...box,
+      fill: fillColor ? { color: fillColor, transparency } : { color: 'FFFFFF', transparency: 100 },
+      line: { color: lineColor || fillColor || 'FFFFFF', transparency: decoration.lineColor ? Math.min(92, transparency + 8) : 100, width: Number(decoration.lineWidth || 0.5) },
+    });
+  });
 }
 function addDecorativeBackground(slide, ctx, mode, baseColor, emphasized = false) {
   const svg = decorativeBackgroundSvg(ctx, mode, baseColor, emphasized);
