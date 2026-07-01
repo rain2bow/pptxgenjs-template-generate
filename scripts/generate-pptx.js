@@ -2857,7 +2857,16 @@ function connectorBetweenRects(fromBox, toBox, gap = 0.05) {
 function addRadialConnector(slide, fromBox, toBox, line) {
   const connector = connectorBetweenRects(fromBox, toBox);
   if (!connector) return;
-  slide.addShape(pptx.ShapeType.line, { ...connector, line });
+  const endX = connector.x + connector.w;
+  const endY = connector.y + connector.h;
+  const shape = connector.w * connector.h < 0 ? pptx.ShapeType.lineInv : pptx.ShapeType.line;
+  slide.addShape(shape, {
+    x: Math.min(connector.x, endX),
+    y: Math.min(connector.y, endY),
+    w: Math.abs(connector.w),
+    h: Math.abs(connector.h),
+    line,
+  });
 }
 function fail(message) {
   console.error(message);
