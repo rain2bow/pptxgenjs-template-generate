@@ -10,7 +10,8 @@
                     "validate:layout":  "node scripts/validate-pptx-layout.js",
                     "import:template":  "node scripts/import-pptx-template.js",
                     "extract:inherited-template":  "node scripts/extract-inherited-template.js",
-                    "fill:inherited-template":  "node scripts/fill-inherited-template.js"
+                    "fill:inherited-template":  "node scripts/fill-inherited-template.js",
+                    "test:inherited-template":  "node scripts/test-inherited-template.js"
                 },
     "dependencies":  {
                          "lucide":  "^0.468.0",

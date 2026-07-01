@@ -120,6 +120,15 @@ node scripts/fill-inherited-template.js --pptx path/to/template.pptx --plan outp
 ```
 
 该模式适合企业模板、品牌汇报模板、强样式 PPT。它不会把页面重画成 guizang layout；如果新增页找不到合适的原页面，只能复制最接近的已有页，再替换文字。
+默认回填会自动修复明显的 z-order 问题：如果后绘制图片覆盖了较早的文本框，脚本会把该图片移到相关文本之前，保持文本可见。确需完全保留原 z-order 时加 `--no-repair-z-order`。
+
+针对真实模板建立回归测试时运行：
+
+```bash
+node scripts/test-inherited-template.js --pptx path/to/template.pptx --out-dir outputs/inherited-template-test
+```
+
+测试会输出 `template.slots.json`、`filled-inherited.pptx`、`test-report.json` 和 `test-report.md`，并对原模板与生成 PPTX 分别运行 native/layout 校验。
 
 没有 spec、只想验证环境时运行样例：
 
@@ -286,7 +295,8 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 - `scripts/generate-pptx.js`: pptxgenjs 生成器，内置主题、版式函数和样例 spec；`READABILITY.minFontSize` 控制普通文本最小可读字号。
 - `scripts/import-pptx-template.js`: 用户上传 PPTX 的结构化迁移器，抽取文本/图片/表格/图表特征，推断为本技能 JSON spec，并可选直接生成新 PPTX。
 - `scripts/extract-inherited-template.js`: 严格继承模式的文本槽位抽取器，只输出非空文本框信息。
-- `scripts/fill-inherited-template.js`: 严格继承模式的 OOXML 回填器，可复制/删除 slide，并只替换文本节点以保留原模板样式。
+- `scripts/fill-inherited-template.js`: 严格继承模式的 OOXML 回填器，可复制/删除 slide，只替换文本节点，并默认修复图片覆盖文本的 z-order 问题。
+- `scripts/test-inherited-template.js`: 严格继承模式的回归测试入口，生成槽位 JSON、回填 PPTX 和测试报告。
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。
 - `assets/template-swiss.js`: 瑞士国际主义完整示例模板，可直接运行生成 `assets/outputs/deck-swiss.pptx`。
 - `assets/template-cmb.js`: 招商银行红灰白完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "swiss"`、`theme: "cmb"`、`logoHeader: "logos/cmb-logo-lockup.png"`，logo 会自动从技能内置 `assets/logos/` 解析。
