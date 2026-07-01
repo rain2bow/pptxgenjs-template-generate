@@ -737,10 +737,9 @@ function cmbStatement(slide, ctx, s) {
   const headY = pageHeadY(ctx, 1.06);
   slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: headY - 0.02, w: 0.12, h: 0.7, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
   slide.addText(data.kicker || 'Executive Summary', { x: 1.05, y: headY, w: 5.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8, bold: true, charSpace: 1.1, color: ctx.theme.accent, margin: 0, fit: 'shrink' });
-  slide.addText(data.title || '', { x: 1.02, y: headY + 0.48, w: 10.45, h: 1.58, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || '', 37, 27), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
-  if (data.body || data.subtitle) slide.addText(data.body || data.subtitle, { x: 1.05, y: headY + 2.42, w: 6.55, h: 0.92, fontFace: FONTS.sansZh, fontSize: 14.2, color: s.fg, transparency: 14, margin: 0, fit: 'shrink' });
-  slide.addShape(pptx.ShapeType.rect, { x: 8.25, y: headY + 2.22, w: 3.65, h: 2.3, fill: { color: ctx.theme.accentSoft || ctx.theme.grey1, transparency: 18 }, line: { color: ctx.theme.accent, transparency: 62, width: 0.7 } });
-  slide.addText(data.callout || data.takeaway || '稳健经营\n价值增长\n风险可控', { x: 8.58, y: headY + 2.55, w: 3.0, h: 1.65, fontFace: FONTS.sansZh, fontSize: 21, bold: true, color: ctx.theme.accent, margin: 0, fit: 'shrink', breakLine: false });
+  slide.addText(data.title || '', { x: 1.02, y: headY + 0.48, w: 6.85, h: 1.58, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || '', 34, 26), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+  if (data.body || data.subtitle) slide.addText(data.body || data.subtitle, { x: 1.05, y: headY + 2.42, w: 6.45, h: 1.1, fontFace: FONTS.sansZh, fontSize: 14.2, color: s.fg, transparency: 14, margin: 0, fit: 'shrink', valign: 'top' });
+  addStatementImageSlot(slide, ctx, { x: 8.05, y: headY + 1.72, w: 3.85, h: 3.0 }, ctx.theme.accent, data.imageLabel || 'IMAGE SLOT');
   addFoot(slide, ctx, s.fg, 'swiss');
 }
 
@@ -1513,7 +1512,13 @@ function cellText(cell) {
 }
 function magazineStatementCompat(slide, ctx, s) {
   const data = ctx.slideSpec;
-  magazineBigQuote(slide, { ...ctx, slideSpec: { ...data, quote: data.quote || data.title, body: data.body || data.subtitle || data.cite || '' } }, s);
+  const headY = pageHeadY(ctx, 1.05);
+  slide.addText(data.kicker || 'Statement', { x: 0.78, y: headY, w: 5.8, h: 0.22, fontFace: FONTS.mono, fontSize: 8.2, charSpace: 1.7, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' });
+  slide.addText(data.title || data.quote || ctx.spec.title || '', { x: 0.78, y: headY + 0.55, w: 6.35, h: 2.28, fontFace: FONTS.serifZh, fontSize: fitTitle(data.title || data.quote || ctx.spec.title || '', 37, 27), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+  slide.addShape(pptx.ShapeType.line, { x: 0.82, y: headY + 3.18, w: 2.35, h: 0, line: { color: s.fg, transparency: 55, width: 0.8 } });
+  slide.addText(data.body || data.subtitle || data.cite || '', { x: 0.82, y: headY + 3.48, w: 5.65, h: 0.85, fontFace: FONTS.sansZh, fontSize: 13.8, color: s.fg, transparency: 20, margin: 0, fit: 'shrink', valign: 'top' });
+  addStatementImageSlot(slide, ctx, { x: 7.35, y: headY + 0.48, w: 4.55, h: 3.85 }, s.fg, data.imageLabel || 'IMAGE SLOT');
+  addFoot(slide, ctx, s.fg, 'magazine');
 }
 
 function magazineMatrixCompat(slide, ctx, s) {
@@ -1544,10 +1549,11 @@ function swissStatement(slide, ctx, s) {
   const data = ctx.slideSpec;
   const headY = pageHeadY(ctx, 1.12);
   slide.addText(data.kicker || 'Statement', { x: 0.72, y: headY, w: 5.5, h: 0.25, fontFace: 'JetBrains Mono', fontSize: 8, charSpace: 1.8, color: s.fg, transparency: 35, margin: 0 });
-  slide.addText(data.title, { x: 0.68, y: headY + 0.5, w: 10.8, h: 2.1, fontFace: FONTS.sans, fontSize: fitTitle(data.title, 49, 32), bold: false, color: s.fg, margin: 0, fit: 'shrink' });
+  slide.addText(data.title, { x: 0.68, y: headY + 0.5, w: 6.35, h: 2.1, fontFace: FONTS.sans, fontSize: fitTitle(data.title, 43, 30), bold: false, color: s.fg, margin: 0, fit: 'shrink' });
   if (data.body || data.subtitle) {
-    slide.addText(data.body || data.subtitle, { x: 0.72, y: headY + 3.4, w: 5.9, h: 0.85, fontFace: FONTS.sansZh, fontSize: 16, color: s.fg, transparency: 20, margin: 0, fit: 'shrink' });
+    slide.addText(data.body || data.subtitle, { x: 0.72, y: headY + 3.22, w: 5.9, h: 0.95, fontFace: FONTS.sansZh, fontSize: 15.5, color: s.fg, transparency: 20, margin: 0, fit: 'shrink', valign: 'top' });
   }
+  addStatementImageSlot(slide, ctx, { x: 7.38, y: headY + 0.74, w: 4.25, h: 3.65 }, s.fg, data.imageLabel || 'IMAGE SLOT');
   addFoot(slide, ctx, s.fg, 'swiss');
 }
 function swissKpiTower(slide, ctx, s) {
@@ -1645,12 +1651,24 @@ function swissFourCards(slide, ctx, s) {
   const cols = clampColumns(data.columnsCount || autoCardColumns(count), 1, 4);
   const rows = Math.ceil(count / cols);
   const gapX = 0.34;
-  const gapY = rows > 1 ? 0.32 : 0;
+  const gapY = rows > 1 ? 0.28 : 0;
   const gridW = 11.45;
   const cardW = (gridW - gapX * (cols - 1)) / cols;
-  const cardH = rows > 1 ? Math.min(1.72, (3.55 - gapY * (rows - 1)) / rows) : 3.1;
   const startX = 0.78;
-  const startY = rows > 1 ? 2.55 : 2.75;
+  const startY = rows > 1 ? 2.42 : 2.62;
+  const maxBottom = 6.35;
+  const compact = rows > 1;
+  const titleFont = compact ? 13.5 : 17;
+  const bodyFont = compact ? 8.6 : 10.2;
+  const minCardH = compact ? 1.35 : 2.55;
+  const demands = items.map((item) => {
+    const title = item.title || item.label || '';
+    const body = item.desc || item.note || item.body || '';
+    const titleH = estimateTextHeight(title, cardW - 0.4, titleFont, { min: compact ? 0.34 : 0.48, max: compact ? 0.62 : 0.86 });
+    const bodyH = estimateTextHeight(body, cardW - 0.4, bodyFont, { min: body ? 0.32 : 0, empty: 0, max: compact ? 0.82 : 1.35 });
+    return Math.max(minCardH, (compact ? 0.88 : 1.25) + titleH + bodyH + 0.28);
+  });
+  const rowHeights = distributeRowHeights(demands, rows, cols, minCardH, maxBottom - startY, gapY);
   items.forEach((item, i) => {
     const row = Math.floor(i / cols);
     const col = i % cols;
@@ -1659,21 +1677,23 @@ function swissFourCards(slide, ctx, s) {
     const rowW = rowCount * cardW + Math.max(0, rowCount - 1) * gapX;
     const rowX = startX + (gridW - rowW) / 2;
     const x = rowX + col * (cardW + gapX);
-    const y = startY + row * (cardH + gapY);
-    const compact = rows > 1;
+    const y = startY + rowHeights.slice(0, row).reduce((sum, h) => sum + h, 0) + row * gapY;
+    const cardH = rowHeights[row];
     const iconSize = compact ? 0.25 : 0.34;
-    const titleY = compact ? y + 0.54 : y + 0.67;
-    const descY = compact ? y + 0.98 : y + 1.8;
-    const descH = compact ? Math.max(0.32, cardH - 1.18) : 0.8;
+    const titleText = item.title || item.label || '';
+    const bodyText = item.desc || item.note || item.body || '';
+    const titleY = compact ? y + 0.52 : y + 0.64;
+    const titleH = estimateTextHeight(titleText, cardW - 0.4, titleFont, { min: compact ? 0.34 : 0.48, max: compact ? 0.58 : 0.82 });
+    const descY = titleY + titleH + (compact ? 0.12 : 0.22);
+    const descH = Math.max(0.2, cardH - (descY - y) - 0.22);
     slide.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: cardH, fill: { color: ctx.theme.grey1 }, line: { color: ctx.theme.grey1, transparency: 100 } });
     const hasIcon = addInlineIcon(slide, item, x + 0.2, y + 0.18, iconSize, s.fg, 'swiss', { fallback: item.icon ? null : 'layers', pad: compact ? 0.045 : 0.06 });
     if (!hasIcon) slide.addText(item.number || `0${i + 1}`, { x: x + 0.2, y: y + 0.22, w: 1.0, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 8, color: s.fg, transparency: 45, margin: 0 });
-    slide.addText(item.title || item.label || '', { x: x + 0.2, y: titleY, w: cardW - 0.4, h: compact ? 0.38 : 0.6, fontFace: FONTS.sansZh, fontSize: compact ? 13.5 : 17, color: s.fg, margin: 0, fit: 'shrink' });
-    slide.addText(item.desc || item.note || item.body || '', { x: x + 0.2, y: descY, w: cardW - 0.4, h: descH, fontFace: FONTS.sansZh, fontSize: compact ? 8.4 : 9.8, color: s.fg, transparency: 25, margin: 0, fit: 'shrink', valign: 'top' });
+    slide.addText(titleText, { x: x + 0.2, y: titleY, w: cardW - 0.4, h: titleH, fontFace: FONTS.sansZh, fontSize: titleFont, color: s.fg, margin: 0, fit: 'shrink', valign: 'top' });
+    slide.addText(bodyText, { x: x + 0.2, y: descY, w: cardW - 0.4, h: descH, fontFace: FONTS.sansZh, fontSize: bodyFont, color: s.fg, transparency: 25, margin: 0.02, fit: 'shrink', valign: 'top' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
-
 function swissImageHero(slide, ctx, s) {
   const data = ctx.slideSpec;
   addMediaOrChart(slide, ctx, data, { x: 0, y: 0, w: SLIDE.w, h: 4.15 }, s, 'swiss', '21:9');
@@ -1697,27 +1717,45 @@ function swissTextGrid(slide, ctx, s) {
   const sections = normalizeSections(data.sections || data.items || data.columns || []).slice(0, 9);
   const cols = clampColumns(data.columnsCount || autoColumns(sections.length, 3), 1, 3);
   const x0 = 0.78;
-  const y0 = data.subtitle ? 2.78 : 2.45;
-  const gap = 0.4;
-  const w = (11.45 - gap * (cols - 1)) / cols;
+  const y0 = data.subtitle ? 2.74 : 2.42;
+  const gapX = 0.4;
+  const gapY = 0.3;
+  const w = (11.45 - gapX * (cols - 1)) / cols;
   const rows = Math.ceil(sections.length / cols);
-  const h = rows <= 2 ? 1.22 : 1.12;
-  const rowStep = rows <= 2 ? 1.58 : 1.38;
+  const minH = rows <= 2 ? 1.2 : 1.05;
+  const maxBottom = 6.35;
+  const demands = sections.map((item) => {
+    const title = item.title || '';
+    const body = item.body || item.desc || '';
+    const hasIconWidth = 0.62;
+    const textW = w - hasIconWidth - 0.27;
+    const titleH = estimateTextHeight(title, textW, 11.5, { min: 0.28, max: 0.52 });
+    const bodyH = estimateTextHeight(body, textW, 8.5, { min: body ? 0.34 : 0, empty: 0, max: 0.78 });
+    return Math.max(minH, 0.28 + titleH + 0.14 + bodyH + 0.24);
+  });
+  const rowHeights = distributeRowHeights(demands, rows, cols, minH, maxBottom - y0, gapY);
   sections.forEach((item, i) => {
-    const x = x0 + (i % cols) * (w + gap);
-    const y = y0 + Math.floor(i / cols) * rowStep;
+    const row = Math.floor(i / cols);
+    const x = x0 + (i % cols) * (w + gapX);
+    const y = y0 + rowHeights.slice(0, row).reduce((sum, h) => sum + h, 0) + row * gapY;
+    const h = rowHeights[row];
     const hot = i === data.highlightIndex;
     slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: hot ? ctx.theme.accent : ctx.theme.grey1 }, line: { color: hot ? ctx.theme.accent : ctx.theme.grey1, transparency: 100 } });
     const iconColor = hot ? ctx.theme.accentOn : s.fg;
     const hasIcon = addInlineIcon(slide, item, x + 0.18, y + 0.14, 0.3, iconColor, 'swiss', { fallback: defaultContentIcon(i, 'swiss'), pad: 0.05 });
     if (!hasIcon) slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.16, w: 0.52, h: 0.2, fontFace: 'JetBrains Mono', fontSize: 7.2, color: hot ? ctx.theme.accentOn : s.fg, transparency: hot ? 0 : 35, margin: 0 });
     const tx = hasIcon ? x + 0.62 : x + 0.78;
-    slide.addText(item.title || '', { x: tx, y: y + 0.13, w: x + w - 0.27 - tx, h: 0.3, fontFace: FONTS.sansZh, fontSize: 11.5, bold: true, color: hot ? ctx.theme.accentOn : s.fg, margin: 0, fit: 'shrink' });
-    slide.addText(item.body || item.desc || '', { x: tx, y: y + 0.52, w: x + w - 0.27 - tx, h: 0.42, fontFace: FONTS.sansZh, fontSize: 8.3, color: hot ? ctx.theme.accentOn : s.fg, transparency: hot ? 10 : 30, margin: 0, fit: 'shrink' });
+    const textW = x + w - 0.27 - tx;
+    const titleText = item.title || '';
+    const bodyText = item.body || item.desc || '';
+    const titleH = estimateTextHeight(titleText, textW, 11.5, { min: 0.28, max: 0.5 });
+    const bodyY = y + 0.18 + titleH + 0.14;
+    const bodyH = Math.max(0.2, h - (bodyY - y) - 0.22);
+    slide.addText(titleText, { x: tx, y: y + 0.15, w: textW, h: titleH, fontFace: FONTS.sansZh, fontSize: 11.5, bold: true, color: hot ? ctx.theme.accentOn : s.fg, margin: 0, fit: 'shrink', valign: 'top' });
+    slide.addText(bodyText, { x: tx, y: bodyY, w: textW, h: bodyH, fontFace: FONTS.sansZh, fontSize: 8.5, color: hot ? ctx.theme.accentOn : s.fg, transparency: hot ? 10 : 30, margin: 0.02, fit: 'shrink', valign: 'top' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
-
 function swissDataSheet(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'swiss', 0.82);
@@ -2265,7 +2303,15 @@ function addImageOrPlaceholder(slide, ctx, image, x, y, w, h, color, label) {
   }
   addImagePlaceholder(slide, x, y, w, h, color, label || 'IMAGE SLOT');
 }
-
+function addStatementImageSlot(slide, ctx, box, color, label = 'IMAGE SLOT') {
+  const images = normalizeMediaImages(ctx.slideSpec || {});
+  if (images[0]) {
+    addImageOrPlaceholder(slide, ctx, images[0], box.x, box.y, box.w, box.h, color, label);
+    return 'image';
+  }
+  addImagePlaceholder(slide, box.x, box.y, box.w, box.h, color, label);
+  return 'placeholder';
+}
 function normalizeMediaImages(data) {
   const raw = [];
   if (data.image) raw.push(data.image);
@@ -2512,15 +2558,17 @@ function validateSpecSlots(spec, options = {}) {
 
 function validateMediaSlots(slide, index, errors, warnings, specDir) {
   const layout = slide.layout || '';
-  const mediaLayouts = ['media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy'];
+  const mediaLayouts = ['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy'];
   if (!mediaLayouts.includes(layout)) return;
   const images = normalizeMediaImages(slide);
   const charts = normalizeMediaCharts(slide);
   const slotCount = isMediaGridLayout(layout) ? resolveMediaSlotCount(slide) : 1;
   const explicitCount = explicitMediaCount(slide);
-  if (images.length > 6) errors.push(`slide ${index + 1} has ${images.length} images, but media layouts support at most 6 image slots; split into another slide.`);
-  if (charts.length > 6) errors.push(`slide ${index + 1} has ${charts.length} charts, but media layouts support at most 6 media slots; split into another slide.`);
-  if (Math.max(images.length, charts.length) > slotCount) {
+  if (layout === 'statement' && images.length > 1) errors.push(`slide ${index + 1} uses statement layout with ${images.length} images, but statement supports exactly one image slot; use mediaGrid/imageGrid or split into another slide.`);
+  if (layout !== 'statement' && images.length > 6) errors.push(`slide ${index + 1} has ${images.length} images, but media layouts support at most 6 image slots; split into another slide.`);
+  if (layout === 'statement' && charts.length) errors.push(`slide ${index + 1} uses statement layout with chart data, but statement reserves the media area for one image or image placeholder; use chart/media layout instead.`);
+  if (layout !== 'statement' && charts.length > 6) errors.push(`slide ${index + 1} has ${charts.length} charts, but media layouts support at most 6 media slots; split into another slide.`);
+  if (layout !== 'statement' && Math.max(images.length, charts.length) > slotCount) {
     errors.push(`slide ${index + 1} has ${Math.max(images.length, charts.length)} media assets but only ${slotCount} slot(s).`);
   }
   if (explicitCount && images.length && explicitCount !== images.length && charts.length <= images.length && !slide.allowEmptyMediaSlots) {
@@ -2816,6 +2864,37 @@ function fitTitle(text, max, min) {
   if (len <= 12) return Math.max(min, max - 8);
   if (len <= 20) return Math.max(min, max - 14);
   return min;
+}
+
+function textVisualLength(text) {
+  return String(text || '').split('').reduce((sum, ch) => {
+    if (/\s/.test(ch)) return sum + 0.25;
+    return /[\u2E80-\u9FFF\uF900-\uFAFF]/.test(ch) ? sum + 1 : sum + 0.56;
+  }, 0);
+}
+
+function estimateTextHeight(text, boxW, fontSize, options = {}) {
+  const raw = String(text || '').trim();
+  if (!raw) return options.empty ?? 0;
+  const charsPerLine = Math.max(4, (boxW * 72) / Math.max(1, fontSize * 0.58));
+  const lines = raw.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(textVisualLength(line) / charsPerLine)), 0);
+  const height = (lines * fontSize * (options.lineHeight || 1.18)) / 72 + (options.padding || 0.04);
+  return clamp(height, options.min ?? 0.2, options.max ?? 10);
+}
+
+function distributeRowHeights(demands, rows, cols, minH, maxTotal, gapY) {
+  const rowHeights = Array.from({ length: rows }, (_, row) => {
+    const rowItems = demands.slice(row * cols, row * cols + cols);
+    return Math.max(minH, ...rowItems);
+  });
+  const available = Math.max(minH * rows, maxTotal - gapY * Math.max(0, rows - 1));
+  const total = rowHeights.reduce((sum, h) => sum + h, 0);
+  if (total <= available) return rowHeights;
+  const baseTotal = minH * rows;
+  if (available <= baseTotal) return rowHeights.map(() => available / rows);
+  const extraTotal = rowHeights.reduce((sum, h) => sum + Math.max(0, h - minH), 0) || 1;
+  const extraAvail = available - baseTotal;
+  return rowHeights.map((h) => minH + Math.max(0, h - minH) / extraTotal * extraAvail);
 }
 
 function clamp(value, min, max) {
