@@ -102,6 +102,24 @@ node scripts/import-pptx-template.js --pptx path/to/template.pptx --out-spec out
 - `--asset-dir path/to/assets`: 指定从 PPTX 中抽取图片的输出目录；默认写到 `out-spec` 同级的 `<文件名>.assets/`。
 
 导入脚本会读取 `ppt/slides/*.xml`、关系文件和 `ppt/media/*`，抽取每页文本框、图片、表格/图表信号和大致位置，然后推断为现有 layout，例如 `cover`、`mediaGrid`、`imageHero`、`dataSheet`、`chart`、`textGrid`、`fourCards`。这是结构化迁移，不是像素级复刻；生成前必须打开 `out-spec` 检查每页 `layout`、`title`、`items`、`images` 是否符合预期，必要时手工调整后再运行 `generate-pptx.js`。
+严格继承原模板时，不要使用上面的结构化迁移入口。改用原 PPTX 包内替换流程，只保留非空文本槽位到 JSON，并在回填时只修改 `<a:t>` 文本节点，最大限度保留母版、背景、装饰形状、图片、线条、字体样式、段落样式和原 z-order：
+
+```bash
+node scripts/extract-inherited-template.js --pptx path/to/template.pptx --out outputs/template.slots.json
+```
+
+编辑 `outputs/template.slots.json`：
+- 修改 `slides[].textSlots[].text`，或新增 `newText` 字段。
+- 需要增删页时，调整 `slides` 数组；新增页要保留 `sourceSlideNo` 或 `sourceSlidePath`，表示从哪一页复制原版式。
+- 不要为没有文字的装饰元素补槽位；该模式只处理非空文本框。
+
+然后回填：
+
+```bash
+node scripts/fill-inherited-template.js --pptx path/to/template.pptx --plan outputs/template.slots.json --out outputs/filled-inherited.pptx
+```
+
+该模式适合企业模板、品牌汇报模板、强样式 PPT。它不会把页面重画成 guizang layout；如果新增页找不到合适的原页面，只能复制最接近的已有页，再替换文字。
 
 没有 spec、只想验证环境时运行样例：
 
@@ -265,7 +283,10 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 
 ## 资源导览
 
-- `scripts/generate-pptx.js`: pptxgenjs 生成器，内置主题、版式函数和样例 spec；`READABILITY.minFontSize` 控制普通文本最小可读字号。`n- `scripts/import-pptx-template.js`: 用户上传 PPTX 的模板导入器，抽取文本/图片/表格/图表特征，推断为本技能 JSON spec，并可选直接生成新 PPTX。
+- `scripts/generate-pptx.js`: pptxgenjs 生成器，内置主题、版式函数和样例 spec；`READABILITY.minFontSize` 控制普通文本最小可读字号。
+- `scripts/import-pptx-template.js`: 用户上传 PPTX 的结构化迁移器，抽取文本/图片/表格/图表特征，推断为本技能 JSON spec，并可选直接生成新 PPTX。
+- `scripts/extract-inherited-template.js`: 严格继承模式的文本槽位抽取器，只输出非空文本框信息。
+- `scripts/fill-inherited-template.js`: 严格继承模式的 OOXML 回填器，可复制/删除 slide，并只替换文本节点以保留原模板样式。
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。
 - `assets/template-swiss.js`: 瑞士国际主义完整示例模板，可直接运行生成 `assets/outputs/deck-swiss.pptx`。
 - `assets/template-cmb.js`: 招商银行红灰白完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "swiss"`、`theme: "cmb"`、`logoHeader: "logos/cmb-logo-lockup.png"`，logo 会自动从技能内置 `assets/logos/` 解析。
