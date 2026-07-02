@@ -920,14 +920,15 @@ function magazineArticle(slide, ctx, s) {
   const colW = (gridW - gapX * (cols - 1)) / cols;
   const titleFont = Math.max(15, READABILITY.minFontSize);
   const bodyFont = READABILITY.minFontSize;
+  const articleBodyMax = Math.max(rows > 1 ? 1.62 : 2.8, maxBottom - y0 - 1.0);
   const demands = sections.map((section) => {
     const hasIconWidth = 0.36;
     const textW = colW - hasIconWidth;
     const title = section.title || section.label || '';
     const body = section.body || section.desc || (section.items || []).map((item) => typeof item === 'string' ? item : item.text || item.title || '').join('\n');
-    const titleH = estimateTextHeight(title, textW, titleFont, { min: 0.38, max: 0.72, lineHeight: 1.24, padding: 0.02 });
-    const bodyH = estimateTextHeight(body, textW, bodyFont, { min: body ? 0.6 : 0, empty: 0, max: rows > 1 ? 1.28 : 2.7, lineHeight: 1.38, padding: 0.1 });
-    return Math.max(rows > 1 ? 1.62 : 2.35, 0.18 + titleH + 0.18 + bodyH + 0.22);
+    const titleH = estimateTextHeight(title, textW, titleFont, { min: 0.38, max: 0.72, lineHeight: 1.28, padding: 0.03 });
+    const bodyH = estimateTextHeight(body, textW, bodyFont, { min: body ? 0.68 : 0, empty: 0, max: articleBodyMax, lineHeight: rows > 1 ? 1.46 : 1.52, padding: 0.16 });
+    return Math.max(rows > 1 ? 1.62 : 2.35, 0.2 + titleH + 0.2 + bodyH + 0.26);
   });
   const rowHeights = distributeRowHeights(demands, rows, cols, rows > 1 ? 1.54 : 2.35, maxBottom - y0, gapY);
   sections.forEach((section, i) => {
@@ -941,9 +942,9 @@ function magazineArticle(slide, ctx, s) {
     const textW = colW - (hasIcon ? 0.36 : 0);
     const titleText = section.title || section.label || '';
     const body = section.body || section.desc || (section.items || []).map((item) => typeof item === 'string' ? item : item.text || item.title || '').join('\n');
-    const titleH = estimateTextHeight(titleText, textW, titleFont, { min: 0.38, max: 0.72, lineHeight: 1.24, padding: 0.02 });
-    const bodyY = y + 0.16 + titleH + 0.18;
-    const bodyH = Math.max(0.55, h - (bodyY - y) - 0.22);
+    const titleH = estimateTextHeight(titleText, textW, titleFont, { min: 0.38, max: 0.72, lineHeight: 1.28, padding: 0.03 });
+    const bodyY = y + 0.18 + titleH + 0.2;
+    const bodyH = Math.max(0.62, h - (bodyY - y) - 0.26);
     slide.addText(titleText, { x: titleX, y: y + 0.16, w: textW, h: titleH, fontFace: FONTS.serifZh, fontSize: titleFont, bold: true, color: s.fg, margin: 0, fit: 'shrink', valign: 'top' });
     slide.addText(body, { x: titleX, y: bodyY, w: textW, h: bodyH, fontFace: FONTS.sansZh, fontSize: bodyFont, color: s.fg, transparency: 18, margin: 0.03, fit: 'shrink', valign: 'top', breakLine: false });
   });
@@ -1387,16 +1388,17 @@ function swissTextGrid(slide, ctx, s) {
   const gapY = 0.3;
   const w = (11.45 - gapX * (cols - 1)) / cols;
   const rows = Math.ceil(sections.length / cols);
-  const minH = rows <= 2 ? 1.36 : 1.1;
+  const minH = rows === 1 ? 2.0 : rows === 2 ? 1.44 : 1.14;
   const maxBottom = 6.35;
+  const gridBodyMax = Math.max(rows === 1 ? 2.4 : rows === 2 ? 1.22 : 0.96, (maxBottom - y0 - gapY * Math.max(0, rows - 1)) / rows - 0.86);
   const demands = sections.map((item) => {
     const title = item.title || '';
     const body = item.body || item.desc || '';
     const hasIconWidth = 0.62;
     const textW = w - hasIconWidth - 0.27;
-    const titleH = estimateTextHeight(title, textW, READABILITY.minFontSize, { min: 0.34, max: 0.62 });
-    const bodyH = estimateTextHeight(body, textW, READABILITY.minFontSize, { min: body ? 0.44 : 0, empty: 0, max: 0.9 });
-    return Math.max(minH, 0.28 + titleH + 0.14 + bodyH + 0.24);
+    const titleH = estimateTextHeight(title, textW, READABILITY.minFontSize, { min: 0.36, max: 0.68, lineHeight: 1.28, padding: 0.03 });
+    const bodyH = estimateTextHeight(body, textW, READABILITY.minFontSize, { min: body ? 0.52 : 0, empty: 0, max: gridBodyMax, lineHeight: 1.48, padding: 0.14 });
+    return Math.max(minH, 0.3 + titleH + 0.16 + bodyH + 0.28);
   });
   const rowHeights = distributeRowHeights(demands, rows, cols, minH, maxBottom - y0, gapY);
   sections.forEach((item, i) => {
@@ -1413,9 +1415,9 @@ function swissTextGrid(slide, ctx, s) {
     const textW = x + w - 0.27 - tx;
     const titleText = item.title || '';
     const bodyText = item.body || item.desc || '';
-    const titleH = estimateTextHeight(titleText, textW, READABILITY.minFontSize, { min: 0.34, max: 0.6 });
-    const bodyY = y + 0.18 + titleH + 0.14;
-    const bodyH = Math.max(0.34, h - (bodyY - y) - 0.22);
+    const titleH = estimateTextHeight(titleText, textW, READABILITY.minFontSize, { min: 0.36, max: 0.68, lineHeight: 1.28, padding: 0.03 });
+    const bodyY = y + 0.2 + titleH + 0.16;
+    const bodyH = Math.max(0.48, h - (bodyY - y) - 0.28);
     slide.addText(titleText, { x: tx, y: y + 0.15, w: textW, h: titleH, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, bold: true, color: hot ? ctx.theme.accentOn : s.fg, margin: 0, fit: 'shrink', valign: 'top' });
     slide.addText(bodyText, { x: tx, y: bodyY, w: textW, h: bodyH, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color: hot ? ctx.theme.accentOn : s.fg, transparency: hot ? 10 : 30, margin: 0.02, fit: 'shrink', valign: 'top' });
   });
