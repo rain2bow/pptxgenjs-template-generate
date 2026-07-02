@@ -10,32 +10,41 @@
 
 ```text
 guizang-pptxgenjs-ppt-skill/
-├── SKILL.md
-├── README.md
-├── package.json
-├── scripts/
-│   ├── generate-pptx.js
-│   ├── validate-pptx-native.js
-│   └── validate-pptx-layout.js
-├── assets/
-│   ├── template-magazine.js
-│   ├── template-swiss.js
-│   ├── template-cmb.js
-│   ├── template-cmb-all-layouts.js
-│   └── logos/
-│       ├── cmb-logo-lockup.png
-│       └── cmb-logo-mark.svg
-├── references/
-│   ├── checklist.md
-│   ├── layouts.md
-│   ├── layouts-swiss.md
-│   ├── screenshot-framing.md
-│   ├── swiss-layout-lock.md
-│   ├── swiss-map-component.md
-│   ├── themes.md
-│   └── themes-swiss.md
-├── outputs/              # 本地生成物目录，不建议提交
-└── assets/outputs/       # 样例 PPTX 生成物目录，不建议提交
+|-- SKILL.md
+|-- README.md
+|-- package.json
+|-- scripts/
+|   |-- generate-pptx.js              # CLI and compatibility export entry
+|   |-- validate-pptx-native.js
+|   |-- validate-pptx-layout.js
+|   `-- pptxgen/
+|       |-- ARCHITECTURE.md           # module and engine guide
+|       |-- index.js                  # public module exports
+|       |-- cli.js                    # CLI orchestration
+|       |-- engine.js                 # PPTX rendering runtime and layout renderers
+|       |-- config.js                 # style/theme/font/icon/page constants
+|       |-- spec-io.js                # JSON loading, loose repair, normalized output
+|       |-- samples.js                # built-in --sample specs
+|       `-- errors.js                 # shared fail helper
+|-- assets/
+|   |-- template-magazine.js
+|   |-- template-swiss.js
+|   |-- template-cmb.js
+|   |-- template-cmb-all-layouts.js
+|   `-- logos/
+|       |-- cmb-logo-lockup.png
+|       `-- cmb-logo-mark.svg
+|-- references/
+|   |-- checklist.md
+|   |-- layouts.md
+|   |-- layouts-swiss.md
+|   |-- screenshot-framing.md
+|   |-- swiss-layout-lock.md
+|   |-- swiss-map-component.md
+|   |-- themes.md
+|   `-- themes-swiss.md
+|-- outputs/              # local generated files; do not commit
+`-- assets/outputs/       # sample PPTX outputs; do not commit
 ```
 
 核心文件作用：
@@ -43,7 +52,15 @@ guizang-pptxgenjs-ppt-skill/
 - `SKILL.md`：Codex 使用本技能时读取的主说明文件，包含触发场景、生成流程、JSON spec 约束、layout 规则和校验步骤。
 - `README.md`：面向仓库维护和使用者的概览文档，说明安装、运行、文件结构和当前能力边界。
 - `package.json`：Node 依赖和快捷命令入口，包含 `sample:*`、`validate:*` 等脚本命令。
-- `scripts/generate-pptx.js`：主生成器。读取 JSON spec，解析风格和 layout，插入文本、图片、图标、表格、图表，并输出原生可编辑 PPTX。
+- `scripts/generate-pptx.js`: thin CLI and compatibility entry. Existing templates can still `require('../scripts/generate-pptx.js')` and call `buildDeck`.
+- `scripts/pptxgen/index.js`: public module export surface for `buildDeck`, `sampleSpec`, JSON parsing, and normalized spec helpers.
+- `scripts/pptxgen/cli.js`: CLI orchestration after arguments are parsed: load spec, normalize spec, write normalized spec, and build the deck.
+- `scripts/pptxgen/engine.js`: PPTX rendering runtime. Layout renderers, media/chart/table insertion, slot checks, and readability logic live here.
+- `scripts/pptxgen/config.js`: style/theme registry, default themes, fonts, slide constants, icon aliases, and readability constants. Add new style/theme configuration here first.
+- `scripts/pptxgen/spec-io.js`: JSON spec loading, loose JSON repair, quote/comment/trailing-comma handling, and normalized spec output.
+- `scripts/pptxgen/samples.js`: built-in sample specs used by `--sample`. Add a sample here when adding a new style.
+- `scripts/pptxgen/errors.js`: shared fail helper.
+- `scripts/pptxgen/ARCHITECTURE.md`: module responsibility, engine section map, and style/layout extension guide.
 - `scripts/validate-pptx-native.js`：校验 PPTX 是否包含原生 PowerPoint 结构，避免输出整页截图型文件。
 - `scripts/validate-pptx-layout.js`：扫描生成后的 PPTX 结构，检查明显的布局冲突、文本覆盖和底部安全区风险。
 - `assets/template-magazine.js`：`magazine` 风格样例 spec，适合作为电子杂志/叙事型页面的输入参考。
@@ -194,7 +211,7 @@ JSON 引号与编码规则：
 - 图文页：`media`、`mediaGrid`、`gallery`、`imageGrid`、`imageHero`、`quoteImage`、`textImage`
 - 结构页：`compare`、`duoCompare`、`timeline`、`pipeline`、`roadmap`、`textGrid`、`article`、`fourCards`、`matrix`、`agenda`、`caseStudy`、`pyramid`、`radial`、`swimlane`
 
-布局支持的条目数量由 `scripts/generate-pptx.js` 中的槽位校验规则和对应渲染函数共同决定。生成前会检查文本、图片、图表和表格槽位是否匹配，避免多槽位、少槽位或字段名不匹配导致内容丢失。
+Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/engine.js`; style/theme design configuration is centralized in `scripts/pptxgen/config.js`. The generator checks text, image, chart, and table slots before output to avoid missing or mismatched content.
 
 ## 图片、图表和占位符
 
@@ -229,6 +246,11 @@ node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx -
 
 ```bash
 node --check scripts/generate-pptx.js
+node --check scripts/pptxgen/cli.js
+node --check scripts/pptxgen/config.js
+node --check scripts/pptxgen/engine.js
+node --check scripts/pptxgen/spec-io.js
+node --check scripts/pptxgen/samples.js
 npm run sample:magazine
 npm run sample:swiss
 npm run sample:cmb

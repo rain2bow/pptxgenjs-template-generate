@@ -53,7 +53,7 @@ node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-c
 
 ## 脚本操作指南
 
-默认不要读取 `scripts/generate-pptx.js`、`scripts/validate-pptx-native.js`、`scripts/validate-pptx-layout.js` 的源码。这些脚本是稳定执行入口；除非用户明确要求修改脚本、脚本报错且仅靠报错信息无法判断、或需要新增版式/修复生成器 bug，否则只按本节命令运行。
+Default: do not read `scripts/generate-pptx.js`, `scripts/pptxgen/*.js`, `scripts/validate-pptx-native.js`, or `scripts/validate-pptx-layout.js` source for ordinary deck generation. Read them only when modifying scripts, diagnosing a generator bug, or adding/changing style/layout behavior.
 
 ### 安装依赖
 
@@ -121,7 +121,7 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 
 ### 需要读取哪些文件
 
-优先读取本 `SKILL.md`、用户提供的素材、生成用 JSON spec，以及必要的 `assets/template-magazine.js`、`assets/template-swiss.js`、`assets/template-cmb.js` 或 `assets/template-cmb-all-layouts.js` 示例。招商银行/银行品牌风格任务优先使用 `assets/template-cmb.js`。不要为了普通生成任务读取 `scripts/*.js`。
+Read `SKILL.md`, user materials, the deck JSON spec, and only the needed `assets/template-*.js` example. For ordinary generation do not read `scripts/*.js` or `scripts/pptxgen/*.js`; use the documented commands instead.
 
 仅在这些情况下读取脚本源码：
 - 要新增或修改版式、图表、图标、布局算法。
@@ -248,7 +248,13 @@ JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 
 
 ## 资源导览
 
-- `scripts/generate-pptx.js`: pptxgenjs 生成器，内置主题、版式函数和样例 spec；`READABILITY.minFontSize` 控制普通文本最小可读字号。
+- `scripts/generate-pptx.js`: thin CLI and compatibility export entry; keeps existing template `require` calls working.
+- `scripts/pptxgen/cli.js`: command-line orchestration.
+- `scripts/pptxgen/config.js`: style/theme registry, default themes, fonts, slide constants, icon aliases, and `READABILITY.minFontSize`; add new style/theme configuration here first.
+- `scripts/pptxgen/engine.js`: PPTX rendering runtime, layout renderers, media/chart/table insertion, slot validation, and readability logic; add or change layouts here.
+- `scripts/pptxgen/spec-io.js`: JSON spec loading, loose parsing, quote/comment/trailing-comma repair, and normalized spec output.
+- `scripts/pptxgen/samples.js`: built-in `--sample` specs; add a sample when adding a new style.
+- `scripts/pptxgen/ARCHITECTURE.md`: read this first when modifying generator internals; it maps modules, engine sections, and style/layout extension points.
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。
 - `assets/template-swiss.js`: 瑞士国际主义完整示例模板，可直接运行生成 `assets/outputs/deck-swiss.pptx`。
 - `assets/template-cmb.js`: 招商银行独立品牌风格完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "cmb"`、`theme: "classic"`、`logoHeader: "logos/cmb-logo-lockup.png"`、`logoMark: "logos/cmb-logo-mark.svg"`，logo 会自动从技能内置 `assets/logos/` 解析。`assets/template-cmb-all-layouts.js` 可直接生成 `assets/outputs/deck-cmb-all-layouts.pptx`，包含 CMB 当前全部 31 个支持 layout 的排版检查页。
