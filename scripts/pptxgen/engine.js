@@ -27,8 +27,15 @@ const CHART_TYPES = {
   scatter: pptx.ChartType.scatter,
 };
 const LUCIDE_ICON_CACHE = new Map();
+const ICON_PNG_CACHE = new Map();
+const SVG_IMAGE_PNG_CACHE = new Map();
 const IMAGE_ASPECT_CACHE = new Map();
 let LUCIDE_MODULE = undefined;
+let SHARP_MODULE = undefined;
+let ICON_RENDER_MODE = 'png';
+let SVG_IMAGE_RENDER_MODE = 'png';
+let ICON_PNG_WARNING_SHOWN = false;
+let SVG_IMAGE_PNG_WARNING_SHOWN = false;
 
 function normalizeSpec(spec, options = {}) {
   spec.style = spec.style || 'magazine';
@@ -65,6 +72,8 @@ async function buildDeck(spec, specDir, outPath) {
   pptx.layout = 'CUSTOM_WIDE';
 
   const theme = THEMES[spec.style][spec.theme];
+  await prepareIconAssets(spec, theme);
+  await prepareSvgImageAssets(spec, specDir);
   spec.slides.forEach((slideSpec, index) => {
     const slide = pptx.addSlide();
     enforceReadableSlideText(slide);
@@ -367,12 +376,95 @@ function resolveCmbLogoMark(ctx) {
 function addImageAsset(slide, imagePath, box, options = {}) {
   const placedBox = fitImageBoxToAspect(imagePath, box);
   if (path.extname(imagePath).toLowerCase() === '.svg') {
-    const svg = readSvgWithOpacity(imagePath, options.opacity);
-    slide.addImage({ data: svgDataUri(svg), ...placedBox });
+    const pngData = svgImagePngData(imagePath, options.opacity);
+    if (pngData) {
+      slide.addImage({ data: pngData, ...placedBox });
+    } else {
+      const svg = readSvgWithOpacity(imagePath, options.opacity);
+      slide.addImage({ data: svgDataUri(svg), ...placedBox });
+    }
   } else {
     slide.addImage({ path: imagePath, ...placedBox });
   }
   return placedBox;
+}
+
+function svgImageCacheKey(imagePath, opacity) {
+  const opacityKey = opacity == null ? 'default' : String(Math.max(0, Math.min(1, Number(opacity))));
+  return path.resolve(imagePath) + ':' + opacityKey;
+}
+
+function svgImagePngData(imagePath, opacity) {
+  if (SVG_IMAGE_RENDER_MODE === 'svg') return null;
+  const data = SVG_IMAGE_PNG_CACHE.get(svgImageCacheKey(imagePath, opacity));
+  if (data) return data;
+  if (!loadSharpModule()) warnSvgImagePngFallback();
+  return null;
+}
+
+function warnSvgImagePngFallback() {
+  if (SVG_IMAGE_PNG_WARNING_SHOWN) return;
+  SVG_IMAGE_PNG_WARNING_SHOWN = true;
+  console.warn('Warning: sharp is not installed or failed to load. SVG images/logos fall back to SVG; LibreOffice export or upload platforms may drop them. Run npm install, or set svgImageMode:"svg" intentionally.');
+}
+
+async function prepareSvgImageAssets(spec, specDir) {
+  SVG_IMAGE_RENDER_MODE = String(spec.svgImageMode || spec.svgImageRenderMode || spec.imageMode || 'png').toLowerCase();
+  if (SVG_IMAGE_RENDER_MODE === 'svg') return;
+  const sharp = loadSharpModule();
+  if (!sharp) {
+    warnSvgImagePngFallback();
+    return;
+  }
+  const images = collectSvgImageInputs(spec, specDir);
+  if (spec.style === 'cmb') {
+    const cmbMark = resolveImage(specDir, spec.logoMark || spec.logoSymbol || spec.brandLogoSymbol || 'logos/cmb-logo-mark.svg');
+    if (cmbMark) images.add(cmbMark);
+  }
+  const jobs = [];
+  for (const imagePath of images) {
+    jobs.push(renderSvgImagePngToCache(imagePath, null));
+    jobs.push(renderSvgImagePngToCache(imagePath, 0.2));
+  }
+  await Promise.all(jobs);
+}
+
+function collectSvgImageInputs(value, specDir, images = new Set()) {
+  if (!value) return images;
+  if (typeof value === 'string') {
+    if (/\.svg(?:[?#].*)?$/i.test(value)) {
+      const resolved = resolveImage(specDir, value);
+      if (resolved) images.add(resolved);
+    }
+    return images;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectSvgImageInputs(item, specDir, images));
+    return images;
+  }
+  if (typeof value === 'object') {
+    const raw = value.path || value.src || value.image || value.logo || value.logoMark || value.logoSymbol || value.brandLogoSymbol;
+    if (typeof raw === 'string') collectSvgImageInputs(raw, specDir, images);
+    Object.values(value).forEach((item) => collectSvgImageInputs(item, specDir, images));
+  }
+  return images;
+}
+
+async function renderSvgImagePngToCache(imagePath, opacity) {
+  const key = svgImageCacheKey(imagePath, opacity);
+  if (SVG_IMAGE_PNG_CACHE.has(key)) return;
+  const sharp = loadSharpModule();
+  if (!sharp) return;
+  try {
+    const svg = readSvgWithOpacity(imagePath, opacity);
+    const buffer = await sharp(Buffer.from(svg), { density: 288 }).png().toBuffer();
+    SVG_IMAGE_PNG_CACHE.set(key, 'data:image/png;base64,' + buffer.toString('base64'));
+  } catch (error) {
+    if (!SVG_IMAGE_PNG_WARNING_SHOWN) {
+      SVG_IMAGE_PNG_WARNING_SHOWN = true;
+      console.warn('Warning: sharp failed to rasterize SVG image "' + imagePath + '". Falling back to SVG. ' + error.message);
+    }
+  }
 }
 
 function fitImageBoxToAspect(imagePath, box) {
@@ -1918,6 +2010,100 @@ function svgIconData(icon, color) {
   return lucideIconSvg(icon, color) || fallbackSvgIconData(icon, color);
 }
 
+function iconCacheKey(icon, color) {
+  return `${toKebabIconName(icon) || iconAlias(icon)}:${normalizeHex(color || '111111')}`;
+}
+
+function loadSharpModule() {
+  if (SHARP_MODULE !== undefined) return SHARP_MODULE;
+  try {
+    SHARP_MODULE = require('sharp');
+  } catch (_) {
+    SHARP_MODULE = null;
+  }
+  return SHARP_MODULE;
+}
+
+function warnIconPngFallback() {
+  if (ICON_PNG_WARNING_SHOWN) return;
+  ICON_PNG_WARNING_SHOWN = true;
+  console.warn('Warning: sharp is not installed or failed to load. Lucide icons fall back to SVG; LibreOffice export may drop SVG icons. Run npm install after adding sharp, or set iconMode:"svg" intentionally.');
+}
+
+function iconSvgBuffer(icon, color) {
+  const data = svgIconData(icon, color);
+  const payload = String(data || '').split(',')[1];
+  return payload ? Buffer.from(payload, 'base64') : null;
+}
+
+function collectIconInputs(value, icons = new Set(), colors = new Set()) {
+  if (!value || typeof value !== 'object') return { icons, colors };
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectIconInputs(item, icons, colors));
+    return { icons, colors };
+  }
+  if (value.icon || value.bulletIcon) icons.add(iconAlias(value.icon || value.bulletIcon));
+  if (value.iconColor) colors.add(normalizeHex(value.iconColor));
+  if (value.color) colors.add(normalizeHex(value.color));
+  Object.values(value).forEach((item) => collectIconInputs(item, icons, colors));
+  return { icons, colors };
+}
+
+function themeIconColors(theme) {
+  return Object.values(theme || {})
+    .filter((value) => typeof value === 'string' && /^[0-9a-fA-F]{6}$/.test(value))
+    .map(normalizeHex);
+}
+
+function defaultContentIconNames() {
+  return ['file-text', 'scan-search', 'shield-alert', 'arrow-right-circle', 'lightbulb', 'target', 'chart-line', 'circle-alert', 'workflow', 'users', 'database', 'settings', 'layers', 'info'];
+}
+
+async function prepareIconAssets(spec, theme) {
+  ICON_RENDER_MODE = String(spec.iconMode || 'png').toLowerCase();
+  if (ICON_RENDER_MODE === 'svg') return;
+  const sharp = loadSharpModule();
+  if (!sharp) {
+    warnIconPngFallback();
+    return;
+  }
+  const { icons, colors } = collectIconInputs(spec);
+  [...defaultContentIconNames(), ...Object.values(ICON_ALIASES)].forEach((icon) => icons.add(icon));
+  ['111111', 'FFFFFF', ...themeIconColors(theme), ...colors].forEach((color) => colors.add(normalizeHex(color)));
+  const jobs = [];
+  for (const icon of icons) {
+    for (const color of colors) jobs.push(renderIconPngToCache(icon, color));
+  }
+  await Promise.all(jobs);
+}
+
+async function renderIconPngToCache(icon, color) {
+  const key = iconCacheKey(icon, color);
+  if (ICON_PNG_CACHE.has(key)) return;
+  const sharp = loadSharpModule();
+  if (!sharp) return;
+  const svgBuffer = iconSvgBuffer(icon, color);
+  if (!svgBuffer) return;
+  try {
+    const buffer = await sharp(svgBuffer).resize(192, 192, { fit: 'contain' }).png().toBuffer();
+    ICON_PNG_CACHE.set(key, `data:image/png;base64,${buffer.toString('base64')}`);
+  } catch (error) {
+    if (!ICON_PNG_WARNING_SHOWN) {
+      ICON_PNG_WARNING_SHOWN = true;
+      console.warn(`Warning: sharp failed to rasterize icon "${icon}". Falling back to SVG icons. ${error.message}`);
+    }
+  }
+}
+
+function iconImageData(icon, color) {
+  if (ICON_RENDER_MODE !== 'svg') {
+    const data = ICON_PNG_CACHE.get(iconCacheKey(icon, color));
+    if (data) return data;
+    if (!loadSharpModule()) warnIconPngFallback();
+  }
+  return svgIconData(icon, color);
+}
+
 function normalizeHex(color) {
   const raw = String(color || '').replace('#', '').trim();
   return /^[0-9a-fA-F]{6}$/.test(raw) ? raw.toUpperCase() : '111111';
@@ -1937,7 +2123,7 @@ function addSvgIcon(slide, icon, x, y, size, color, options = {}) {
     });
   }
   const pad = options.pad ?? 0;
-  slide.addImage({ data: svgIconData(icon, color), x: x + pad, y: y + pad, w: Math.max(0.01, size - pad * 2), h: Math.max(0.01, size - pad * 2) });
+  slide.addImage({ data: iconImageData(icon, color), x: x + pad, y: y + pad, w: Math.max(0.01, size - pad * 2), h: Math.max(0.01, size - pad * 2) });
 }
 function defaultContentIcon(index, mode) {
   const magazine = ['file-text', 'scan-search', 'shield-alert', 'arrow-right-circle', 'lightbulb', 'target'];
@@ -2014,7 +2200,7 @@ function addImagePlaceholder(slide, x, y, w, h, color, label = 'IMAGE SLOT') {
 function addImageOrPlaceholder(slide, ctx, image, x, y, w, h, color, label) {
   const imgPath = resolveImage(ctx.specDir, image);
   if (imgPath) {
-    slide.addImage({ path: imgPath, x, y, w, h });
+    addImageAsset(slide, imgPath, { x, y, w, h });
     return;
   }
   addImagePlaceholder(slide, x, y, w, h, color, label || 'IMAGE SLOT');
@@ -2085,7 +2271,7 @@ function imageCaption(image) {
 function resolveImage(specDir, image) {
   const raw = typeof image === 'string' ? image : image?.path || image?.src;
   if (!raw || /^data:/i.test(raw) || /^https?:\/\//i.test(raw)) return null;
-  const skillRoot = path.resolve(__dirname, '..');
+  const skillRoot = path.resolve(__dirname, '..', '..');
   const skillAssets = path.join(skillRoot, 'assets');
   const bases = [specDir, process.cwd(), skillAssets, skillRoot].filter(Boolean);
   const candidates = path.isAbsolute(raw)
