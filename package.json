@@ -12,7 +12,7 @@
     "validate:layout": "node scripts/validate-pptx-layout.js"
   },
   "dependencies": {
-    "lucide": "^0.468.0",
+    "lucide": "^0.525.0",
     "pptxgenjs": "^3.12.0"
   }
 }
