@@ -1,34 +1,12 @@
 # guizang-pptxgenjs-ppt-skill
 
-当前分支：`cmb-independent-style`
+基于 `pptxgenjs` 的可编辑 PowerPoint 生成技能。它直接生成 PowerPoint 原生文本框、形状、线条、图片、表格和图表，不依赖 HTML 截图、整页图片或 PDF 转换，便于后续在 PowerPoint/WPS 中继续编辑。
 
-本目录是一个基于 `pptxgenjs` 的可编辑 PowerPoint 生成技能。它不通过 HTML 截图、整页图片或 PDF 转换交付，而是直接生成 PowerPoint 原生文本框、形状、线条、图片、表格和图表，方便后续在 PowerPoint/WPS 中继续编辑。
+当前 `main` 分支包含三套可切换风格、统一的 JSON spec 输入、内置样例、图片/图表槽位校验、布局多样性提示、CMB 招商银行独立品牌风格，以及 PPTX 原生结构和布局风险校验脚本。
 
-## 当前分支重点
+## 安装
 
-`cmb-independent-style` 分支在原有 `magazine` 和 `swiss` 风格基础上，新增并持续完善了独立的招商银行风格：
-
-- 新增 `style: "cmb"`，不是把 CMB 当作 Swiss 的一个 theme。
-- 内置招商银行页眉白底 PNG logo 和页眉外透明 SVG 纯图 logo。
-- CMB 页面保持白色页眉，内容页右上角使用低透明度 SVG logo 水印。
-- CMB 支持当前全部通用 layout，并提供全布局检查文件生成入口。
-- 修复多处 layout 切换、文本溢出、连线错误、媒体槽位、图标和 logo 解析问题。
-
-## 支持的风格
-
-- `magazine`：电子杂志 / 电子墨水风格，适合观点、叙事、报告型页面。
-- `swiss`：瑞士国际主义风格，适合科技、数据、方法论和产品说明。
-- `cmb`：招商银行品牌风格，适合银行、金融、经营汇报和商务汇报。
-
-默认主题：
-
-- `magazine`: `ink`
-- `swiss`: `ikb`
-- `cmb`: `classic`
-
-## 安装依赖
-
-在技能目录下执行：
+建议使用 Node.js 18 或更高版本。
 
 ```bash
 npm install
@@ -36,10 +14,8 @@ npm install
 
 主要依赖：
 
-- `pptxgenjs`: 生成可编辑 `.pptx`
-- `lucide`: 为分点、卡片、指标等位置提供图标
-
-建议使用 Node.js 18 或更高版本。
+- `pptxgenjs`：生成可编辑 `.pptx`
+- `lucide`：为分点、卡片、指标等元素提供图标
 
 ## 生成 PPTX
 
@@ -49,7 +25,7 @@ npm install
 node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx
 ```
 
-生成内置示例：
+生成内置样例：
 
 ```bash
 npm run sample:magazine
@@ -57,35 +33,58 @@ npm run sample:swiss
 npm run sample:cmb
 ```
 
-生成 CMB 全布局检查文件：
+生成 CMB 全 layout 检查文件：
 
 ```bash
 npm run sample:cmb:layouts
 ```
 
-输出文件：
+输出位置：
 
 ```text
 assets/outputs/deck-cmb-all-layouts.pptx
 ```
 
-## 校验 PPTX
+## 校验
 
-生成后建议按顺序执行：
+生成后建议执行：
 
 ```bash
 node scripts/validate-pptx-native.js path/to/deck.pptx
 node scripts/validate-pptx-layout.js path/to/deck.pptx
 ```
 
-含义：
+- `validate-pptx-native.js`：检查是否为 PowerPoint 原生结构，避免整页截图伪装成 PPTX。
+- `validate-pptx-layout.js`：检查明显布局风险，例如文本覆盖、元素冲突和底部安全区问题。
 
-- `validate-pptx-native.js`: 检查是否为 PowerPoint 原生结构，避免整页截图伪装成 PPTX。
-- `validate-pptx-layout.js`: 检查明显的布局风险，如重叠、底部安全区、文本框冲突等。
+修改技能结构后可运行：
 
-## Spec 基本结构
+```bash
+python C:\Users\lizey\.codex\skills\.system\skill-creator\scripts\quick_validate.py C:\Users\lizey\Desktop\guizang-ppt-skill-main\guizang-pptxgenjs-ppt-skill
+```
 
-最小示例：
+## 支持风格
+
+- `magazine`：电子杂志 / 电子墨水风格，适合观点、叙事、报告型页面。
+- `swiss`：瑞士国际主义风格，适合科技、数据、方法论和产品说明。
+- `cmb`：招商银行独立品牌风格，适合银行、金融、经营汇报和商务汇报。
+
+默认主题：
+
+- `magazine`: `ink`
+- `swiss`: `ikb`
+- `cmb`: `classic`
+
+CMB 风格使用技能内置 logo 资源：
+
+- 页眉完整白底 PNG logo：`logos/cmb-logo-lockup.png`
+- 页眉外透明 SVG 纯图 logo：`logos/cmb-logo-mark.svg`
+
+生成器会自动从 `assets/logos/` 解析这些资源，不需要把 logo 手动复制到项目目录。所有 logo 都按原比例显示，避免被压扁。
+
+## JSON Spec 示例
+
+所有 spec 文件建议保存为 UTF-8。不要手写拼接 JSON 字符串，优先由程序对象调用 `JSON.stringify(data, null, 2)` 写出。
 
 ```json
 {
@@ -122,71 +121,72 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 }
 ```
 
-## Layout 能力摘要
+JSON 引号与编码规则：
 
-当前 CMB 模板可通过 `assets/template-cmb-all-layouts.js` 生成完整检查页，覆盖 31 个 layout。常用 layout 包括：
+- 文件统一使用 UTF-8。
+- 普通中文内容里的引号优先使用 `「」` 或中文弯引号。
+- 如果 JSON 字符串中必须使用英文直引号 `"`，必须写成 `\"`。
+- `--spec` 读取时会尝试修复常见问题：Markdown fenced code block、UTF-8 BOM、注释、尾逗号、部分中英文弯引号。
+- 若需要把修复后的内容落盘为严格 JSON，使用 `--write-normalized-spec path/to/normalized.json`。
+
+## 常用 Layout
+
+三套风格支持统一的常用 layout 名称，切换模板时优先只修改顶层 `style` / `theme`。
 
 - 封面与章节：`cover`、`section`、`closing`
-- 结论页：`statement`
+- 结论页：`statement`、`bigQuote`
 - 数据页：`kpiTower`、`bigNumbers`、`dashboard`、`chart`、`dataSheet`
 - 图文页：`media`、`mediaGrid`、`gallery`、`imageGrid`、`imageHero`、`quoteImage`、`textImage`
 - 结构页：`compare`、`duoCompare`、`timeline`、`pipeline`、`roadmap`、`textGrid`、`article`、`fourCards`、`matrix`、`agenda`、`caseStudy`、`pyramid`、`radial`、`swimlane`
 
-布局支持数量由 `scripts/generate-pptx.js` 内的 `validateTextSlots()` 规则表和各 layout 渲染函数共同决定。生成前会检查分点、图片、图表和表格槽位是否匹配。
+布局支持的条目数量由 `scripts/generate-pptx.js` 中的槽位校验规则和对应渲染函数共同决定。生成前会检查文本、图片、图表和表格槽位是否匹配，避免多槽位、少槽位或字段名不匹配导致内容丢失。
 
-## 当前分支已修复的重点问题
-
-- CMB logo 自动从技能内置 `assets/logos/` 解析，不再提示用户手动复制。
-- CMB logo 保持原始比例，不横向或纵向压扁。
-- CMB 页眉统一白底，内容页右上角使用 SVG 纯图 logo 水印。
-- CMB 背景网格与实际网格元素对齐。
-- `statement` 页右侧改为图片槽位；无图片时显示 `IMAGE SLOT`。
-- `media` / `mediaGrid` / `gallery` / `imageGrid` 图片槽位按用户图片数量自适应。
-- 无用户图片且无显式图表时，不再默认塞图表，而是显示图片占位符。
-- `fourCards` 和 `textGrid` 会根据文本量调整卡片高度，减少文本跑出卡片。
-- CMB `media` 右侧说明区行距放宽，最多支持 4 个侧边分点。
-- `radial` 连线改为从中心卡片边缘连到节点卡片边缘，避免覆盖中心卡片。
-- `radial` 负斜率连线使用稳定方向，修复右上/左下连接方向错误。
-- `radial` 外圈卡片增大，能容纳更多标题和正文。
-- 生成 JSON 支持宽松解析和规范化输出，减少中英文引号、注释、尾逗号导致的解析失败。
-- 自动变更重复 layout 时要求写出 normalized JSON，避免 PPTX 和 JSON 不一致。
-
-## 图片、图表和占位符规则
+## 图片、图表和占位符
 
 - 用户提供 `image` / `images` / `gallery` 时优先插入用户图片。
-- `mediaGrid` / `gallery` / `imageGrid` 默认槽位数跟随图片、图表或 caption 数量。
+- `mediaGrid` / `gallery` / `imageGrid` 未显式设置 `mediaCount` 时，槽位数自动等于图片数、显式图表数或 caption 数。
 - 显式设置 `mediaCount` 时必须与图片数量匹配，除非明确允许空槽。
 - 没有用户图片但提供 `chart` / `charts` 时，使用 PowerPoint 原生图表。
-- 没有图片和显式图表时，显示 `IMAGE SLOT` 占位符。
-- `statement` 只支持 1 个图片槽位，不支持 chart；需要多图请用 `mediaGrid` / `imageGrid`。
+- 没有图片和显式图表时，显示 `IMAGE SLOT` 占位符，不再默认填充图表。
+- `statement` 只支持 1 个图片槽位，不支持 chart；多图请使用 `mediaGrid` / `imageGrid`。
 
-## 图标规则
+图表类型支持：
 
-分点对象可写 `icon` 字段：
-
-```json
-{ "icon": "shield-alert", "title": "风险预警", "body": "识别异常行为并前置处置。" }
+```text
+bar, column, line, pie, doughnut, area, radar, scatter
 ```
 
-图标优先来自 `lucide` 包。旧环境如果安装过 `lucide-static`，生成器也兼容读取。
+## 布局多样性
 
-## 推荐测试流程
+规划 deck 时应避免连续 3 页以上使用同一 layout 或同一视觉节奏。生成器默认只输出重复 layout 的替换建议，不会擅自修改输入 JSON，保证 JSON 与 PPTX 一致。
+
+如果确实要自动改 layout，必须同时使用：
+
+```bash
+node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx --diversify-layouts --write-normalized-spec outputs/deck.normalized.json
+```
+
+后续应以 normalized JSON 作为真实源文件。
+
+## 推荐开发检查流程
 
 修改模板或生成器后建议执行：
 
 ```bash
 node --check scripts/generate-pptx.js
+npm run sample:magazine
+npm run sample:swiss
+npm run sample:cmb
 npm run sample:cmb:layouts
 node scripts/validate-pptx-native.js assets/outputs/deck-cmb-all-layouts.pptx
 node scripts/validate-pptx-layout.js assets/outputs/deck-cmb-all-layouts.pptx
 ```
 
-如修改了复杂 layout，再补专项 JSON 到 `outputs/` 下生成测试 PPTX。`outputs/` 和 `assets/outputs/` 是生成物目录，不建议提交。
+`outputs/` 和 `assets/outputs/` 是生成物目录，不建议提交。
 
-## 当前已知约束
+## 已知边界
 
 - 这是原生 PPTX 生成器，不保证与 HTML/CSS 像素级一致。
-- PowerPoint 字体渲染和浏览器不同，长文本仍建议拆页或减少分点。
-- `layout` 自动多样化默认只给建议，不会直接改输入 JSON。需要真实改 layout 时必须配合 `--write-normalized-spec`。
-- CMB 是独立风格，切换模板时优先只改 `style` / `theme`，不要批量改每页字段。
-
+- PowerPoint 与 WPS 的字体渲染可能不同，长文本仍建议拆页或减少分点。
+- 后置插入的 `blocks`、`charts`、`tables` 若缺少显式 `x/y/w/h` 会被跳过并打印 warning，避免与正文重叠。
+- 自动 layout 多样化会改变页面类型，必须配合 `--write-normalized-spec` 使用。
