@@ -96,6 +96,8 @@ function readableTextOptions(options, text) {
   const next = { ...options };
   if (typeof next.fontSize === 'number' && next.fontSize < READABILITY.minFontSize && !isSymbolText(next, text)) {
     next.fontSize = READABILITY.minFontSize;
+    const minBoxH = (READABILITY.minFontSize * 1.28) / 72;
+    if (typeof next.h === 'number' && next.h < minBoxH) next.h = minBoxH;
   }
   return next;
 }
@@ -903,20 +905,47 @@ function magazineArticle(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'magazine', 0.82);
   const sections = normalizeSections(data.sections || data.items || data.columns || []).slice(0, data.maxItems || 6);
+  if (!sections.length) {
+    addFoot(slide, ctx, s.fg, 'magazine');
+    return;
+  }
   const cols = clampColumns(data.columnsCount || autoColumns(sections.length, 3), 1, 3);
+  const rows = Math.ceil(sections.length / cols);
   const x0 = 0.78;
-  const y0 = data.subtitle ? 2.78 : 2.45;
-  const gap = 0.34;
-  const colW = (11.75 - gap * (cols - 1)) / cols;
+  const y0 = data.subtitle ? 2.68 : 2.32;
+  const gapX = 0.34;
+  const gapY = rows > 1 ? 0.26 : 0;
+  const gridW = 11.75;
+  const maxBottom = data.callout ? 5.58 : 6.35;
+  const colW = (gridW - gapX * (cols - 1)) / cols;
+  const titleFont = Math.max(15, READABILITY.minFontSize);
+  const bodyFont = READABILITY.minFontSize;
+  const demands = sections.map((section) => {
+    const hasIconWidth = 0.36;
+    const textW = colW - hasIconWidth;
+    const title = section.title || section.label || '';
+    const body = section.body || section.desc || (section.items || []).map((item) => typeof item === 'string' ? item : item.text || item.title || '').join('\n');
+    const titleH = estimateTextHeight(title, textW, titleFont, { min: 0.38, max: 0.72, lineHeight: 1.24, padding: 0.02 });
+    const bodyH = estimateTextHeight(body, textW, bodyFont, { min: body ? 0.6 : 0, empty: 0, max: rows > 1 ? 1.28 : 2.7, lineHeight: 1.38, padding: 0.1 });
+    return Math.max(rows > 1 ? 1.62 : 2.35, 0.18 + titleH + 0.18 + bodyH + 0.22);
+  });
+  const rowHeights = distributeRowHeights(demands, rows, cols, rows > 1 ? 1.54 : 2.35, maxBottom - y0, gapY);
   sections.forEach((section, i) => {
-    const x = x0 + (i % cols) * (colW + gap);
-    const y = y0 + Math.floor(i / cols) * 1.95;
+    const row = Math.floor(i / cols);
+    const x = x0 + (i % cols) * (colW + gapX);
+    const y = y0 + rowHeights.slice(0, row).reduce((sum, h) => sum + h, 0) + row * gapY;
+    const h = rowHeights[row];
     slide.addShape(pptx.ShapeType.line, { x, y, w: colW, h: 0, line: { color: s.fg, transparency: 65, width: 0.6 } });
     const hasIcon = addInlineIcon(slide, section, x, y + 0.15, 0.26, s.fg, 'magazine', { fallback: defaultContentIcon(i, 'magazine'), pad: 0.045 });
     const titleX = hasIcon ? x + 0.36 : x;
-    slide.addText(section.title || section.label || '', { x: titleX, y: y + 0.16, w: colW - (hasIcon ? 0.36 : 0), h: 0.32, fontFace: FONTS.serifZh, fontSize: 15, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+    const textW = colW - (hasIcon ? 0.36 : 0);
+    const titleText = section.title || section.label || '';
     const body = section.body || section.desc || (section.items || []).map((item) => typeof item === 'string' ? item : item.text || item.title || '').join('\n');
-    slide.addText(body, { x: titleX, y: y + 0.58, w: colW - (hasIcon ? 0.36 : 0), h: 1.05, fontFace: FONTS.sansZh, fontSize: 9.5, color: s.fg, transparency: 18, margin: 0.03, fit: 'shrink', valign: 'top', breakLine: false });
+    const titleH = estimateTextHeight(titleText, textW, titleFont, { min: 0.38, max: 0.72, lineHeight: 1.24, padding: 0.02 });
+    const bodyY = y + 0.16 + titleH + 0.18;
+    const bodyH = Math.max(0.55, h - (bodyY - y) - 0.22);
+    slide.addText(titleText, { x: titleX, y: y + 0.16, w: textW, h: titleH, fontFace: FONTS.serifZh, fontSize: titleFont, bold: true, color: s.fg, margin: 0, fit: 'shrink', valign: 'top' });
+    slide.addText(body, { x: titleX, y: bodyY, w: textW, h: bodyH, fontFace: FONTS.sansZh, fontSize: bodyFont, color: s.fg, transparency: 18, margin: 0.03, fit: 'shrink', valign: 'top', breakLine: false });
   });
   if (data.callout) addCallout(slide, data.callout, 8.3, 5.88, 3.65, 0.68, s.fg, ctx.theme.paperTint);
   addFoot(slide, ctx, s.fg, 'magazine');
@@ -1098,7 +1127,7 @@ function magazineSwimlane(slide, ctx, s) {
   stages.forEach((stage, i) => slide.addText(String(stage), { x: x0 + i * colW, y: 2.22, w: colW - 0.12, h: 0.22, fontFace: FONTS.mono, fontSize: 9.5, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' }));
   lanes.forEach((lane, r) => {
     const y = y0 + r * 1.02;
-    slide.addText(lane.title || lane.label || `Lane ${r + 1}`, { x: 0.78, y: y + 0.2, w: 0.62, h: 0.34, fontFace: FONTS.serifZh, fontSize: 11.5, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+    slide.addText(lane.title || lane.label || `Lane ${r + 1}`, { x: 0.78, y: y + 0.2, w: 0.62, h: 0.34, fontFace: FONTS.serifZh, fontSize: READABILITY.minFontSize, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
     const cells = lane.items || lane.steps || [];
     stages.forEach((stage, c) => {
       const cell = cells[c] || {};
@@ -1202,19 +1231,51 @@ function swissTimeline(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'swiss', 0.88);
   const items = (data.items || data.steps || []).slice(0, 6);
-  const startX = 0.8;
-  const endX = 12.0;
-  const axisY = 4.25;
-  slide.addShape(pptx.ShapeType.line, { x: startX, y: axisY, w: endX - startX, h: 0, line: { color: s.fg, transparency: 55, width: 0.7 } });
+  if (!items.length) {
+    addFoot(slide, ctx, s.fg, 'swiss');
+    return;
+  }
+  const cols = clampColumns(data.columnsCount || (items.length <= 4 ? items.length : 3), 1, 4);
+  const rows = Math.ceil(items.length / cols);
+  const gridX = 0.78;
+  const gridW = 11.45;
+  const gapX = 0.34;
+  const gapY = rows > 1 ? 0.36 : 0;
+  const startY = rows > 1 ? 2.48 : 2.92;
+  const maxBottom = 6.35;
+  const cardW = (gridW - gapX * (cols - 1)) / cols;
+  const titleFont = READABILITY.minFontSize;
+  const bodyFont = READABILITY.minFontSize;
+  const demands = items.map((item) => {
+    const title = item.title || '';
+    const body = item.body || item.desc || item.note || '';
+    const titleH = estimateTextHeight(title, cardW - 0.34, titleFont, { min: 0.32, max: 0.56, lineHeight: 1.24, padding: 0.02 });
+    const bodyH = estimateTextHeight(body, cardW - 0.34, bodyFont, { min: body ? 0.48 : 0, empty: 0, max: rows > 1 ? 0.9 : 1.18, lineHeight: 1.34, padding: 0.08 });
+    return Math.max(rows > 1 ? 1.42 : 1.78, 0.54 + titleH + 0.14 + bodyH + 0.18);
+  });
+  const rowHeights = distributeRowHeights(demands, rows, cols, rows > 1 ? 1.36 : 1.78, maxBottom - startY, gapY);
   items.forEach((item, i) => {
-    const x = startX + (i * (endX - startX)) / Math.max(items.length - 1, 1);
-    const labelX = clamp(x - 0.55, 0.32, SLIDE.w - 1.42);
-    const titleX = clamp(x - 0.72, 0.32, SLIDE.w - 1.77);
-    const descX = clamp(x - 0.82, 0.32, SLIDE.w - 1.97);
-    slide.addShape(pptx.ShapeType.rect, { x: x - 0.04, y: axisY - 0.04, w: 0.08, h: 0.08, fill: { color: i === items.length - 1 ? ctx.theme.accent : s.fg }, line: { color: i === items.length - 1 ? ctx.theme.accent : s.fg } });
-    slide.addText(item.label || item.year || String(i + 1).padStart(2, '0'), { x: labelX, y: 3.48, w: 1.1, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 8, color: s.fg, transparency: 30, align: 'center', margin: 0, fit: 'shrink' });
-    slide.addText(item.title || '', { x: titleX, y: 4.55, w: 1.45, h: 0.45, fontFace: FONTS.sansZh, fontSize: 10.5, bold: true, color: s.fg, align: 'center', margin: 0, fit: 'shrink' });
-    slide.addText(item.desc || item.note || '', { x: descX, y: 5.08, w: 1.65, h: 0.48, fontFace: FONTS.sansZh, fontSize: 8.5, color: s.fg, transparency: 25, align: 'center', margin: 0, fit: 'shrink' });
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const rowStart = row * cols;
+    const rowCount = Math.min(cols, items.length - rowStart);
+    const rowW = rowCount * cardW + Math.max(0, rowCount - 1) * gapX;
+    const rowX = gridX + (gridW - rowW) / 2;
+    const x = rowX + col * (cardW + gapX);
+    const y = startY + rowHeights.slice(0, row).reduce((sum, h) => sum + h, 0) + row * gapY;
+    const h = rowHeights[row];
+    const hot = i === items.length - 1 || item.highlight;
+    const axisY = y + 0.3;
+    slide.addShape(pptx.ShapeType.line, { x, y: axisY, w: cardW, h: 0, line: { color: hot ? ctx.theme.accent : s.fg, transparency: hot ? 20 : 58, width: hot ? 1.0 : 0.7 } });
+    slide.addShape(pptx.ShapeType.rect, { x: x + 0.02, y: axisY - 0.045, w: 0.09, h: 0.09, fill: { color: hot ? ctx.theme.accent : s.fg }, line: { color: hot ? ctx.theme.accent : s.fg, transparency: 100 } });
+    slide.addText(item.label || item.year || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.04, w: Math.max(0.8, cardW - 0.36), h: 0.22, fontFace: 'JetBrains Mono', fontSize: 8, color: hot ? ctx.theme.accent : s.fg, transparency: hot ? 0 : 30, margin: 0, fit: 'shrink' });
+    const titleText = item.title || '';
+    const bodyText = item.body || item.desc || item.note || '';
+    const titleH = estimateTextHeight(titleText, cardW - 0.34, titleFont, { min: 0.32, max: 0.56, lineHeight: 1.24, padding: 0.02 });
+    const titleY = axisY + 0.22;
+    const bodyY = titleY + titleH + 0.14;
+    slide.addText(titleText, { x: x + 0.17, y: titleY, w: cardW - 0.34, h: titleH, fontFace: FONTS.sansZh, fontSize: titleFont, bold: true, color: s.fg, margin: 0, fit: 'shrink', valign: 'top' });
+    slide.addText(bodyText, { x: x + 0.17, y: bodyY, w: cardW - 0.34, h: Math.max(0.42, h - (bodyY - y) - 0.16), fontFace: FONTS.sansZh, fontSize: bodyFont, color: s.fg, transparency: 25, margin: 0.02, fit: 'shrink', valign: 'top' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -1262,15 +1323,15 @@ function swissFourCards(slide, ctx, s) {
   const startY = rows > 1 ? 2.42 : 2.62;
   const maxBottom = 6.35;
   const compact = rows > 1;
-  const titleFont = compact ? 13.5 : 17;
-  const bodyFont = compact ? 8.6 : 10.2;
-  const minCardH = compact ? 1.35 : 2.55;
+  const titleFont = Math.max(compact ? 13.5 : 17, READABILITY.minFontSize);
+  const bodyFont = READABILITY.minFontSize;
+  const minCardH = compact ? 1.58 : 2.72;
   const demands = items.map((item) => {
     const title = item.title || item.label || '';
     const body = item.desc || item.note || item.body || '';
-    const titleH = estimateTextHeight(title, cardW - 0.4, titleFont, { min: compact ? 0.34 : 0.48, max: compact ? 0.62 : 0.86 });
-    const bodyH = estimateTextHeight(body, cardW - 0.4, bodyFont, { min: body ? 0.32 : 0, empty: 0, max: compact ? 0.82 : 1.35 });
-    return Math.max(minCardH, (compact ? 0.88 : 1.25) + titleH + bodyH + 0.28);
+    const titleH = estimateTextHeight(title, cardW - 0.4, titleFont, { min: compact ? 0.38 : 0.5, max: compact ? 0.72 : 0.9 });
+    const bodyH = estimateTextHeight(body, cardW - 0.4, bodyFont, { min: body ? 0.42 : 0, empty: 0, max: compact ? 1.02 : 1.55 });
+    return Math.max(minCardH, (compact ? 0.96 : 1.3) + titleH + bodyH + 0.32);
   });
   const rowHeights = distributeRowHeights(demands, rows, cols, minCardH, maxBottom - startY, gapY);
   items.forEach((item, i) => {
@@ -1287,9 +1348,9 @@ function swissFourCards(slide, ctx, s) {
     const titleText = item.title || item.label || '';
     const bodyText = item.desc || item.note || item.body || '';
     const titleY = compact ? y + 0.52 : y + 0.64;
-    const titleH = estimateTextHeight(titleText, cardW - 0.4, titleFont, { min: compact ? 0.34 : 0.48, max: compact ? 0.58 : 0.82 });
-    const descY = titleY + titleH + (compact ? 0.12 : 0.22);
-    const descH = Math.max(0.2, cardH - (descY - y) - 0.22);
+    const titleH = estimateTextHeight(titleText, cardW - 0.4, titleFont, { min: compact ? 0.38 : 0.5, max: compact ? 0.68 : 0.86 });
+    const descY = titleY + titleH + (compact ? 0.14 : 0.22);
+    const descH = Math.max(0.34, cardH - (descY - y) - 0.24);
     slide.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: cardH, fill: { color: ctx.theme.grey1 }, line: { color: ctx.theme.grey1, transparency: 100 } });
     const hasIcon = addInlineIcon(slide, item, x + 0.2, y + 0.18, iconSize, s.fg, 'swiss', { fallback: item.icon ? null : 'layers', pad: compact ? 0.045 : 0.06 });
     if (!hasIcon) slide.addText(item.number || `0${i + 1}`, { x: x + 0.2, y: y + 0.22, w: 1.0, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 8, color: s.fg, transparency: 45, margin: 0 });
@@ -1326,15 +1387,15 @@ function swissTextGrid(slide, ctx, s) {
   const gapY = 0.3;
   const w = (11.45 - gapX * (cols - 1)) / cols;
   const rows = Math.ceil(sections.length / cols);
-  const minH = rows <= 2 ? 1.2 : 1.05;
+  const minH = rows <= 2 ? 1.36 : 1.1;
   const maxBottom = 6.35;
   const demands = sections.map((item) => {
     const title = item.title || '';
     const body = item.body || item.desc || '';
     const hasIconWidth = 0.62;
     const textW = w - hasIconWidth - 0.27;
-    const titleH = estimateTextHeight(title, textW, 11.5, { min: 0.28, max: 0.52 });
-    const bodyH = estimateTextHeight(body, textW, 8.5, { min: body ? 0.34 : 0, empty: 0, max: 0.78 });
+    const titleH = estimateTextHeight(title, textW, READABILITY.minFontSize, { min: 0.34, max: 0.62 });
+    const bodyH = estimateTextHeight(body, textW, READABILITY.minFontSize, { min: body ? 0.44 : 0, empty: 0, max: 0.9 });
     return Math.max(minH, 0.28 + titleH + 0.14 + bodyH + 0.24);
   });
   const rowHeights = distributeRowHeights(demands, rows, cols, minH, maxBottom - y0, gapY);
@@ -1352,11 +1413,11 @@ function swissTextGrid(slide, ctx, s) {
     const textW = x + w - 0.27 - tx;
     const titleText = item.title || '';
     const bodyText = item.body || item.desc || '';
-    const titleH = estimateTextHeight(titleText, textW, 11.5, { min: 0.28, max: 0.5 });
+    const titleH = estimateTextHeight(titleText, textW, READABILITY.minFontSize, { min: 0.34, max: 0.6 });
     const bodyY = y + 0.18 + titleH + 0.14;
-    const bodyH = Math.max(0.2, h - (bodyY - y) - 0.22);
-    slide.addText(titleText, { x: tx, y: y + 0.15, w: textW, h: titleH, fontFace: FONTS.sansZh, fontSize: 11.5, bold: true, color: hot ? ctx.theme.accentOn : s.fg, margin: 0, fit: 'shrink', valign: 'top' });
-    slide.addText(bodyText, { x: tx, y: bodyY, w: textW, h: bodyH, fontFace: FONTS.sansZh, fontSize: 8.5, color: hot ? ctx.theme.accentOn : s.fg, transparency: hot ? 10 : 30, margin: 0.02, fit: 'shrink', valign: 'top' });
+    const bodyH = Math.max(0.34, h - (bodyY - y) - 0.22);
+    slide.addText(titleText, { x: tx, y: y + 0.15, w: textW, h: titleH, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, bold: true, color: hot ? ctx.theme.accentOn : s.fg, margin: 0, fit: 'shrink', valign: 'top' });
+    slide.addText(bodyText, { x: tx, y: bodyY, w: textW, h: bodyH, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color: hot ? ctx.theme.accentOn : s.fg, transparency: hot ? 10 : 30, margin: 0.02, fit: 'shrink', valign: 'top' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -1378,15 +1439,39 @@ function swissDataSheet(slide, ctx, s) {
 function swissChart(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'swiss', 0.82);
-  addChartBlock(slide, ctx, data.chart || data, { x: 0.78, y: 2.35, w: 8.3, h: 4.05 }, s, 'swiss');
+  addChartBlock(slide, ctx, data.chart || data, { x: 0.78, y: 2.35, w: 7.55, h: 4.05 }, s, 'swiss');
   const insights = normalizeSections(data.insights || data.notes || []).slice(0, 3);
+  const panelX = 8.76;
+  const iconX = 8.92;
+  const textX = 9.34;
+  const textW = 3.08;
+  const startY = 2.42;
+  const bottomY = 6.48;
+  const gapY = 0.12;
+  const demands = insights.map((item) => {
+    const title = item.title || '';
+    const body = item.body || item.desc || '';
+    const titleH = estimateTextHeight(title, textW, READABILITY.minFontSize, { min: 0.28, max: 0.44, lineHeight: 1.24, padding: 0.02 });
+    const bodyH = estimateTextHeight(body, textW, READABILITY.minFontSize, { min: body ? 0.48 : 0, empty: 0, max: 0.86, lineHeight: 1.34, padding: 0.08 });
+    return titleH + (body ? 0.13 + bodyH : 0);
+  });
+  const rowHeights = insights.length
+    ? distributeRowHeights(demands, insights.length, 1, 0.98, bottomY - startY, gapY)
+    : [];
+  let yCursor = startY;
   insights.forEach((item, i) => {
-    const y = 2.48 + i * 1.16;
+    const y = yCursor;
+    const rowH = rowHeights[i] || 1.08;
     const iconColor = i === 0 ? ctx.theme.accent : s.fg;
-    const hasIcon = addInlineIcon(slide, item, 9.55, y + 0.02, 0.34, iconColor, 'swiss', { fallback: defaultContentIcon(i, 'swiss'), pad: 0.055 });
-    if (!hasIcon) slide.addText(item.value || item.label || `0${i + 1}`, { x: 9.55, y, w: 1.05, h: 0.38, fontFace: FONTS.sans, fontSize: 22, bold: true, color: i === 0 ? ctx.theme.accent : s.fg, margin: 0, fit: 'shrink' });
-    slide.addText(item.title || '', { x: 10.35, y: y + 0.03, w: 1.85, h: 0.24, fontFace: FONTS.sansZh, fontSize: 9.6, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
-    slide.addText(item.body || item.desc || '', { x: 10.35, y: y + 0.34, w: 1.85, h: 0.34, fontFace: FONTS.sansZh, fontSize: 7.6, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' });
+    const hasIcon = addInlineIcon(slide, item, iconX, y + 0.04, 0.32, iconColor, 'swiss', { fallback: defaultContentIcon(i, 'swiss'), pad: 0.055 });
+    if (!hasIcon) slide.addText(item.value || item.label || `0${i + 1}`, { x: iconX, y, w: 0.34, h: 0.38, fontFace: FONTS.sans, fontSize: 22, bold: true, color: i === 0 ? ctx.theme.accent : s.fg, margin: 0, fit: 'shrink' });
+    const titleText = item.title || '';
+    const bodyText = item.body || item.desc || '';
+    const titleH = estimateTextHeight(titleText, textW, READABILITY.minFontSize, { min: 0.3, max: 0.44, lineHeight: 1.24, padding: 0.02 });
+    const bodyY = y + titleH + 0.13;
+    slide.addText(titleText, { x: textX, y: y + 0.02, w: textW, h: titleH, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, bold: true, color: s.fg, margin: 0, fit: 'shrink', valign: 'top' });
+    slide.addText(bodyText, { x: textX, y: bodyY, w: textW, h: Math.max(0.48, rowH - titleH - 0.16), fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color: s.fg, transparency: 35, margin: 0.02, fit: 'shrink', valign: 'top' });
+    yCursor += rowH + gapY;
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -1573,27 +1658,44 @@ function swissMedia(slide, ctx, s) {
   const isCmb = ctx.spec.style === 'cmb' || data.style === 'cmb';
   const headY = pageHeadY(ctx, 0.82);
   const hasSubtitle = !!data.subtitle;
-  const contentTop = Math.max(2.58, headY + (hasSubtitle ? 2.04 : 1.72));
+  const contentTop = Math.max(2.36, headY + (hasSubtitle ? 1.86 : 1.54));
   const contentBottom = 6.35;
   const mediaBox = { x: 0.78, y: contentTop, w: 6.25, h: Math.max(2.55, contentBottom - contentTop) };
   addMediaOrChart(slide, ctx, data, mediaBox, s, 'swiss', 'MEDIA');
   const panelX = 7.42;
-  const summaryH = isCmb ? 1.08 : 0.92;
+  const summaryH = isCmb ? 0.78 : 0.72;
   slide.addText(data.body || data.story || data.note || '', { x: panelX, y: contentTop + 0.05, w: 4.65, h: summaryH, fontFace: FONTS.sansZh, fontSize: isCmb ? 12 : 11.7, color: s.fg, transparency: 15, margin: 0.03, fit: 'shrink', valign: 'top' });
   const sideLimit = isCmb ? 4 : 5;
   const items = normalizeSections(data.items || data.insights || data.points || []).slice(0, sideLimit);
-  const itemStartY = contentTop + (isCmb ? 1.42 : 1.18);
-  const rowMin = isCmb ? 0.58 : 0.42;
-  const rowMax = isCmb ? 0.8 : 0.56;
-  const rowH = items.length ? clamp((contentBottom - itemStartY) / items.length, rowMin, rowMax) : (isCmb ? 0.66 : 0.52);
+  const itemStartY = contentTop + summaryH + (isCmb ? 0.2 : 0.18);
+  const rowGap = isCmb ? 0.1 : 0.08;
+  const rowMin = isCmb ? 0.9 : 0.78;
+  const textWForEstimate = 4.05;
+  const demands = items.map((item) => {
+    const title = item.title || item.label || item.body || '';
+    const body = item.body || item.desc || item.note || '';
+    const titleH = estimateTextHeight(title, textWForEstimate, READABILITY.minFontSize, { min: 0.3, max: 0.44, lineHeight: 1.24, padding: 0.02 });
+    const bodyH = estimateTextHeight(body, textWForEstimate, READABILITY.minFontSize, { min: body ? 0.46 : 0, empty: 0, max: 0.72, lineHeight: 1.32, padding: 0.08 });
+    return titleH + (body ? 0.12 + bodyH : 0);
+  });
+  const rowHeights = items.length
+    ? distributeRowHeights(demands, items.length, 1, rowMin, contentBottom - itemStartY, rowGap)
+    : [];
+  let yCursor = itemStartY;
   items.forEach((item, i) => {
-    const y = itemStartY + i * rowH;
+    const y = yCursor;
+    const rowH = rowHeights[i] || rowMin;
     slide.addShape(pptx.ShapeType.line, { x: panelX, y, w: 4.4, h: 0, line: { color: s.fg, transparency: isCmb ? 74 : 68, width: 0.5 } });
     const hasIcon = addInlineIcon(slide, item, panelX, y + (isCmb ? 0.12 : 0.1), 0.21, i === 0 ? ctx.theme.accent : s.fg, 'swiss', { fallback: defaultContentIcon(i, 'swiss'), pad: 0.04 });
     const textX = hasIcon ? panelX + 0.34 : panelX;
     const textW = hasIcon ? 4.05 : 4.4;
-    slide.addText(item.title || item.label || item.body || '', { x: textX, y: y + 0.08, w: textW, h: isCmb ? 0.28 : 0.23, fontFace: FONTS.sansZh, fontSize: isCmb ? 10.8 : 10.4, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
-    slide.addText(item.body || item.desc || item.note || '', { x: textX, y: y + (isCmb ? 0.42 : 0.32), w: textW, h: Math.max(isCmb ? 0.22 : 0.16, rowH - (isCmb ? 0.48 : 0.34)), fontFace: FONTS.sansZh, fontSize: isCmb ? 8.8 : 8.4, color: s.fg, transparency: 32, margin: 0.01, fit: 'shrink', valign: 'top' });
+    const titleText = item.title || item.label || item.body || '';
+    const bodyText = item.body || item.desc || item.note || '';
+    const titleH = estimateTextHeight(titleText, textW, READABILITY.minFontSize, { min: 0.3, max: 0.44, lineHeight: 1.24, padding: 0.02 });
+    const bodyY = y + 0.08 + titleH + 0.12;
+    slide.addText(titleText, { x: textX, y: y + 0.08, w: textW, h: titleH, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, bold: true, color: s.fg, margin: 0, fit: 'shrink', valign: 'top' });
+    slide.addText(bodyText, { x: textX, y: bodyY, w: textW, h: Math.max(isCmb ? 0.46 : 0.4, rowH - titleH - 0.2), fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color: s.fg, transparency: 32, margin: 0.02, fit: 'shrink', valign: 'top' });
+    yCursor += rowH + rowGap;
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -2061,7 +2163,7 @@ function addChartBlock(slide, ctx, chart, defaults, s, mode) {
     showTitle: !!chart.title,
     title: chart.title,
     titleFontFace: mode === 'swiss' ? FONTS.sansZh : FONTS.serifZh,
-    titleFontSize: chart.titleFontSize || 10,
+    titleFontSize: Math.max(Number(chart.titleFontSize) || READABILITY.minChartFontSize, READABILITY.minChartFontSize),
     titleColor: s.fg,
     showValue: chart.showValue ?? ['pie', 'doughnut'].includes(typeName),
     showPercent: chart.showPercent ?? ['pie', 'doughnut'].includes(typeName),
@@ -2412,22 +2514,29 @@ function warnLayoutVariety(spec) {
   let runLayout = null;
   let runStart = 0;
   let runLength = 0;
+  const flush = () => {
+    if (runLength >= 3) {
+      console.warn(
+        `Warning: slides ${runStart + 1}-${runStart + runLength} use layout "${runLayout}" consecutively. Change at least one page to an equivalent layout or run --diversify-layouts --write-normalized-spec so the deck does not feel repetitive.`
+      );
+    } else if (runLength === 2) {
+      console.warn(
+        `Notice: slides ${runStart + 1}-${runStart + 2} both use layout "${runLayout}". If the content is not intentionally paired, consider alternating layouts for visual variety.`
+      );
+    }
+  };
   spec.slides.forEach((slide, index) => {
     const layout = slide.layout || (spec.style === 'magazine' ? 'textImage' : 'statement');
     if (layout === runLayout) {
       runLength += 1;
     } else {
-      if (runLength >= 3) {
-        console.warn(`Warning: slides ${runStart + 1}-${runStart + runLength} use layout "${runLayout}" consecutively; consider alternating layouts for visual variety.`);
-      }
+      flush();
       runLayout = layout;
       runStart = index;
       runLength = 1;
     }
   });
-  if (runLength >= 3) {
-    console.warn(`Warning: slides ${runStart + 1}-${runStart + runLength} use layout "${runLayout}" consecutively; consider alternating layouts for visual variety.`);
-  }
+  flush();
 }
 function autoCardColumns(count) {
   const n = Number(count) || 0;

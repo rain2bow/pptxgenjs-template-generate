@@ -157,9 +157,9 @@ const FONTS = {
 };
 
 const READABILITY = {
-  minFontSize: 9.8,
-  minChartFontSize: 9,
-  minTableFontSize: 9.2,
+  minFontSize: 12,
+  minChartFontSize: 12,
+  minTableFontSize: 12,
 };
 
 const BASIC_ICON_NAMES = ['dot', 'square', 'diamond', 'plus', 'minus', 'cross', 'number'];
