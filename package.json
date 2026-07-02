@@ -1,0 +1,19 @@
+{
+  "name": "pptxgenjs-template-generate",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "sample": "node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx",
+    "sample:swiss": "node scripts/generate-pptx.js --sample --sample-style swiss --out outputs/sample-deck.pptx",
+    "sample:magazine": "node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sample-magazine.pptx",
+    "sample:cmb": "node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-cmb.pptx",
+    "sample:cmb:layouts": "node assets/template-cmb-all-layouts.js",
+    "validate:native": "node scripts/validate-pptx-native.js",
+    "validate:layout": "node scripts/validate-pptx-layout.js"
+  },
+  "dependencies": {
+    "lucide": "^0.525.0",
+    "pptxgenjs": "^3.12.0"
+  }
+}
+
