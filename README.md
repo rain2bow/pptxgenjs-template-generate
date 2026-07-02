@@ -4,6 +4,61 @@
 
 当前 `main` 分支包含三套可切换风格、统一的 JSON spec 输入、内置样例、图片/图表槽位校验、布局多样性提示、CMB 招商银行独立品牌风格，以及 PPTX 原生结构和布局风险校验脚本。
 
+## 文件结构与作用
+
+主分支的核心文件结构如下。`git ls-files` 中未包含的 `outputs/`、`assets/outputs/` 和 `.idea/` 属于本地生成物或 IDE 配置，不是技能运行所必需的源码。
+
+```text
+guizang-pptxgenjs-ppt-skill/
+├── SKILL.md
+├── README.md
+├── package.json
+├── scripts/
+│   ├── generate-pptx.js
+│   ├── validate-pptx-native.js
+│   └── validate-pptx-layout.js
+├── assets/
+│   ├── template-magazine.js
+│   ├── template-swiss.js
+│   ├── template-cmb.js
+│   ├── template-cmb-all-layouts.js
+│   └── logos/
+│       ├── cmb-logo-lockup.png
+│       └── cmb-logo-mark.svg
+├── references/
+│   ├── checklist.md
+│   ├── layouts.md
+│   ├── layouts-swiss.md
+│   ├── screenshot-framing.md
+│   ├── swiss-layout-lock.md
+│   ├── swiss-map-component.md
+│   ├── themes.md
+│   └── themes-swiss.md
+├── outputs/              # 本地生成物目录，不建议提交
+└── assets/outputs/       # 样例 PPTX 生成物目录，不建议提交
+```
+
+核心文件作用：
+
+- `SKILL.md`：Codex 使用本技能时读取的主说明文件，包含触发场景、生成流程、JSON spec 约束、layout 规则和校验步骤。
+- `README.md`：面向仓库维护和使用者的概览文档，说明安装、运行、文件结构和当前能力边界。
+- `package.json`：Node 依赖和快捷命令入口，包含 `sample:*`、`validate:*` 等脚本命令。
+- `scripts/generate-pptx.js`：主生成器。读取 JSON spec，解析风格和 layout，插入文本、图片、图标、表格、图表，并输出原生可编辑 PPTX。
+- `scripts/validate-pptx-native.js`：校验 PPTX 是否包含原生 PowerPoint 结构，避免输出整页截图型文件。
+- `scripts/validate-pptx-layout.js`：扫描生成后的 PPTX 结构，检查明显的布局冲突、文本覆盖和底部安全区风险。
+- `assets/template-magazine.js`：`magazine` 风格样例 spec，适合作为电子杂志/叙事型页面的输入参考。
+- `assets/template-swiss.js`：`swiss` 风格样例 spec，适合作为数据、科技、方法论页面的输入参考。
+- `assets/template-cmb.js`：招商银行 `cmb` 独立风格样例 spec，内置 CMB logo 配置和金融汇报页面结构。
+- `assets/template-cmb-all-layouts.js`：CMB 全 layout QA 生成入口，用于一次性生成所有支持页面类型，便于人工检查排版。
+- `assets/logos/cmb-logo-lockup.png`：CMB 页眉使用的白底完整 logo。
+- `assets/logos/cmb-logo-mark.svg`：CMB 页眉外装饰和水印使用的透明纯图 logo。
+- `references/checklist.md`：生成后人工检查清单。
+- `references/layouts.md`、`references/layouts-swiss.md`：原始视觉风格和 layout 语义参考。
+- `references/themes.md`、`references/themes-swiss.md`：主题色、字体和视觉参数参考。
+- `references/swiss-layout-lock.md`、`references/swiss-map-component.md`：Swiss 风格布局锁定和组件映射参考。
+- `references/screenshot-framing.md`：历史截图/取景相关参考，仅在需要追溯视觉来源时读取。
+- `outputs/`：本地测试输出目录，例如临时 spec、normalized JSON 和生成 PPTX。
+- `assets/outputs/`：样例模板脚本默认写入的 PPTX 输出目录。
 ## 安装
 
 建议使用 Node.js 18 或更高版本。
