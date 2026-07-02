@@ -1,4 +1,5 @@
 # guizang-pptxgenjs-ppt-skill
+本技能没有直接用到guizang-ppt中的文件, 借鉴了其两个模板风格作为pptxgenjs模板, 生成产物是.pptx文件非html.
 
 基于 `pptxgenjs` 的可编辑 PowerPoint 生成技能。它直接生成 PowerPoint 原生文本框、形状、线条、图片、表格和图表，不依赖 HTML 截图、整页图片或 PDF 转换，便于后续在 PowerPoint/WPS 中继续编辑。
 
