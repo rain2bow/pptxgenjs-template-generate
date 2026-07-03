@@ -46,6 +46,7 @@ function normalizeSpec(spec, options = {}) {
   if (shouldDiversify && !options.writeNormalizedSpec && !spec.allowUnsyncedLayoutDiversify) {
     fail('Layout diversification changes slide.layout. Use --write-normalized-spec path/to/normalized.json so the JSON matches the generated PPTX, or remove --diversify-layouts.');
   }
+  normalizeLayoutCompatibility(spec);
   const layoutChanges = diversifyRepeatedLayouts(spec, { mutate: shouldDiversify });
   if (layoutChanges.length && shouldDiversify) spec.__layoutDiversified = true;
   validateSpecSlots(spec, { specDir: options.specDir || process.cwd() });
@@ -182,6 +183,7 @@ function renderMagazine(slide, ctx) {
     pipeline: magazinePipeline,
     bigQuote: magazineBigQuote,
     compare: magazineCompare,
+    splitCompare: magazineCompare,
     textImage: magazineTextImage,
     article: magazineArticle,
     sectionList: magazineSectionList,
@@ -232,6 +234,7 @@ function renderSwiss(slide, ctx) {
     pipeline: swissTimeline,
     bigQuote: swissBigQuoteCompat,
     compare: swissDuoCompare,
+    splitCompare: swissDuoCompare,
     textImage: swissTextImageCompat,
     article: swissTextGrid,
     sectionList: swissSectionList,
@@ -287,6 +290,7 @@ function renderCmb(slide, ctx) {
     imageGrid: swissImageGridCompat,
     compare: swissDuoCompare,
     duoCompare: swissDuoCompare,
+    splitCompare: swissDuoCompare,
     timeline: swissTimeline,
     pipeline: swissTimeline,
     roadmap: swissRoadmap,
@@ -1002,7 +1006,7 @@ function magazineCompare(slide, ctx, s) {
     slide.addShape(pptx.ShapeType.line, { x, y: 2.5, w: 0, h: 3.4, line: { color: s.fg, transparency: i === 0 ? 55 : 15, width: 1.6 } });
     slide.addText(col.label || (i === 0 ? 'Before' : 'After'), { x: x + 0.25, y: 2.55, w: 4.8, h: 0.25, fontFace: FONTS.mono, fontSize: 8, charSpace: 1.5, color: s.fg, transparency: i === 0 ? 55 : 25, margin: 0 });
     slide.addText(col.title || '', { x: x + 0.25, y: 3.0, w: 4.9, h: 0.55, fontFace: FONTS.serifZh, fontSize: 22, bold: true, color: s.fg, transparency: i === 0 ? 38 : 0, margin: 0, fit: 'shrink' });
-    addBullets(slide, col.items || [], x + 0.25, 3.82, 4.9, 1.65, s.fg, i === 0 ? 35 : 10, 'magazine');
+    addBullets(slide, compareBulletItems(col.items || []), x + 0.25, 3.82, 4.9, 1.65, s.fg, i === 0 ? 35 : 10, 'magazine');
   });
   addFoot(slide, ctx, s.fg, 'magazine');
 }
@@ -1260,12 +1264,12 @@ function magazineRoadmap(slide, ctx, s) {
     const x = x0 + i * stepW;
     const y = y0 + (i % 2 === 0 ? -1.0 : 0.38);
     slide.addShape(pptx.ShapeType.ellipse, { x: x - 0.08, y: y0 - 0.08, w: 0.16, h: 0.16, fill: { color: s.fg }, line: { color: s.fg, transparency: 100 } });
+    const textW = steps.length <= 4 ? 2.25 : steps.length === 5 ? 1.9 : 1.72;
     const labelX = clamp(x - 0.48, 0.65, SLIDE.w - 1.6);
-    const titleX = clamp(x - 0.68, 0.65, SLIDE.w - 1.85);
-    const descX = clamp(x - 0.72, 0.65, SLIDE.w - 1.95);
+    const textX = clamp(x - textW / 2, 0.65, SLIDE.w - textW - 0.35);
     slide.addText(item.label || item.date || `0${i + 1}`, { x: labelX, y: y - 0.24, w: 0.95, h: 0.2, fontFace: FONTS.mono, fontSize: 9.5, color: s.fg, transparency: 35, align: 'center', margin: 0, fit: 'shrink' });
-    slide.addText(item.title || '', { x: titleX, y, w: 1.35, h: 0.34, fontFace: FONTS.serifZh, fontSize: 12.5, bold: true, color: s.fg, align: 'center', margin: 0, fit: 'shrink' });
-    slide.addText(item.body || item.desc || item.note || '', { x: descX, y: y + 0.42, w: 1.45, h: 0.45, fontFace: FONTS.sansZh, fontSize: 9.2, color: s.fg, transparency: 26, align: 'center', margin: 0, fit: 'shrink' });
+    slide.addText(item.title || '', { x: textX, y, w: textW, h: 0.34, fontFace: FONTS.serifZh, fontSize: 12.5, bold: true, color: s.fg, align: 'center', margin: 0, fit: 'shrink' });
+    slide.addText(item.body || item.desc || item.note || '', { x: textX, y: y + 0.42, w: textW, h: 0.48, fontFace: FONTS.sansZh, fontSize: 9.2, color: s.fg, transparency: 26, align: 'center', margin: 0, fit: 'shrink' });
   });
   addFoot(slide, ctx, s.fg, 'magazine');
 }
@@ -1377,7 +1381,7 @@ function swissDuoCompare(slide, ctx, s) {
     slide.addShape(pptx.ShapeType.rect, { x, y: 2.55, w: 5.55, h: 3.25, fill: { color: fill }, line: { color: fill, transparency: 100 } });
     slide.addText(col.label || (i === 0 ? 'Before' : 'After'), { x: x + 0.35, y: 2.88, w: 4.7, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 8, charSpace: 1.3, color, transparency: 30, margin: 0 });
     slide.addText(col.title || '', { x: x + 0.35, y: 3.35, w: 4.7, h: 0.55, fontFace: FONTS.sans, fontSize: 23, color, margin: 0, fit: 'shrink' });
-    addBullets(slide, col.items || [], x + 0.35, 4.22, 4.7, 1.15, color, 14, 'swiss');
+    addBullets(slide, compareBulletItems(col.items || []), x + 0.35, 4.22, 4.7, 1.15, color, 14, 'swiss');
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -1542,9 +1546,9 @@ function swissTextGrid(slide, ctx, s) {
   const gapY = 0.3;
   const w = (11.45 - gapX * (cols - 1)) / cols;
   const rows = Math.ceil(sections.length / cols);
-  const minH = rows === 1 ? 2.0 : rows === 2 ? 1.44 : 1.14;
-  const maxBottom = 6.35;
-  const gridBodyMax = Math.max(rows === 1 ? 2.4 : rows === 2 ? 1.22 : 0.96, (maxBottom - y0 - gapY * Math.max(0, rows - 1)) / rows - 0.86);
+  const minH = rows === 1 ? 2.0 : rows === 2 ? 1.62 : 1.14;
+  const maxBottom = 6.42;
+  const gridBodyMax = Math.max(rows === 1 ? 2.4 : rows === 2 ? 1.48 : 0.96, (maxBottom - y0 - gapY * Math.max(0, rows - 1)) / rows - 0.78);
   const demands = sections.map((item) => {
     const title = item.title || '';
     const body = item.body || item.desc || '';
@@ -1705,7 +1709,8 @@ function swissAgenda(slide, ctx, s) {
   const y0 = data.subtitle ? 2.85 : 2.52;
   const rowGap = rows > 1 ? 0.24 : 0;
   const maxBottom = 6.42;
-  const cardH = Math.max(1.12, Math.min(1.46, (maxBottom - y0 - rowGap * (rows - 1)) / rows));
+  const maxCardH = rows === 2 ? 1.82 : rows === 1 ? 2.15 : 1.46;
+  const cardH = Math.max(1.12, Math.min(maxCardH, (maxBottom - y0 - rowGap * (rows - 1)) / rows));
   items.forEach((item, i) => {
     const x = 0.78 + (i % cols) * (cardW + gap);
     const y = y0 + Math.floor(i / cols) * (cardH + rowGap);
@@ -1795,12 +1800,12 @@ function swissRoadmap(slide, ctx, s) {
     const hot = i === data.highlightIndex || (data.highlightLast && i === steps.length - 1);
     slide.addShape(pptx.ShapeType.rect, { x: x - 0.06, y: y0 - 0.06, w: 0.12, h: 0.12, fill: { color: hot ? ctx.theme.accent : s.fg }, line: { color: hot ? ctx.theme.accent : s.fg, transparency: 100 } });
     const y = y0 + (i % 2 === 0 ? -1.02 : 0.35);
+    const textW = steps.length <= 4 ? 2.3 : steps.length === 5 ? 1.96 : 1.78;
     const labelX = clamp(x - 0.48, 0.65, SLIDE.w - 1.6);
-    const titleX = clamp(x - 0.68, 0.65, SLIDE.w - 1.9);
-    const descX = clamp(x - 0.76, 0.65, SLIDE.w - 2.0);
+    const textX = clamp(x - textW / 2, 0.65, SLIDE.w - textW - 0.35);
     slide.addText(item.label || item.date || `0${i + 1}`, { x: labelX, y: y - 0.28, w: 0.95, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 9.8, color: hot ? ctx.theme.accent : s.fg, align: 'center', margin: 0, fit: 'shrink' });
-    slide.addText(item.title || '', { x: titleX, y, w: 1.38, h: 0.35, fontFace: FONTS.sansZh, fontSize: 11.4, bold: true, color: s.fg, align: 'center', margin: 0, fit: 'shrink' });
-    slide.addText(item.body || item.desc || item.note || '', { x: descX, y: y + 0.44, w: 1.52, h: 0.42, fontFace: FONTS.sansZh, fontSize: 9.2, color: s.fg, transparency: 30, align: 'center', margin: 0, fit: 'shrink' });
+    slide.addText(item.title || '', { x: textX, y, w: textW, h: 0.35, fontFace: FONTS.sansZh, fontSize: 11.4, bold: true, color: s.fg, align: 'center', margin: 0, fit: 'shrink' });
+    slide.addText(item.body || item.desc || item.note || '', { x: textX, y: y + 0.44, w: textW, h: 0.48, fontFace: FONTS.sansZh, fontSize: 9.2, color: s.fg, transparency: 30, align: 'center', margin: 0, fit: 'shrink' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -1969,6 +1974,17 @@ function addBullets(slide, items, x, y, w, h, color, transparency, mode) {
       breakLine: false,
       valign: 'mid',
     });
+  });
+}
+
+function compareBulletItems(items) {
+  return normalizeSections(items).map((item) => {
+    const title = item.title || item.label || item.text || '';
+    const body = item.body || item.desc || item.note || item.summary || item.detail || '';
+    return {
+      ...item,
+      text: title && body ? title + ': ' + body : title || body,
+    };
   });
 }
 
@@ -2551,6 +2567,46 @@ function normalizeTableRows(table) {
   return [];
 }
 
+function normalizeLayoutCompatibility(spec) {
+  spec.slides.forEach((slide, index) => {
+    normalizeCompareSlide(slide, index);
+  });
+}
+
+function normalizeCompareSlide(slide, index) {
+  const layout = slide.layout || '';
+  if (!['compare', 'duoCompare', 'splitCompare'].includes(layout)) return;
+  const before = normalizeCompareColumn(slide.before, slide.left, slide.leftTitle || slide.beforeTitle, slide.leftLabel || slide.beforeLabel, 'left/before', index);
+  const after = normalizeCompareColumn(slide.after, slide.right, slide.rightTitle || slide.afterTitle, slide.rightLabel || slide.afterLabel, 'right/after', index);
+  if (before) slide.before = before;
+  if (after) slide.after = after;
+}
+
+function normalizeCompareColumn(primary, alias, title, label, side, index) {
+  if (primary && !Array.isArray(primary)) return normalizeCompareColumnObject(primary, title, label);
+  if (Array.isArray(primary)) {
+    console.warn(`Warning: slide ${index + 1} compare column "${side}" is an array; normalized it to { title, items } so body text is rendered.`);
+    return normalizeCompareColumnObject({ title, label, items: primary }, title, label);
+  }
+  if (Array.isArray(alias)) {
+    console.warn(`Warning: slide ${index + 1} compare column "${side}" is an array; normalized it to { title, items } so body text is rendered.`);
+    return normalizeCompareColumnObject({ title, label, items: alias }, title, label);
+  }
+  if (alias && typeof alias === 'object') return normalizeCompareColumnObject(alias, title, label);
+  return null;
+}
+
+function normalizeCompareColumnObject(column, title, label) {
+  const next = { ...column };
+  if (title && !next.title) next.title = title;
+  if (label && !next.label) next.label = label;
+  if (!Array.isArray(next.items)) {
+    const fallbackItems = next.sections || next.points || next.bullets || next.list;
+    if (Array.isArray(fallbackItems)) next.items = fallbackItems;
+  }
+  return next;
+}
+
 function validateSpecSlots(spec, options = {}) {
   const errors = [];
   const warnings = [];
@@ -2623,7 +2679,7 @@ function validateTextSlots(slide, index, style, errors, warnings) {
   const layoutRules = rules[layout] || [];
   validateIgnoredSlotFields(slide, index, layout, layoutRules, errors);
   layoutRules.forEach((rule) => validateSlotCollection(slide, index, rule, errors, warnings));
-  if (layout === 'compare' || layout === 'duoCompare') {
+  if (layout === 'compare' || layout === 'duoCompare' || layout === 'splitCompare') {
     validateSlotCollection(slide.before || {}, index, { keys: ['items'], max: 6, min: 1, label: 'before items', prefix: 'before.' }, errors, warnings);
     validateSlotCollection(slide.after || {}, index, { keys: ['items'], max: 6, min: 1, label: 'after items', prefix: 'after.' }, errors, warnings);
   }
