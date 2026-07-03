@@ -1699,17 +1699,25 @@ function swissAgenda(slide, ctx, s) {
   addPageHead(slide, data, s.fg, 'swiss', 0.82);
   const items = normalizeSections(data.items || data.sections || data.agenda || []).slice(0, 8);
   const cols = clampColumns(data.columnsCount || autoColumns(items.length, 4), 1, 4);
+  const rows = Math.max(1, Math.ceil(items.length / cols));
   const gap = 0.24;
   const cardW = (11.45 - gap * (cols - 1)) / cols;
   const y0 = data.subtitle ? 2.85 : 2.52;
+  const rowGap = rows > 1 ? 0.24 : 0;
+  const maxBottom = 6.42;
+  const cardH = Math.max(1.12, Math.min(1.46, (maxBottom - y0 - rowGap * (rows - 1)) / rows));
   items.forEach((item, i) => {
     const x = 0.78 + (i % cols) * (cardW + gap);
-    const y = y0 + Math.floor(i / cols) * 1.42;
+    const y = y0 + Math.floor(i / cols) * (cardH + rowGap);
     const hot = i === data.highlightIndex;
-    slide.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: 1.08, fill: { color: hot ? ctx.theme.accent : ctx.theme.grey1 }, line: { color: hot ? ctx.theme.accent : ctx.theme.grey1, transparency: 100 } });
+    const body = item.body || item.desc || item.note || item.summary || item.detail || item.text || '';
+    slide.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: cardH, fill: { color: hot ? ctx.theme.accent : ctx.theme.grey1 }, line: { color: hot ? ctx.theme.accent : ctx.theme.grey1, transparency: 100 } });
     const color = hot ? ctx.theme.accentOn : s.fg;
     slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.16, w: 0.62, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 9.8, color, transparency: hot ? 0 : 35, margin: 0, fit: 'shrink' });
-    slide.addText(item.title || '', { x: x + 0.18, y: y + 0.48, w: cardW - 0.36, h: 0.3, fontFace: FONTS.sansZh, fontSize: 12.6, bold: true, color, margin: 0, fit: 'shrink' });
+    slide.addText(item.title || item.label || `Item ${i + 1}`, { x: x + 0.18, y: y + 0.48, w: cardW - 0.36, h: 0.3, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, bold: true, color, margin: 0, fit: 'shrink' });
+    if (body) {
+      slide.addText(body, { x: x + 0.18, y: y + 0.86, w: cardW - 0.36, h: Math.max(0.28, cardH - 0.98), fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color, transparency: hot ? 8 : 30, margin: 0.02, valign: 'top' });
+    }
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
