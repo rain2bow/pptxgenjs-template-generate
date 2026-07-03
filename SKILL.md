@@ -200,6 +200,7 @@ JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 
 - `imageHero`: 顶部 21:9 主图 + 下方说明/KPI；无用户图片且无显式 `chart` 时显示 `IMAGE SLOT` 占位符。
 - `media`: 统一媒体区 + 侧边说明；有用户图片优先放图，没有图片且显式提供 `chart`/`charts` 时放可编辑图表，否则显示 `IMAGE SLOT` 占位符。
 - `mediaGrid` / `gallery`: 1-6 个图片/图表媒体位，自适应一张或多张图。
+- `sectionList`: text-only vertical section list for 3-7 `sections` / `items` / `columns`; preserves `title` + `body` and is the preferred visual alternative when repeated `article` pages need variety without image slots.
 - `textGrid`: 6-9 项三列信息网格。
 - `dataSheet`: Swiss 表格 + 侧边备注页。
 - `chart`: 大图表 + 右侧指标洞察页。
@@ -217,10 +218,14 @@ JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 
 - `swimlane`: 泳道矩阵，适合角色 × 阶段、团队 × 任务、模块 × 时间。
 跨模板兼容：`magazine`、`swiss` 与 `cmb` 都必须接受上述两套 layout 名称。切换模板时优先只改顶层 `style` / `theme`，不要批量改每页 `layout`；生成器会把另一套模板的 layout 映射为当前风格中语义最接近的页面：`bigNumbers` ↔ `kpiTower`、`compare` ↔ `duoCompare`、`pipeline` ↔ `timeline`、`article` ↔ `textGrid`、`quoteImage`/`textImage` ↔ `imageHero`、`bigQuote`/`section` ↔ `statement`/`cover`。如果某页切换后信息密度明显不合适，再人工换成同风格推荐版式。
 媒体区规则：两个模板都使用同名 `media` / `mediaGrid` / `gallery` layout 留出统一放图区域。用户提供 `image` / `images` / `gallery` 时优先插入用户图片；`mediaGrid` / `gallery` / `imageGrid` 未显式设置 `mediaCount` 时，槽位数自动等于图片数、显式图表数或 caption 数，不再用默认 4 格。若显式设置 `mediaCount`，必须与用户图片数一致；例如 3 张图就用 3 个槽位，不要生成 4 个槽位。没有用户图片且显式提供 `chart` / `charts` 时才用 PowerPoint 原生图表填充；没有图片和显式图表时显示 `IMAGE SLOT` 占位符，表示这里可以放图。
+
+Media selection rule: without user-provided images, do not select image/media-slot layouts unless the slide has explicit chart data that will fill the media region. If there are no images and no charts, use text-only layouts and do not create empty image placeholders unless the user explicitly asks for placeholders.
 槽位校验：生成器会在生成前检查每页图片槽位、文本槽位和字段格式。超过布局最大数量的 `items` / `sections` / `steps` / `charts` 会直接报错，避免内容被静默截断；同一组同义字段（如 `sections`、`items`、`columns`）不要同时填写，否则只有第一个字段会被使用并打印警告；分点对象必须至少包含 `text` / `title` / `label` / `body` / `desc` / `note` / `summary` / `value` 之一，避免格式不匹配导致内容不显示。
 内容完整性：每个分点、卡片、栏目不能只写标题，至少补 `body` / `desc` / `note` / `summary` 之一。生成器会对大多数分点只有标题的页面打印警告；生成大纲和 spec 时必须把“标题 + 一句解释/证据/结论”作为最小单元。
 自适应分栏：多分点页面必须根据实际条目数排版，不要为了模板默认 6/9/12 个位置而补空内容。`article`、`textGrid`、`matrix`、`fourCards`、`bigNumbers` 会自动选择列数：4 条默认 2×2，`fourCards` 的 5-6 条默认 3×2，7-8 条默认 4×2；`textGrid`/`matrix` 的 7-9 条默认 3 列多行；确需固定列数时才在页面 spec 中显式设置 `columnsCount`。
-页面多样性：规划 deck 时主动避免连续 3 页以上使用同一 layout 或同一视觉节奏。连续说明页应在 `statement`、`textGrid`、`article`、`fourCards`、`matrix`、`chart`、`media`、`mediaGrid`、`imageHero`、`compare`、`timeline`、`agenda`、`caseStudy`、`pyramid`、`radial`、`roadmap`、`swimlane` 之间轮换；如果内容语义相同但页面相邻，优先换成等价版式、调整条目数量、加入图表/表格/图片页或章节页。只有用户明确要求统一模板页时，才允许长段连续重复同一 layout。生成器默认只对连续重复 layout 输出替换建议，不会擅自修改 `slides[].layout`，这样输入 JSON 与生成 PPTX 保持一致。若确实要自动改 layout，必须同时使用 `--diversify-layouts --write-normalized-spec path/to/normalized.json`，并以后续 normalized JSON 作为真实源文件；否则可能出现“PPT 已换 layout、原 JSON 未变、内容字段不匹配”的问题。
+页面多样性：规划 deck 时主动避免连续 3 页以上使用同一 layout 或同一视觉节奏。连续说明页应在 `statement`、`textGrid`、`article`、`fourCards`、`matrix`、`chart`、`media`、`mediaGrid`、`imageHero`、`compare`、`timeline`、`agenda`、`caseStudy`、`pyramid`、`radial`、`roadmap`、`swimlane` 之间轮换；如果内容语义相同但页面相邻，优先换成等价版式、调整条目数量、加入图表/表格/图片页或章节页。只有用户明确要求统一模板页时，才允许长段连续重复同一 layout。生成器默认只对连续重复 layout 输出替换建议，不会擅自修改 `slides[].layout`，这样输入 JSON 与生成 PPTX 保持一致。若确实要自动改 layout，必须同时使用 
+Layout gating rule: if a slide has no user-provided image fields (`image`, `images`, `gallery`, or image media items), do not choose image/media-slot layouts (`media`, `mediaGrid`, `gallery`, `imageGrid`, `imageHero`, `quoteImage`, `textImage`, `caseStudy`) just for visual variety. Use text/structure layouts instead. If the slide has explicit `chart` / `charts` or `table` data, use `chart`, `dashboard`, or `dataSheet` as the preferred variation. The generator layout suggestions follow the same filtering rule.
+`--diversify-layouts --write-normalized-spec path/to/normalized.json`，并以后续 normalized JSON 作为真实源文件；否则可能出现“PPT 已换 layout、原 JSON 未变、内容字段不匹配”的问题。
 
 ## 生成准则
 

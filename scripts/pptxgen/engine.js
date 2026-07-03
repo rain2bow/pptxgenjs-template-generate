@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const process = require('node:process');
 const pptxgen = require('pptxgenjs');
+const JSZip = require('jszip');
 const {
   SLIDE,
   THEMES,
@@ -34,8 +35,6 @@ let LUCIDE_MODULE = undefined;
 let SHARP_MODULE = undefined;
 let ICON_RENDER_MODE = 'png';
 let SVG_IMAGE_RENDER_MODE = 'png';
-let ICON_PNG_WARNING_SHOWN = false;
-let SVG_IMAGE_PNG_WARNING_SHOWN = false;
 
 function normalizeSpec(spec, options = {}) {
   spec.style = spec.style || 'magazine';
@@ -83,11 +82,45 @@ async function buildDeck(spec, specDir, outPath) {
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
   await pptx.writeFile({ fileName: outPath });
+  if (spec.disableTextAutofit !== false) await disableTextAutofit(outPath);
   console.log(`Wrote ${outPath}`);
   console.log(`Slides: ${spec.slides.length}`);
   console.log(`Style: ${spec.style} / ${theme.name}`);
 }
 
+async function disableTextAutofit(pptxPath) {
+  const buffer = await fs.promises.readFile(pptxPath);
+  const zip = await JSZip.loadAsync(buffer);
+  const slideFiles = Object.keys(zip.files).filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name));
+  let changed = false;
+  await Promise.all(slideFiles.map(async (name) => {
+    const xml = await zip.file(name).async('string');
+    const next = forceNoAutofitXml(xml);
+    if (next !== xml) {
+      zip.file(name, next);
+      changed = true;
+    }
+  }));
+  if (!changed) return;
+  const output = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+  await fs.promises.writeFile(pptxPath, output);
+}
+
+function forceNoAutofitXml(xml) {
+  return String(xml)
+    .replace(/<a:bodyPr\b([^>]*)\/>/g, '<a:bodyPr$1><a:noAutofit/></a:bodyPr>')
+    .replace(/<a:bodyPr\b([^>]*)>([\s\S]*?)<\/a:bodyPr>/g, (_match, attrs, body) => {
+      let nextBody = body.replace(/<a:(?:spAutoFit|normAutofit)\b[^>]*(?:\/>|>[\s\S]*?<\/a:(?:spAutoFit|normAutofit)>)/g, '');
+      if (!/<a:noAutofit\b/.test(nextBody)) nextBody = insertNoAutofit(nextBody);
+      return `<a:bodyPr${attrs}>${nextBody}</a:bodyPr>`;
+    });
+}
+
+function insertNoAutofit(body) {
+  const warp = body.match(/^\s*<a:prstTxWarp\b[^>]*(?:\/>|>[\s\S]*?<\/a:prstTxWarp>)/);
+  if (!warp) return '<a:noAutofit/>' + body;
+  return body.slice(0, warp[0].length) + '<a:noAutofit/>' + body.slice(warp[0].length);
+}
 function enforceReadableSlideText(slide) {
   if (slide.__readabilityPatched) return;
   const originalAddText = slide.addText.bind(slide);
@@ -101,8 +134,10 @@ function enforceReadableSlideText(slide) {
 }
 
 function readableTextOptions(options, text) {
-  if (!options || options.noReadabilityScale) return options;
+  if (!options) return options;
   const next = { ...options };
+  if (next.fit === 'shrink' && next.allowAutoFit !== true) delete next.fit;
+  if (next.noReadabilityScale) return next;
   if (typeof next.fontSize === 'number' && next.fontSize < READABILITY.minFontSize && !isSymbolText(next, text)) {
     next.fontSize = READABILITY.minFontSize;
     const minBoxH = (READABILITY.minFontSize * 1.28) / 72;
@@ -149,6 +184,7 @@ function renderMagazine(slide, ctx) {
     compare: magazineCompare,
     textImage: magazineTextImage,
     article: magazineArticle,
+    sectionList: magazineSectionList,
     statement: magazineStatementCompat,
     kpiTower: magazineBigNumbers,
     duoCompare: magazineCompare,
@@ -198,6 +234,7 @@ function renderSwiss(slide, ctx) {
     compare: swissDuoCompare,
     textImage: swissTextImageCompat,
     article: swissTextGrid,
+    sectionList: swissSectionList,
     statement: swissStatement,
     kpiTower: swissKpiTower,
     duoCompare: swissDuoCompare,
@@ -255,6 +292,7 @@ function renderCmb(slide, ctx) {
     roadmap: swissRoadmap,
     textGrid: swissTextGrid,
     article: swissTextGrid,
+    sectionList: swissSectionList,
     fourCards: swissFourCards,
     matrix: swissMatrix,
     agenda: swissAgenda,
@@ -398,24 +436,14 @@ function svgImagePngData(imagePath, opacity) {
   if (SVG_IMAGE_RENDER_MODE === 'svg') return null;
   const data = SVG_IMAGE_PNG_CACHE.get(svgImageCacheKey(imagePath, opacity));
   if (data) return data;
-  if (!loadSharpModule()) warnSvgImagePngFallback();
-  return null;
-}
-
-function warnSvgImagePngFallback() {
-  if (SVG_IMAGE_PNG_WARNING_SHOWN) return;
-  SVG_IMAGE_PNG_WARNING_SHOWN = true;
-  console.warn('Warning: sharp is not installed or failed to load. SVG images/logos fall back to SVG; LibreOffice export or upload platforms may drop them. Run npm install, or set svgImageMode:"svg" intentionally.');
+  requireSharpForPng('SVG images/logos');
+  fail('SVG image was not rasterized before insertion: ' + imagePath);
 }
 
 async function prepareSvgImageAssets(spec, specDir) {
   SVG_IMAGE_RENDER_MODE = String(spec.svgImageMode || spec.svgImageRenderMode || spec.imageMode || 'png').toLowerCase();
   if (SVG_IMAGE_RENDER_MODE === 'svg') return;
-  const sharp = loadSharpModule();
-  if (!sharp) {
-    warnSvgImagePngFallback();
-    return;
-  }
+  requireSharpForPng('SVG images/logos');
   const images = collectSvgImageInputs(spec, specDir);
   if (spec.style === 'cmb') {
     const cmbMark = resolveImage(specDir, spec.logoMark || spec.logoSymbol || spec.brandLogoSymbol || 'logos/cmb-logo-mark.svg');
@@ -453,17 +481,13 @@ function collectSvgImageInputs(value, specDir, images = new Set()) {
 async function renderSvgImagePngToCache(imagePath, opacity) {
   const key = svgImageCacheKey(imagePath, opacity);
   if (SVG_IMAGE_PNG_CACHE.has(key)) return;
-  const sharp = loadSharpModule();
-  if (!sharp) return;
+  const sharp = requireSharpForPng('SVG images/logos');
   try {
     const svg = readSvgWithOpacity(imagePath, opacity);
     const buffer = await sharp(Buffer.from(svg), { density: 288 }).png().toBuffer();
     SVG_IMAGE_PNG_CACHE.set(key, 'data:image/png;base64,' + buffer.toString('base64'));
   } catch (error) {
-    if (!SVG_IMAGE_PNG_WARNING_SHOWN) {
-      SVG_IMAGE_PNG_WARNING_SHOWN = true;
-      console.warn('Warning: sharp failed to rasterize SVG image "' + imagePath + '". Falling back to SVG. ' + error.message);
-    }
+    fail('Failed to rasterize SVG image/logo to PNG: ' + imagePath + '. ' + error.message);
   }
 }
 
@@ -1044,6 +1068,44 @@ function magazineArticle(slide, ctx, s) {
   addFoot(slide, ctx, s.fg, 'magazine');
 }
 
+function magazineSectionList(slide, ctx, s) {
+  const data = ctx.slideSpec;
+  addPageHead(slide, data, s.fg, 'magazine', 0.82);
+  const sections = normalizeSections(data.sections || data.items || data.columns || []).slice(0, data.maxItems || 7);
+  if (!sections.length) {
+    addFoot(slide, ctx, s.fg, 'magazine');
+    return;
+  }
+  const y0 = data.subtitle ? 2.62 : 2.32;
+  const bottom = 6.34;
+  const gapY = 0.14;
+  const rowMin = sections.length <= 4 ? 0.78 : 0.58;
+  const textW = 8.95;
+  const demands = sections.map((item) => {
+    const title = item.title || item.label || item.name || '';
+    const body = item.body || item.desc || item.note || item.summary || item.detail || item.text || '';
+    const titleH = estimateTextHeight(title, textW, 14.2, { min: 0.26, max: 0.46, lineHeight: 1.2, padding: 0.02 });
+    const bodyH = estimateTextHeight(body, textW, READABILITY.minFontSize, { min: body ? 0.32 : 0, empty: 0, max: 0.82, lineHeight: 1.35, padding: 0.06 });
+    return Math.max(rowMin, titleH + (body ? 0.08 + bodyH : 0) + 0.2);
+  });
+  const rowHeights = distributeRowHeights(demands, sections.length, 1, rowMin, bottom - y0, gapY);
+  let y = y0;
+  sections.forEach((item, i) => {
+    const h = rowHeights[i];
+    const hot = i === data.highlightIndex;
+    const accent = hot ? ctx.theme.inkTint : s.fg;
+    slide.addShape(pptx.ShapeType.line, { x: 0.78, y, w: 10.95, h: 0, line: { color: accent, transparency: hot ? 8 : 62, width: hot ? 1.6 : 0.65 } });
+    slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: 0.82, y: y + 0.16, w: 0.58, h: 0.26, fontFace: FONTS.serifEn, fontSize: 13.5, italic: true, bold: hot, color: accent, transparency: hot ? 0 : 25, margin: 0 });
+    const title = item.title || item.name || '';
+    const body = item.body || item.desc || item.note || item.summary || item.detail || item.text || '';
+    const titleH = estimateTextHeight(title, textW, 14.2, { min: 0.28, max: 0.48, lineHeight: 1.2, padding: 0.02 });
+    slide.addText(title, { x: 1.55, y: y + 0.12, w: textW, h: titleH, fontFace: FONTS.serifZh, fontSize: 14.2, bold: true, color: s.fg, margin: 0, valign: 'top' });
+    if (body) slide.addText(body, { x: 1.55, y: y + 0.16 + titleH, w: textW, h: Math.max(0.28, h - titleH - 0.22), fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color: s.fg, transparency: 18, margin: 0.02, valign: 'top' });
+    y += h + gapY;
+  });
+  addFoot(slide, ctx, s.fg, 'magazine');
+}
+
 function magazineDataSheet(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'magazine', 0.82);
@@ -1515,6 +1577,47 @@ function swissTextGrid(slide, ctx, s) {
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
+function swissSectionList(slide, ctx, s) {
+  const data = ctx.slideSpec;
+  addPageHead(slide, data, s.fg, 'swiss', 0.82);
+  const sections = normalizeSections(data.sections || data.items || data.columns || []).slice(0, data.maxItems || 7);
+  if (!sections.length) {
+    addFoot(slide, ctx, s.fg, 'swiss');
+    return;
+  }
+  const isCmb = ctx.spec.style === 'cmb';
+  const y0 = data.subtitle ? 2.72 : 2.42;
+  const bottom = 6.35;
+  const gapY = 0.12;
+  const rowMin = sections.length <= 4 ? 0.82 : 0.6;
+  const textW = 9.22;
+  const demands = sections.map((item) => {
+    const title = item.title || item.label || item.name || '';
+    const body = item.body || item.desc || item.note || item.summary || item.detail || item.text || '';
+    const titleH = estimateTextHeight(title, textW, READABILITY.minFontSize, { min: 0.28, max: 0.46, lineHeight: 1.22, padding: 0.02 });
+    const bodyH = estimateTextHeight(body, textW, READABILITY.minFontSize, { min: body ? 0.34 : 0, empty: 0, max: 0.82, lineHeight: 1.34, padding: 0.06 });
+    return Math.max(rowMin, titleH + (body ? 0.08 + bodyH : 0) + 0.22);
+  });
+  const rowHeights = distributeRowHeights(demands, sections.length, 1, rowMin, bottom - y0, gapY);
+  let y = y0;
+  sections.forEach((item, i) => {
+    const h = rowHeights[i];
+    const hot = i === data.highlightIndex;
+    const fill = hot ? ctx.theme.accent : ctx.theme.grey1;
+    const color = hot ? ctx.theme.accentOn : s.fg;
+    slide.addShape(pptx.ShapeType.rect, { x: 0.78, y, w: 11.45, h, fill: { color: fill, transparency: hot ? 0 : isCmb ? 18 : 0 }, line: { color: fill, transparency: 100 } });
+    slide.addShape(pptx.ShapeType.rect, { x: 0.78, y, w: 0.1, h, fill: { color: hot ? ctx.theme.accentOn : ctx.theme.accent, transparency: hot ? 0 : 12 }, line: { color: hot ? ctx.theme.accentOn : ctx.theme.accent, transparency: 100 } });
+    slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: 1.04, y: y + 0.18, w: 0.54, h: 0.24, fontFace: 'JetBrains Mono', fontSize: 9.4, bold: hot, color, transparency: hot ? 0 : 28, margin: 0 });
+    const title = item.title || item.name || '';
+    const body = item.body || item.desc || item.note || item.summary || item.detail || item.text || '';
+    const titleH = estimateTextHeight(title, textW, READABILITY.minFontSize, { min: 0.3, max: 0.48, lineHeight: 1.22, padding: 0.02 });
+    slide.addText(title, { x: 1.78, y: y + 0.14, w: textW, h: titleH, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, bold: true, color, margin: 0, valign: 'top' });
+    if (body) slide.addText(body, { x: 1.78, y: y + 0.18 + titleH, w: textW, h: Math.max(0.3, h - titleH - 0.24), fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color, transparency: hot ? 8 : 28, margin: 0.02, valign: 'top' });
+    y += h + gapY;
+  });
+  addFoot(slide, ctx, s.fg, 'swiss');
+}
+
 function swissDataSheet(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'swiss', 0.82);
@@ -2024,10 +2127,12 @@ function loadSharpModule() {
   return SHARP_MODULE;
 }
 
-function warnIconPngFallback() {
-  if (ICON_PNG_WARNING_SHOWN) return;
-  ICON_PNG_WARNING_SHOWN = true;
-  console.warn('Warning: sharp is not installed or failed to load. Lucide icons fall back to SVG; LibreOffice export may drop SVG icons. Run npm install after adding sharp, or set iconMode:"svg" intentionally.');
+function requireSharpForPng(scope) {
+  const sharp = loadSharpModule();
+  if (!sharp) {
+    fail(scope + ' require sharp to be installed because PNG rasterization is the default. Run npm install in the skill directory, or explicitly set iconMode:"svg" / svgImageMode:"svg" if SVG output is intentional.');
+  }
+  return sharp;
 }
 
 function iconSvgBuffer(icon, color) {
@@ -2062,11 +2167,7 @@ function defaultContentIconNames() {
 async function prepareIconAssets(spec, theme) {
   ICON_RENDER_MODE = String(spec.iconMode || 'png').toLowerCase();
   if (ICON_RENDER_MODE === 'svg') return;
-  const sharp = loadSharpModule();
-  if (!sharp) {
-    warnIconPngFallback();
-    return;
-  }
+  requireSharpForPng('Lucide icons');
   const { icons, colors } = collectIconInputs(spec);
   [...defaultContentIconNames(), ...Object.values(ICON_ALIASES)].forEach((icon) => icons.add(icon));
   ['111111', 'FFFFFF', ...themeIconColors(theme), ...colors].forEach((color) => colors.add(normalizeHex(color)));
@@ -2080,18 +2181,14 @@ async function prepareIconAssets(spec, theme) {
 async function renderIconPngToCache(icon, color) {
   const key = iconCacheKey(icon, color);
   if (ICON_PNG_CACHE.has(key)) return;
-  const sharp = loadSharpModule();
-  if (!sharp) return;
+  const sharp = requireSharpForPng('Lucide icons');
   const svgBuffer = iconSvgBuffer(icon, color);
-  if (!svgBuffer) return;
+  if (!svgBuffer) fail('Failed to build SVG source for icon: ' + icon);
   try {
     const buffer = await sharp(svgBuffer).resize(192, 192, { fit: 'contain' }).png().toBuffer();
     ICON_PNG_CACHE.set(key, `data:image/png;base64,${buffer.toString('base64')}`);
   } catch (error) {
-    if (!ICON_PNG_WARNING_SHOWN) {
-      ICON_PNG_WARNING_SHOWN = true;
-      console.warn(`Warning: sharp failed to rasterize icon "${icon}". Falling back to SVG icons. ${error.message}`);
-    }
+    fail(`Failed to rasterize Lucide icon "${icon}" to PNG. ${error.message}`);
   }
 }
 
@@ -2099,7 +2196,8 @@ function iconImageData(icon, color) {
   if (ICON_RENDER_MODE !== 'svg') {
     const data = ICON_PNG_CACHE.get(iconCacheKey(icon, color));
     if (data) return data;
-    if (!loadSharpModule()) warnIconPngFallback();
+    requireSharpForPng('Lucide icons');
+    fail('Icon was not rasterized before insertion: ' + icon);
   }
   return svgIconData(icon, color);
 }
@@ -2481,8 +2579,8 @@ function validateMediaSlots(slide, index, errors, warnings, specDir) {
       warnings.push(`Warning: slide ${index + 1} image ${imageIndex + 1} path is missing or unsupported; an image placeholder will be rendered.`);
     }
   });
-  if (isMediaGridLayout(layout) && !images.length && !charts.length && slotCount > 1) {
-    warnings.push(`Warning: slide ${index + 1} has ${slotCount} media slot(s) but no images/charts; placeholders will be rendered.`);
+  if (isVisualMediaLayout(layout) && !images.length && !charts.length) {
+    warnings.push(`Warning: slide ${index + 1} uses layout "${layout}" with media/image slot(s) but provides no images or charts. Use a text-only layout such as textGrid/article/fourCards/agenda/radial, or provide image/chart data.`);
   }
 }
 
@@ -2498,6 +2596,7 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     fourCards: [{ keys: ['items'], max: 8, min: 1, label: 'cards' }],
     article: [{ keys: ['sections', 'items', 'columns'], max: 6, min: 1, label: 'article sections' }],
     textGrid: [{ keys: ['sections', 'items', 'columns'], max: 9, min: 1, label: 'text grid cells' }],
+    sectionList: [{ keys: ['sections', 'items', 'columns'], max: 7, min: 1, label: 'section list items' }],
     agenda: [{ keys: ['items', 'sections', 'agenda'], max: 8, min: 1, label: 'agenda items' }],
     pyramid: [{ keys: ['layers', 'items', 'sections'], max: 5, min: 1, label: 'pyramid layers' }],
     radial: [{ keys: ['items', 'nodes', 'sections'], max: 8, min: 1, label: 'radial nodes' }],
@@ -2601,6 +2700,72 @@ function slotItemHasDisplayText(item) {
   return ['text', 'title', 'label', 'body', 'desc', 'note', 'summary', 'detail', 'value', 'unit', 'metric', 'name'].some((key) => String(item[key] ?? '').trim().length > 0);
 }
 
+const VISUAL_MEDIA_LAYOUTS = new Set(['media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy']);
+const CHART_DATA_LAYOUTS = new Set(['chart', 'dashboard']);
+const TABLE_DATA_LAYOUTS = new Set(['dataSheet']);
+
+function isVisualMediaLayout(layout) {
+  return VISUAL_MEDIA_LAYOUTS.has(layout || '');
+}
+
+function hasUserImages(data) {
+  return normalizeMediaImages(data || {}).length > 0;
+}
+
+function chartCount(data) {
+  return normalizeMediaCharts(data || {}).length;
+}
+
+function hasChartData(data) {
+  return chartCount(data) > 0;
+}
+
+function hasTableData(data) {
+  if (!data) return false;
+  if (data.table && normalizeTableRows(data.table).length) return true;
+  return Array.isArray(data.tables) && data.tables.some((table) => normalizeTableRows(table).length);
+}
+
+function hasCollectionOutside(slide, allowedKeys) {
+  const allowed = new Set(allowedKeys || []);
+  const keys = ['items', 'sections', 'columns', 'steps', 'nodes', 'layers', 'metrics', 'notes', 'insights', 'agenda', 'lanes', 'captions', 'points'];
+  return keys.some((key) => slide?.[key] !== undefined && slide?.[key] !== null && !allowed.has(key));
+}
+
+function layoutAllowedByContent(slide, layout) {
+  if (!layout) return false;
+  if (layout === 'chart') return hasChartData(slide) && !hasCollectionOutside(slide, ['insights', 'notes']);
+  if (layout === 'dashboard') return chartCount(slide) >= 2 && normalizeSections(slide.metrics || slide.items || []).length > 0 && !hasCollectionOutside(slide, ['metrics', 'items']);
+  if (layout === 'dataSheet') return hasTableData(slide) && !hasCollectionOutside(slide, ['notes', 'insights']);
+  if (isVisualMediaLayout(layout)) return hasUserImages(slide) || (hasChartData(slide) && !hasCollectionOutside(slide, ['items', 'insights', 'points', 'captions', 'metrics']));
+  return true;
+}
+
+function filterLayoutCandidates(slide, candidates) {
+  return (candidates || []).filter((layout) => layoutAllowedByContent(slide, layout));
+}
+
+function replacementCandidatesForLayout(layout) {
+  const replacements = {
+    textGrid: ['sectionList', 'fourCards', 'matrix', 'radial', 'chart', 'dataSheet'],
+    article: ['sectionList', 'textGrid', 'fourCards', 'radial', 'matrix', 'chart', 'dataSheet'],
+    fourCards: ['sectionList', 'textGrid', 'matrix', 'radial', 'chart', 'dataSheet'],
+    matrix: ['sectionList', 'textGrid', 'fourCards', 'radial', 'chart', 'dataSheet'],
+    statement: ['sectionList', 'agenda', 'fourCards', 'textGrid', 'radial', 'chart', 'dataSheet', 'caseStudy'],
+    compare: ['swimlane', 'matrix', 'agenda', 'chart', 'dataSheet'],
+    timeline: ['roadmap', 'swimlane', 'agenda', 'chart', 'dataSheet'],
+    pipeline: ['roadmap', 'swimlane', 'agenda', 'chart', 'dataSheet'],
+  };
+  return replacements[layout] || ['sectionList', 'fourCards', 'textGrid', 'radial', 'roadmap', 'swimlane', 'chart', 'dataSheet'];
+}
+
+function suggestedLayoutsForSlide(slide, currentLayout, limit = 4) {
+  const candidates = filterLayoutCandidates(slide, replacementCandidatesForLayout(currentLayout))
+    .filter((layout) => layout !== currentLayout);
+  const preferred = chooseDiversifiedLayout(slide, currentLayout, 0, candidates);
+  const ordered = preferred ? [preferred, ...candidates.filter((layout) => layout !== preferred)] : candidates;
+  return ordered.slice(0, limit);
+}
 function explicitMediaCount(data) {
   const n = Number(data.mediaCount || data.imageSlots || data.slotCount);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
@@ -2636,16 +2801,6 @@ function warnThinContent(spec) {
 function diversifyRepeatedLayouts(spec, options = {}) {
   if (spec.preserveLayouts || spec.lockLayouts || spec.disableLayoutDiversify) return [];
   const mutate = options.mutate === true;
-  const replacements = {
-    textGrid: ['agenda', 'fourCards', 'matrix', 'radial'],
-    article: ['agenda', 'fourCards', 'caseStudy', 'radial'],
-    fourCards: ['textGrid', 'agenda', 'matrix', 'radial'],
-    matrix: ['textGrid', 'agenda', 'fourCards', 'radial'],
-    statement: ['agenda', 'caseStudy', 'radial'],
-    compare: ['swimlane', 'caseStudy', 'matrix'],
-    timeline: ['roadmap', 'swimlane', 'agenda'],
-    pipeline: ['roadmap', 'swimlane', 'agenda'],
-  };
   let previous = null;
   let runLength = 0;
   const diversifyCounts = new Map();
@@ -2666,7 +2821,7 @@ function diversifyRepeatedLayouts(spec, options = {}) {
     }
     if (runLength < 2) return;
     const replacementCount = diversifyCounts.get(layout) || 0;
-    const nextLayout = chooseDiversifiedLayout(slide, layout, replacementCount, replacements[layout] || ['agenda', 'caseStudy', 'radial', 'roadmap', 'swimlane']);
+    const nextLayout = chooseDiversifiedLayout(slide, layout, replacementCount, replacementCandidatesForLayout(layout));
     if (nextLayout && nextLayout !== layout) {
       changes.push({ slide: index + 1, from: layout, to: nextLayout });
       diversifyCounts.set(layout, replacementCount + 1);
@@ -2685,31 +2840,43 @@ function diversifyRepeatedLayouts(spec, options = {}) {
 }
 
 function chooseDiversifiedLayout(slide, currentLayout, replacementCount, candidates) {
-  if (slide.layoutAlt) return slide.layoutAlt;
+  if (slide.layoutAlt && layoutAllowedByContent(slide, slide.layoutAlt)) return slide.layoutAlt;
+  if (hasTableData(slide) && currentLayout !== 'dataSheet') return 'dataSheet';
+  if (hasChartData(slide) && !CHART_DATA_LAYOUTS.has(currentLayout)) {
+    if (layoutAllowedByContent(slide, 'dashboard')) return 'dashboard';
+    if (layoutAllowedByContent(slide, 'chart')) return 'chart';
+  }
   if ((slide.lanes || slide.stages) && currentLayout !== 'swimlane') return 'swimlane';
   if ((slide.steps || slide.milestones) && currentLayout !== 'roadmap') return 'roadmap';
-  if ((slide.image || slide.metrics) && currentLayout !== 'caseStudy') return 'caseStudy';
+  if (hasUserImages(slide) && (slide.metrics || slide.caseTitle || slide.story) && currentLayout !== 'caseStudy') return 'caseStudy';
+  const allowedCandidates = filterLayoutCandidates(slide, candidates);
+  if (!allowedCandidates.length) return null;
   const items = normalizeSections(slide.sections || slide.items || slide.columns || slide.nodes || []);
   const count = items.length;
-  const offset = replacementCount % candidates.length;
-  if (['textGrid', 'article', 'fourCards', 'matrix'].includes(currentLayout) && count >= 3) return candidates[offset];
-  if (count >= 7 && currentLayout !== 'matrix') return 'matrix';
-  if (count >= 5 && currentLayout !== 'agenda') return 'agenda';
-  if (count >= 3 && count <= 8 && currentLayout !== 'fourCards') return 'fourCards';
-  return candidates[offset];
+  const offset = replacementCount % allowedCandidates.length;
+  if (['textGrid', 'article', 'sectionList', 'fourCards', 'matrix'].includes(currentLayout) && count >= 3) return allowedCandidates[offset];
+  if (count >= 7 && currentLayout !== 'matrix' && layoutAllowedByContent(slide, 'matrix')) return 'matrix';
+  if (count >= 5 && currentLayout !== 'agenda' && layoutAllowedByContent(slide, 'agenda')) return 'agenda';
+  if (count >= 3 && count <= 8 && currentLayout !== 'fourCards' && layoutAllowedByContent(slide, 'fourCards')) return 'fourCards';
+  return allowedCandidates[offset];
 }
 function warnLayoutVariety(spec) {
   let runLayout = null;
   let runStart = 0;
   let runLength = 0;
   const flush = () => {
+    const slide = spec.slides[Math.min(spec.slides.length - 1, runStart + runLength - 1)] || {};
+    const suggestions = suggestedLayoutsForSlide(slide, runLayout);
+    const suffix = suggestions.length
+      ? ` Suggested text/data-compatible alternatives: ${suggestions.map((layout) => `"${layout}"`).join(', ')}.`
+      : ' No image/media-slot layout is suggested unless this page provides images or chart data.';
     if (runLength >= 3) {
       console.warn(
-        `Warning: slides ${runStart + 1}-${runStart + runLength} use layout "${runLayout}" consecutively. Change at least one page to an equivalent layout or run --diversify-layouts --write-normalized-spec so the deck does not feel repetitive.`
+        `Warning: slides ${runStart + 1}-${runStart + runLength} use layout "${runLayout}" consecutively. Change at least one page to an equivalent layout or run --diversify-layouts --write-normalized-spec so the deck does not feel repetitive.${suffix}`
       );
     } else if (runLength === 2) {
       console.warn(
-        `Notice: slides ${runStart + 1}-${runStart + 2} both use layout "${runLayout}". If the content is not intentionally paired, consider alternating layouts for visual variety.`
+        `Notice: slides ${runStart + 1}-${runStart + 2} both use layout "${runLayout}". If the content is not intentionally paired, consider alternating layouts for visual variety.${suffix}`
       );
     }
   };
