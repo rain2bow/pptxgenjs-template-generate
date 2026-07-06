@@ -2651,6 +2651,19 @@ function validateMediaSlots(slide, index, errors, warnings, specDir) {
 function validateTextSlots(slide, index, style, errors, warnings) {
   const layout = slide.layout || '';
   const sideMax = style === 'swiss' ? 5 : style === 'cmb' ? 4 : 3;
+  const narrativeFields = ['body', 'desc', 'note', 'summary', 'detail', 'text', 'story'];
+  const metricNarrativeFields = ['body', 'desc', 'summary', 'detail', 'text', 'story'];
+  const textLayoutSuggestion = 'Use textGrid, article, sectionList, fourCards, agenda, or radial for title + body content.';
+  const metricLayoutSuggestion = 'Use textGrid, article, sectionList, or media when each item needs explanatory body text.';
+  const titleOnlyMatrixRule = style === 'magazine'
+    ? { keys: ['items'], max: 12, min: 1, label: 'matrix cells' }
+    : { keys: ['items'], max: 12, min: 1, label: 'matrix cells', itemTextKeys: ['title', 'label'], unusedItemFields: [...narrativeFields, 'name', 'value'], suggestion: textLayoutSuggestion };
+  const numberMetricRule = style === 'magazine'
+    ? { keys: ['items'], max: 6, min: 1, label: 'number cards', itemTextKeys: ['label', 'value', 'note', 'unit'], unusedItemFields: ['title', ...metricNarrativeFields], suggestion: metricLayoutSuggestion }
+    : { keys: ['items'], max: 6, min: 1, label: 'number cards', itemTextKeys: ['label', 'value', 'note', 'unit'], unusedItemFields: ['title', ...metricNarrativeFields], suggestion: metricLayoutSuggestion };
+  const dashboardMetricRule = style === 'magazine'
+    ? { keys: ['metrics', 'items'], max: 4, min: 1, label: 'dashboard metrics', itemTextKeys: ['label', 'value', 'note'], unusedItemFields: ['title', ...metricNarrativeFields], suggestion: metricLayoutSuggestion }
+    : { keys: ['metrics', 'items'], max: style === 'swiss' ? 5 : 4, min: 1, label: 'dashboard metrics', itemTextKeys: ['label', 'value'], unusedItemFields: ['title', 'note', ...metricNarrativeFields], suggestion: metricLayoutSuggestion };
   const rules = {
     cover: [],
     section: [],
@@ -2662,11 +2675,11 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     textImage: [],
     statement: [],
     closing: [],
-    bigNumbers: [{ keys: ['items'], max: 6, min: 1, label: 'number cards' }],
-    kpiTower: [{ keys: ['items'], max: 4, min: 1, label: 'KPI cards' }],
+    bigNumbers: [numberMetricRule],
+    kpiTower: [{ ...numberMetricRule, max: 4, label: 'KPI cards' }],
     pipeline: [{ keys: ['steps', 'items'], max: 6, min: 1, label: 'pipeline steps' }],
     timeline: [{ keys: ['items', 'steps'], max: 6, min: 1, label: 'timeline steps' }],
-    matrix: [{ keys: ['items'], max: 12, min: 1, label: 'matrix cells' }],
+    matrix: [titleOnlyMatrixRule],
     fourCards: [{ keys: ['items'], max: 8, min: 1, label: 'cards' }],
     article: [{ keys: ['sections', 'items', 'columns'], max: 6, min: 1, label: 'article sections' }],
     textGrid: [{ keys: ['sections', 'items', 'columns'], max: 9, min: 1, label: 'text grid cells' }],
@@ -2680,11 +2693,11 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     mediaGrid: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 0, label: 'media captions' }],
     gallery: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 0, label: 'media captions' }],
     imageGrid: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 0, label: 'media captions' }],
-    imageHero: [{ keys: ['items'], max: 3, min: 0, label: 'image hero metrics' }],
-    caseStudy: [{ keys: ['metrics', 'items'], max: 3, min: 0, label: 'case metrics' }],
+    imageHero: [{ keys: ['items'], max: 3, min: 0, label: 'image hero metrics', itemTextKeys: ['label', 'value', 'note'], unusedItemFields: ['title', ...metricNarrativeFields], suggestion: metricLayoutSuggestion }],
+    caseStudy: [{ keys: ['metrics', 'items'], max: 3, min: 0, label: 'case metrics', itemTextKeys: ['label', 'title', 'value', 'note'], unusedItemFields: metricNarrativeFields, suggestion: metricLayoutSuggestion }],
     dataSheet: [{ keys: ['notes', 'insights'], max: style === 'swiss' ? 4 : 3, min: 0, label: 'side notes' }],
     chart: [{ keys: ['insights', 'notes'], max: style === 'swiss' ? 3 : 4, min: 0, label: 'chart insights' }],
-    dashboard: [{ keys: ['metrics', 'items'], max: style === 'swiss' ? 5 : 4, min: 1, label: 'dashboard metrics' }],
+    dashboard: [dashboardMetricRule],
   };
   const layoutRules = rules[layout] || [];
   validateIgnoredSlotFields(slide, index, layout, layoutRules, errors, Object.prototype.hasOwnProperty.call(rules, layout));
@@ -2720,9 +2733,11 @@ function validateSlotCollection(source, index, rule, errors, warnings) {
     warnings.push(`Warning: slide ${index + 1} has ${items.length} ${rule.label}; expected at least ${rule.min}.`);
   }
   items.forEach((item, itemIndex) => {
-    if (!slotItemHasDisplayText(item)) {
-      errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] has no displayable text/value field. Use text/title/label/body/desc/note/summary/value.`);
+    if (!slotItemHasDisplayTextForRule(item, rule)) {
+      const keys = rule.itemTextKeys || DISPLAY_ITEM_TEXT_KEYS;
+      errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] has no field rendered by ${rule.label}. Use one of: ${keys.join(', ')}.`);
     }
+    validateUnusedSlotItemFields(item, index, rule, key, itemIndex, errors);
   });
   return items;
 }
@@ -2772,10 +2787,27 @@ function normalizeSlotItemsForValidation(value) {
   return null;
 }
 
+const DISPLAY_ITEM_TEXT_KEYS = ['text', 'title', 'label', 'body', 'desc', 'note', 'summary', 'detail', 'value', 'unit', 'metric', 'name'];
+
 function slotItemHasDisplayText(item) {
   if (typeof item === 'string' || typeof item === 'number') return String(item).trim().length > 0;
   if (!item || typeof item !== 'object') return false;
-  return ['text', 'title', 'label', 'body', 'desc', 'note', 'summary', 'detail', 'value', 'unit', 'metric', 'name'].some((key) => String(item[key] ?? '').trim().length > 0);
+  return DISPLAY_ITEM_TEXT_KEYS.some((key) => String(item[key] ?? '').trim().length > 0);
+}
+
+function slotItemHasDisplayTextForRule(item, rule) {
+  if (typeof item === 'string' || typeof item === 'number') return String(item).trim().length > 0;
+  if (!item || typeof item !== 'object') return false;
+  const keys = rule.itemTextKeys || DISPLAY_ITEM_TEXT_KEYS;
+  return keys.some((key) => String(item[key] ?? '').trim().length > 0);
+}
+
+function validateUnusedSlotItemFields(item, index, rule, key, itemIndex, errors) {
+  if (!item || typeof item !== 'object' || Array.isArray(item) || !rule.unusedItemFields?.length) return;
+  const ignored = rule.unusedItemFields.filter((field) => String(item[field] ?? '').trim().length > 0);
+  if (!ignored.length) return;
+  const suggestion = rule.suggestion || 'Use a layout that renders these item fields, or remove the unused fields.';
+  errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] includes field(s) not rendered by ${rule.label}: ${ignored.join(', ')}. ${suggestion}`);
 }
 
 const VISUAL_MEDIA_LAYOUTS = new Set(['media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy']);
