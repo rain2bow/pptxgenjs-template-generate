@@ -2652,6 +2652,16 @@ function validateTextSlots(slide, index, style, errors, warnings) {
   const layout = slide.layout || '';
   const sideMax = style === 'swiss' ? 5 : style === 'cmb' ? 4 : 3;
   const rules = {
+    cover: [],
+    section: [],
+    bigQuote: [],
+    quoteImage: [],
+    compare: [],
+    duoCompare: [],
+    splitCompare: [],
+    textImage: [],
+    statement: [],
+    closing: [],
     bigNumbers: [{ keys: ['items'], max: 6, min: 1, label: 'number cards' }],
     kpiTower: [{ keys: ['items'], max: 4, min: 1, label: 'KPI cards' }],
     pipeline: [{ keys: ['steps', 'items'], max: 6, min: 1, label: 'pipeline steps' }],
@@ -2677,7 +2687,7 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     dashboard: [{ keys: ['metrics', 'items'], max: style === 'swiss' ? 5 : 4, min: 1, label: 'dashboard metrics' }],
   };
   const layoutRules = rules[layout] || [];
-  validateIgnoredSlotFields(slide, index, layout, layoutRules, errors);
+  validateIgnoredSlotFields(slide, index, layout, layoutRules, errors, Object.prototype.hasOwnProperty.call(rules, layout));
   layoutRules.forEach((rule) => validateSlotCollection(slide, index, rule, errors, warnings));
   if (layout === 'compare' || layout === 'duoCompare' || layout === 'splitCompare') {
     validateSlotCollection(slide.before || {}, index, { keys: ['items'], max: 6, min: 1, label: 'before items', prefix: 'before.' }, errors, warnings);
@@ -2717,12 +2727,16 @@ function validateSlotCollection(source, index, rule, errors, warnings) {
   return items;
 }
 
-function validateIgnoredSlotFields(slide, index, layout, layoutRules, errors) {
+function validateIgnoredSlotFields(slide, index, layout, layoutRules, errors, isKnownLayout = false) {
   const valid = new Set(layoutRules.flatMap((rule) => rule.keys));
   const common = ['items', 'sections', 'columns', 'steps', 'nodes', 'layers', 'metrics', 'notes', 'insights', 'agenda', 'lanes', 'captions', 'points'];
   const ignored = common.filter((key) => slide[key] !== undefined && slide[key] !== null && !valid.has(key));
-  if (ignored.length && layoutRules.length) {
-    errors.push(`slide ${index + 1} layout "${layout}" does not render field(s): ${ignored.join(', ')}. Rename them to one of: ${Array.from(valid).join(', ')}.`);
+  if (ignored.length && (layoutRules.length || isKnownLayout)) {
+    const targets = Array.from(valid);
+    const suggestion = targets.length
+      ? `Rename them to one of: ${targets.join(', ')}.`
+      : 'Use a collection layout such as textGrid, article, sectionList, agenda, roadmap, timeline, media, dashboard, or dataSheet.';
+    errors.push(`slide ${index + 1} layout "${layout}" does not render collection field(s): ${ignored.join(', ')}. ${suggestion}`);
   }
   if (layout === 'dashboard' && slide.chart && !Array.isArray(slide.charts)) {
     errors.push(`slide ${index + 1} dashboard uses charts[]; field chart will not be rendered. Rename chart to charts: [chart].`);
