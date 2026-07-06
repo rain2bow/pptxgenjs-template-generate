@@ -10,7 +10,8 @@
     "sample:cmb:layouts": "node assets/template-cmb-all-layouts.js",
     "validate:native": "node scripts/validate-pptx-native.js",
     "validate:layout": "node scripts/validate-pptx-layout.js",
-    "spec:md": "node scripts/spec-to-md.js"
+    "spec:md": "node scripts/spec-to-md.js",
+    "check:media-slots": "node scripts/check-media-slot-warnings.js"
   },
   "dependencies": {
     "jszip": "^3.10.1",

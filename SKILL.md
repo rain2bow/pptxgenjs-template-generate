@@ -285,6 +285,7 @@ Layout gating rule: if a slide has no user-provided image fields (`image`, `imag
 - `scripts/pptxgen/spec-md.js`: JSON spec to user-facing Markdown outline renderer.
 - `scripts/pptxgen/speaker-notes.js`: speaker notes normalization and auto-generation helpers used by both PPTX output and Markdown outline.
 - `scripts/spec-to-md.js`: CLI for generating the Markdown outline after JSON spec creation and before PPTX generation.
+- `scripts/check-media-slot-warnings.js`: regression check for media-slot layout warnings when images/charts are missing.
 - `scripts/pptxgen/samples.js`: built-in `--sample` specs; add a sample when adding a new style.
 - `scripts/pptxgen/ARCHITECTURE.md`: read this first when modifying generator internals; it maps modules, engine sections, and style/layout extension points.
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。
@@ -304,7 +305,8 @@ Layout gating rule: if a slide has no user-provided image fields (`image`, `imag
 5. 图片路径缺失时脚本会用占位框提示，正式交付前应替换为真实图片或删掉图片页。
 6. 运行 `node scripts/validate-pptx-native.js path/to/deck.pptx`，确认包含可编辑的原生 PPTX 结构。
 7. 运行 `node scripts/validate-pptx-layout.js path/to/deck.pptx`，检查文字是否被后绘制的色块/图片覆盖、文本框是否冲突、是否进入底部安全区。
-8. 打开 PPTX 做视觉核对：每页必须符合当前 `style` 的版式语法、主题 token 和安全区规则。若某页看起来像普通 PowerPoint 模板，或出现文字被色块覆盖、元素互相压住，必须回退重做。
+8. 修改媒体槽位或 layout 选择逻辑后，运行 `npm run check:media-slots`，确认所有带图片/媒体槽位的 layout 缺少图片/图表时都会 warning，不能静默生成。
+9. 打开 PPTX 做视觉核对：每页必须符合当前 `style` 的版式语法、主题 token 和安全区规则。若某页看起来像普通 PowerPoint 模板，或出现文字被色块覆盖、元素互相压住，必须回退重做。
 
 ## 新增高密度版式与数据组件
 

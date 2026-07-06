@@ -22,6 +22,7 @@ pptxgenjs-template-generate/
 |   |-- generate-pptx.js              # CLI and compatibility export entry
 |   |-- validate-pptx-native.js
 |   |-- validate-pptx-layout.js
+|   |-- check-media-slot-warnings.js
 |   |-- spec-to-md.js                 # convert JSON spec to user-facing Markdown outline
 |   `-- pptxgen/
 |       |-- ARCHITECTURE.md           # module and engine guide
@@ -65,6 +66,7 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/ARCHITECTURE.md`: module responsibility, engine section map, and style/layout extension guide.
 - `scripts/validate-pptx-native.js`：校验 PPTX 是否包含原生 PowerPoint 结构，避免输出整页截图型文件。
 - `scripts/validate-pptx-layout.js`：扫描生成后的 PPTX 结构，检查明显的布局冲突、文本覆盖和底部安全区风险。
+- `scripts/check-media-slot-warnings.js`：回归检查所有带图片/媒体槽位的 layout 在没有图片或图表时都会输出 warning。
 - `assets/template-magazine.js`：`magazine` 风格样例 spec，适合作为电子杂志/叙事型页面的输入参考。
 - `assets/template-swiss.js`：`swiss` 风格样例 spec，适合作为数据、科技、方法论页面的输入参考。
 - `assets/template-cmb.js`：招商银行 `cmb` 独立风格样例 spec，内置 CMB logo 配置和金融汇报页面结构。
@@ -130,10 +132,12 @@ assets/outputs/deck-cmb-all-layouts.pptx
 ```bash
 node scripts/validate-pptx-native.js path/to/deck.pptx
 node scripts/validate-pptx-layout.js path/to/deck.pptx
+npm run check:media-slots
 ```
 
 - `validate-pptx-native.js`：检查是否为 PowerPoint 原生结构，避免整页截图伪装成 PPTX。
 - `validate-pptx-layout.js`：检查明显布局风险，例如文本覆盖、元素冲突和底部安全区问题。
+- `check:media-slots`：检查 `statement`、`media`、`imageHero` 等带媒体槽位的 layout 缺少图片/图表时不会静默通过。
 
 修改技能结构后可运行：
 

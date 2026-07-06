@@ -2630,8 +2630,7 @@ function validateSpecSlots(spec, options = {}) {
 
 function validateMediaSlots(slide, index, errors, warnings, specDir) {
   const layout = slide.layout || '';
-  const mediaLayouts = ['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy'];
-  if (!mediaLayouts.includes(layout)) return;
+  if (!MEDIA_SLOT_LAYOUTS.has(layout)) return;
   const images = normalizeMediaImages(slide);
   const charts = normalizeMediaCharts(slide);
   const slotCount = isMediaGridLayout(layout) ? resolveMediaSlotCount(slide) : 1;
@@ -2818,7 +2817,8 @@ function validateUnusedSlotItemFields(item, index, rule, key, itemIndex, errors)
   errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] includes field(s) not rendered by ${rule.label}: ${ignored.join(', ')}. ${suggestion}`);
 }
 
-const VISUAL_MEDIA_LAYOUTS = new Set(['media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy']);
+const MEDIA_SLOT_LAYOUTS = new Set(['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy']);
+const VISUAL_MEDIA_LAYOUTS = MEDIA_SLOT_LAYOUTS;
 const CHART_DATA_LAYOUTS = new Set(['chart', 'dashboard']);
 const TABLE_DATA_LAYOUTS = new Set(['dataSheet']);
 
