@@ -126,6 +126,28 @@ node scripts/validate-pptx-layout.js path/to/deck.pptx
 python path/to/skill-creator/scripts/quick_validate.py path/to/pptxgenjs-template-generate
 ```
 
+## 示例预览
+
+每个示例目录包含一个可编辑 PPTX 和一张全页面拼图截图，便于快速查看当前 style 的整体效果。
+
+### Magazine
+
+[下载 PPTX](example/magazine/magazine-example.pptx)
+
+![Magazine style example](example/magazine/magazine-example.png)
+
+### Swiss
+
+[下载 PPTX](example/swiss/swiss-example.pptx)
+
+![Swiss style example](example/swiss/swiss-example.png)
+
+### CMB
+
+[下载 PPTX](example/cmb/cmb-example.pptx)
+
+![CMB style example](example/cmb/cmb-example.png)
+
 ## 支持风格
 
 - `magazine`：电子杂志 / 电子墨水风格，适合观点、叙事、报告型页面。
