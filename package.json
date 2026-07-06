@@ -9,7 +9,8 @@
     "sample:cmb": "node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-cmb.pptx",
     "sample:cmb:layouts": "node assets/template-cmb-all-layouts.js",
     "validate:native": "node scripts/validate-pptx-native.js",
-    "validate:layout": "node scripts/validate-pptx-layout.js"
+    "validate:layout": "node scripts/validate-pptx-layout.js",
+    "spec:md": "node scripts/spec-to-md.js"
   },
   "dependencies": {
     "jszip": "^3.10.1",

@@ -39,6 +39,13 @@ description: 使用 pptxgenjs 原生生成可编辑 .pptx 演示文稿，支持 
 node scripts/generate-pptx.js --spec path/to/deck.json --out path/to/deck.pptx
 ```
 
+生成 PPTX 前，先把 JSON spec 转成用户友好的 Markdown 大纲给用户审阅。该 Markdown 应展示总页数、每页页面类型、标题、正文、要点、图表、表格和图片说明，不要求用户阅读 JSON 字段名：
+
+```bash
+node scripts/spec-to-md.js --spec path/to/deck.json --out path/to/deck-outline.md
+```
+
+
 如果没有 spec，可以生成内置样例验证环境：
 
 ```bash
@@ -252,6 +259,8 @@ Layout gating rule: if a slide has no user-provided image fields (`image`, `imag
 - `scripts/pptxgen/config.js`: style/theme registry, default themes, fonts, slide constants, icon aliases, and `READABILITY.minFontSize`; add new style/theme configuration here first.
 - `scripts/pptxgen/engine.js`: PPTX rendering runtime, layout renderers, media/chart/table insertion, slot validation, and readability logic; add or change layouts here.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose parsing, quote/comment/trailing-comma repair, and normalized spec output.
+- `scripts/pptxgen/spec-md.js`: JSON spec to user-facing Markdown outline renderer.
+- `scripts/spec-to-md.js`: CLI for generating the Markdown outline after JSON spec creation and before PPTX generation.
 - `scripts/pptxgen/samples.js`: built-in `--sample` specs; add a sample when adding a new style.
 - `scripts/pptxgen/ARCHITECTURE.md`: read this first when modifying generator internals; it maps modules, engine sections, and style/layout extension points.
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。

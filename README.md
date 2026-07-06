@@ -22,6 +22,7 @@ pptxgenjs-template-generate/
 |   |-- generate-pptx.js              # CLI and compatibility export entry
 |   |-- validate-pptx-native.js
 |   |-- validate-pptx-layout.js
+|   |-- spec-to-md.js                 # convert JSON spec to user-facing Markdown outline
 |   `-- pptxgen/
 |       |-- ARCHITECTURE.md           # module and engine guide
 |       |-- index.js                  # public module exports
@@ -29,6 +30,7 @@ pptxgenjs-template-generate/
 |       |-- engine.js                 # PPTX rendering runtime and layout renderers
 |       |-- config.js                 # style/theme/font/icon/page constants
 |       |-- spec-io.js                # JSON loading, loose repair, normalized output
+|       |-- spec-md.js                # user-facing Markdown outline renderer
 |       |-- samples.js                # built-in --sample specs
 |       `-- errors.js                 # shared fail helper
 |-- assets/
@@ -54,6 +56,8 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/engine.js`: PPTX rendering runtime. Layout renderers, media/chart/table insertion, slot checks, and readability logic live here.
 - `scripts/pptxgen/config.js`: style/theme registry, default themes, fonts, slide constants, icon aliases, and readability constants. Add new style/theme configuration here first.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose JSON repair, quote/comment/trailing-comma handling, and normalized spec output.
+- `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, and media notes.
+- `scripts/spec-to-md.js`: CLI entry for writing that Markdown outline from a JSON spec.
 - `scripts/pptxgen/samples.js`: built-in sample specs used by `--sample`. Add a sample here when adding a new style.
 - `scripts/pptxgen/errors.js`: shared fail helper.
 - `scripts/pptxgen/ARCHITECTURE.md`: module responsibility, engine section map, and style/layout extension guide.
@@ -87,6 +91,13 @@ npm install
 ```bash
 node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx
 ```
+
+把 JSON spec 转成用户友好的 Markdown 大纲，便于人工检查页数、页面类型和每页内容：
+
+```bash
+node scripts/spec-to-md.js --spec path/to/deck.json --out outputs/deck-outline.md
+```
+
 
 生成内置样例：
 
