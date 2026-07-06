@@ -1,9 +1,10 @@
 # pptxgenjs-template-generate
 
-本项目没有直接复制、内嵌或复用其他仓库中的源码、模板、图片素材或文档内容。当前版本以本仓库 `scripts/pptxgen/` 中的原生 PPTX 生成器、内置 JS 示例模板和 logo 资产为准，生成产物是可编辑 `.pptx` 文件。
+本项目借鉴了guizang-ppt中的风格样式, 但没有使用其html文件。当前版本以本仓库 `scripts/pptxgen/` 中的原生 PPTX 生成器、内置 JS 示例模板和 logo 资产为准，生成产物是可编辑 `.pptx` 文件。
 
 基于 `pptxgenjs` 的可编辑 PowerPoint 生成技能。它直接生成 PowerPoint 原生文本框、形状、线条、图片、表格和图表，便于后续在 PowerPoint/WPS 中继续编辑。
 
+感谢 [op7418/guizang-ppt-skill](https://github.com/op7418/guizang-ppt-skil) 中的优秀样式和设计风格。
 感谢 [gitbrent/PptxGenJS](https://github.com/gitbrent/PptxGenJS/) 提供 PPTX 生成能力。
 
 当前版本包含三套可切换风格、统一的 JSON spec 输入、内置样例、图片/图表槽位校验、布局多样性提示、CMB 招商银行独立品牌风格，以及 PPTX 原生结构和布局风险校验脚本。
@@ -44,7 +45,7 @@ pptxgenjs-template-generate/
 
 核心文件作用：
 
-- `SKILL.md`：Codex 使用本技能时读取的主说明文件，包含触发场景、生成流程、JSON spec 约束、layout 规则和校验步骤。
+- `SKILL.md`：Agent 使用本技能时读取的主说明文件，包含触发场景、生成流程、JSON spec 约束、layout 规则和校验步骤。
 - `README.md`：面向仓库维护和使用者的概览文档，说明安装、运行、文件结构和当前能力边界。
 - `package.json`：Node 依赖和快捷命令入口，包含 `sample:*`、`validate:*` 等脚本命令。
 - `scripts/generate-pptx.js`: thin CLI and compatibility entry. Existing templates can still `require('../scripts/generate-pptx.js')` and call `buildDeck`.
