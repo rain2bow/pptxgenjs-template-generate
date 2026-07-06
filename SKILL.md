@@ -39,7 +39,7 @@ description: 使用 pptxgenjs 原生生成可编辑 .pptx 演示文稿，支持 
 node scripts/generate-pptx.js --spec path/to/deck.json --out path/to/deck.pptx
 ```
 
-生成 PPTX 前，先把 JSON spec 转成用户友好的 Markdown 大纲给用户审阅。该 Markdown 应展示总页数、每页页面类型、标题、正文、要点、图表、表格和图片说明，不要求用户阅读 JSON 字段名：
+生成 PPTX 前，先把 JSON spec 转成用户友好的 Markdown 大纲给用户审阅。该 Markdown 应展示总页数、每页页面类型、标题、正文、要点、图表、表格、图片说明和演讲者备注，不要求用户阅读 JSON 字段名：
 
 ```bash
 node scripts/spec-to-md.js --spec path/to/deck.json --out path/to/deck-outline.md
@@ -97,6 +97,29 @@ node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-c
 ```
 
 `--sample-style` 只能取 `swiss`、`magazine` 或 `cmb`。输出路径建议放到项目 `outputs/` 下，避免覆盖技能自带模板或用户源文件。
+
+### 演讲者备注
+
+每页可以用 `speakerNotes` 写入 PowerPoint speaker notes；兼容别名 `speaker_notes`、`presenterNotes`、`presenter_notes`。字段可以是字符串、字符串数组，或 `{ opening, points, closing }` 这类对象。不要用 `notes` 表示演讲者备注，因为 `notes` 已在 `dataSheet`、`chart` 等 layout 中作为页面内侧边说明渲染。
+
+如果用户需要每页都有基础讲稿，但 JSON 没有逐页写备注，可以在 deck 根部或单页设置 `generateSpeakerNotes: true`。生成器会根据标题、正文、要点、图表、表格和图片字段生成基础备注，并写入 PPTX 的备注区；同时 `scripts/spec-to-md.js` 输出的 Markdown 也会显示这些备注，便于人工检查。
+
+示例：
+
+```json
+{
+  "generateSpeakerNotes": true,
+  "slides": [
+    {
+      "layout": "textGrid",
+      "title": "客户经营重点",
+      "sections": [{"title": "增长", "body": "提升高价值客户渗透"}],
+      "speakerNotes": ["先说明本页结论。", "再逐项解释三个经营抓手。"]
+    }
+  ]
+}
+```
+
 
 ### 内置模板入口
 
@@ -260,6 +283,7 @@ Layout gating rule: if a slide has no user-provided image fields (`image`, `imag
 - `scripts/pptxgen/engine.js`: PPTX rendering runtime, layout renderers, media/chart/table insertion, slot validation, and readability logic; add or change layouts here.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose parsing, quote/comment/trailing-comma repair, and normalized spec output.
 - `scripts/pptxgen/spec-md.js`: JSON spec to user-facing Markdown outline renderer.
+- `scripts/pptxgen/speaker-notes.js`: speaker notes normalization and auto-generation helpers used by both PPTX output and Markdown outline.
 - `scripts/spec-to-md.js`: CLI for generating the Markdown outline after JSON spec creation and before PPTX generation.
 - `scripts/pptxgen/samples.js`: built-in `--sample` specs; add a sample when adding a new style.
 - `scripts/pptxgen/ARCHITECTURE.md`: read this first when modifying generator internals; it maps modules, engine sections, and style/layout extension points.

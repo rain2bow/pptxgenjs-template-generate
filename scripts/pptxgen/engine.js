@@ -15,6 +15,7 @@ const {
   defaultThemeForStyle,
 } = require('./config');
 const { fail } = require('./errors');
+const { speakerNotesText } = require('./speaker-notes');
 
 const pptx = new pptxgen();
 const CHART_TYPES = {
@@ -79,6 +80,7 @@ async function buildDeck(spec, specDir, outPath) {
     enforceReadableSlideText(slide);
     const ctx = { spec, slideSpec, theme, specDir, index, total: spec.slides.length };
     renderByStyle(spec.style, slide, ctx);
+    addSpeakerNotes(slide, slideSpec, ctx);
   });
 
   fs.mkdirSync(path.dirname(outPath), { recursive: true });
@@ -87,6 +89,12 @@ async function buildDeck(spec, specDir, outPath) {
   console.log(`Wrote ${outPath}`);
   console.log(`Slides: ${spec.slides.length}`);
   console.log(`Style: ${spec.style} / ${theme.name}`);
+}
+
+function addSpeakerNotes(slide, slideSpec, ctx) {
+  const notes = speakerNotesText(slideSpec, ctx);
+  if (!notes) return;
+  slide.addNotes(notes);
 }
 
 async function disableTextAutofit(pptxPath) {

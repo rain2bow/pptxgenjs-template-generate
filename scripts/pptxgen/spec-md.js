@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { fail } = require('./errors');
+const { speakerNotesText } = require('./speaker-notes');
 
 const LAYOUT_LABELS = {
   cover: '封面',
@@ -62,7 +63,7 @@ function specToMarkdown(spec) {
     lines.push(`- 第 ${index + 1} 页：${pageTitle}（${layoutLabel(slide.layout)}）`);
   });
   lines.push('');
-  slides.forEach((slide, index) => addSlideMarkdown(lines, slide, index, slides.length));
+  slides.forEach((slide, index) => addSlideMarkdown(lines, slide, index, slides.length, spec));
   return `${lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()}\n`;
 }
 
@@ -72,7 +73,7 @@ function writeSpecMarkdown(spec, outPath) {
   console.log(`Wrote outline Markdown ${outPath}`);
 }
 
-function addSlideMarkdown(lines, slide, index, total) {
+function addSlideMarkdown(lines, slide, index, total, spec) {
   lines.push(`## 第 ${index + 1} / ${total} 页：${pageDisplayTitle(slide, index)}`);
   lines.push('');
   lines.push(`- 页面类型：${layoutLabel(slide.layout)}`);
@@ -88,6 +89,7 @@ function addSlideMarkdown(lines, slide, index, total) {
   addTable(lines, slide);
   addMedia(lines, slide);
   addMeta(lines, '页脚/结束语', slide.footer || slide.closing);
+  addMeta(lines, '演讲者备注', speakerNotesText(slide, { spec, index, total }));
   lines.push('');
 }
 

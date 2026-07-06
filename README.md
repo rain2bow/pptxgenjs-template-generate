@@ -31,6 +31,7 @@ pptxgenjs-template-generate/
 |       |-- config.js                 # style/theme/font/icon/page constants
 |       |-- spec-io.js                # JSON loading, loose repair, normalized output
 |       |-- spec-md.js                # user-facing Markdown outline renderer
+|       |-- speaker-notes.js          # speaker notes normalization and auto-generation
 |       |-- samples.js                # built-in --sample specs
 |       `-- errors.js                 # shared fail helper
 |-- assets/
@@ -56,7 +57,8 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/engine.js`: PPTX rendering runtime. Layout renderers, media/chart/table insertion, slot checks, and readability logic live here.
 - `scripts/pptxgen/config.js`: style/theme registry, default themes, fonts, slide constants, icon aliases, and readability constants. Add new style/theme configuration here first.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose JSON repair, quote/comment/trailing-comma handling, and normalized spec output.
-- `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, and media notes.
+- `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, media notes, and speaker notes.
+- `scripts/pptxgen/speaker-notes.js`: normalizes explicit `speakerNotes` fields and can derive basic speaker notes from slide content when `generateSpeakerNotes` is enabled.
 - `scripts/spec-to-md.js`: CLI entry for writing that Markdown outline from a JSON spec.
 - `scripts/pptxgen/samples.js`: built-in sample specs used by `--sample`. Add a sample here when adding a new style.
 - `scripts/pptxgen/errors.js`: shared fail helper.
@@ -92,12 +94,14 @@ npm install
 node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx
 ```
 
-把 JSON spec 转成用户友好的 Markdown 大纲，便于人工检查页数、页面类型和每页内容：
+把 JSON spec 转成用户友好的 Markdown 大纲，便于人工检查页数、页面类型、每页内容和演讲者备注：
 
 ```bash
 node scripts/spec-to-md.js --spec path/to/deck.json --out outputs/deck-outline.md
 ```
 
+
+演讲者备注字段使用 `speakerNotes`、`speaker_notes`、`presenterNotes` 或 `presenter_notes`。不要把演讲者备注写入 `notes`，因为 `notes` 在部分 layout 中是页面内侧边说明。也可以在 deck 或单页设置 `generateSpeakerNotes: true`，由脚本根据标题、正文、要点、图表和图片说明生成基础备注。
 
 生成内置样例：
 
