@@ -28,6 +28,12 @@ function sampleSpec(style = 'swiss') {
           { chartType: 'column', title: '风险事件处置量', labels: ['1月', '2月', '3月', '4月'], values: [120, 148, 176, 214] },
           { chartType: 'doughnut', title: '渠道结构', labels: ['App', '网点', '远程', '客户经理'], values: [46, 18, 21, 15], showLegend: true },
         ] },
+        { layout: 'briefing', kicker: 'Operating Brief', title: 'High-density text is grouped into a readable summary, analysis, and takeaway.', summary: 'This page demonstrates the CMB text-heavy layout. Long card copy is split into numbered subpoints so dense material remains scannable instead of becoming a flat paragraph.', sections: [
+          { title: 'Customer segmentation', body: 'Segment by assets, behavior and lifecycle. Match each group with an offer and owner.' },
+          { title: 'Signal capture', body: 'Capture high-value moments, churn signals and service friction across key channels.' },
+          { title: 'Closed-loop action', body: 'Assign owners, trigger actions and review conversion weekly.' },
+          { title: 'Risk coordination', body: 'Combine behavior alerts and review thresholds. Escalate only material exceptions.' },
+        ], conclusion: 'Use this layout when ordinary columns are too fragmented for a management discussion.' },
         { layout: 'media', kicker: 'Customer Operation', title: '客户经营从单点触达转向分层运营', body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。', chart: { chartType: 'line', title: '客户活跃趋势', labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [42, 51, 63, 78], showValue: true }, items: [
           { icon: 'users', title: '客群分层', body: '按资产、行为与生命周期拆分运营策略。' },
           { icon: 'scan-search', title: '信号识别', body: '捕捉高价值触点与潜在流失风险。' },

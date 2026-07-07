@@ -6,7 +6,7 @@ const logoHeader = 'logos/cmb-logo-lockup.png';
 const logoMark = 'logos/cmb-logo-mark.svg';
 
 function item(n, title = `Point ${n}`) {
-  return { icon: ['users', 'chart-line', 'shield-check', 'workflow', 'database', 'target'][n % 6], label: `0${n}`, title, body: 'Short supporting copy for density and spacing checks.' };
+  return { icon: ['users', 'chart-line', 'shield-check', 'workflow', 'database', 'target'][n % 6], label: `0${n}`, title, body: 'Spacing check.' };
 }
 
 function metric(label, value, note = 'projection check') {
@@ -48,7 +48,7 @@ const deckSpec = {
     { layout: 'statement', kicker: 'statement', title: 'A single executive statement anchors the narrative.', body: 'Use this page for a strong conclusion, thesis, or management decision.', callout: 'Stable\nReadable\nAligned' },
     { layout: 'kpiTower', kicker: 'kpiTower', title: 'Four key performance cards', items: [metric('Growth', '+18%'), metric('Active', '+32%'), metric('Coverage', '96%'), metric('Cycle', '-24%')] },
     { layout: 'bigNumbers', kicker: 'bigNumbers', title: 'Big number compatibility page', items: [metric('AUM', '128'), metric('NPS', '91'), metric('Branches', '42'), metric('Risk', '7')] },
-    { layout: 'dashboard', kicker: 'dashboard', title: 'KPI strip with dual editable charts', metrics: [metric('Hit', '87%'), metric('SLA', '2.4h'), metric('Auto', '68%'), metric('Accuracy', '95%')], charts: [chart('Volume by quarter', 'column'), chart('Channel share', 'doughnut')] },
+    { layout: 'dashboard', kicker: 'dashboard', title: 'KPI strip with dual editable charts', metrics: [{ label: 'Hit', value: '87%' }, { label: 'SLA', value: '2.4h' }, { label: 'Auto', value: '68%' }, { label: 'Accuracy', value: '95%' }], charts: [chart('Volume by quarter', 'column'), chart('Channel share', 'doughnut')] },
     { layout: 'chart', kicker: 'chart', title: 'Single dominant chart with insights', chart: chart('Customer activity trend', 'line'), insights: [item(1, 'Activity'), item(2, 'Conversion'), item(3, 'Retention')] },
     { layout: 'dataSheet', kicker: 'dataSheet', title: 'Editable table with side notes', table: table(), notes: [item(1, 'Owner'), item(2, 'Cadence'), item(3, 'Risk')] },
     { layout: 'media', kicker: 'media', title: 'Media area with side explanation', body: 'The media slot can hold a chart, image, or placeholder.', chart: chart('Media chart', 'bar'), items: [item(1, 'Signal'), item(2, 'Action'), item(3, 'Review')] },
@@ -65,8 +65,10 @@ const deckSpec = {
     { layout: 'roadmap', kicker: 'roadmap', title: 'Roadmap layout', steps: [item(1, 'Q1'), item(2, 'Q2'), item(3, 'Q3'), item(4, 'Q4')], highlightLast: true },
     { layout: 'textGrid', kicker: 'textGrid', title: 'Text grid with multiple compact points', sections: [item(1), item(2), item(3), item(4), item(5), item(6)], highlightIndex: 1 },
     { layout: 'article', kicker: 'article', title: 'Article compatibility grid', sections: [item(1, 'Context'), item(2, 'Finding'), item(3, 'Impact'), item(4, 'Action')] },
+    { layout: 'briefing', kicker: 'briefing', title: 'Executive briefing for dense operating logic', summary: 'Use a top summary, grouped middle analysis and bottom conclusion for text-heavy CMB pages.', sections: [1, 2, 3, 4, 5, 6].map((n) => ({ ...item(n, ['Segmentation', 'Trigger design', 'Channel action', 'Risk response', 'Service loop', 'Management view'][n - 1]), body: 'Coordinate actions and risk signals in one loop. Numbered copy appears when space allows.' })).slice(0, 4), conclusion: 'Keep the final decision or next action visible at the bottom.' },
+    { layout: 'textWeave', kicker: 'textWeave', title: 'Asymmetric text weave for five or six dense points', sections: [1, 2, 3, 4, 5, 6].map((n) => ({ ...item(n, ['Segmentation', 'Trigger design', 'Channel action', 'Risk response', 'Service loop', 'Management view'][n - 1]), body: 'Coordinate actions and risk signals.' })) },
     { layout: 'fourCards', kicker: 'fourCards', title: 'Adaptive card layout', items: [item(1), item(2), item(3), item(4), item(5)] },
-    { layout: 'matrix', kicker: 'matrix', title: 'Matrix layout', items: [item(1), item(2), item(3), item(4), item(5), item(6), item(7), item(8)], highlightIndex: 2 },
+    { layout: 'matrix', kicker: 'matrix', title: 'Matrix layout', items: [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ label: `0${n}`, title: ['Segment', 'Signal', 'Offer', 'Risk', 'Channel', 'Service', 'Data', 'Review'][n - 1] })), highlightIndex: 2 },
     { layout: 'agenda', kicker: 'agenda', title: 'Agenda and section navigation', items: [item(1, 'Overview'), item(2, 'Performance'), item(3, 'Risk'), item(4, 'Roadmap')] },
     { layout: 'caseStudy', kicker: 'caseStudy', title: 'Case study page', caseTitle: 'Retail customer operation pilot', body: 'A compact story area pairs evidence media with quantified business results.', chart: chart('Case evidence', 'line'), metrics: [metric('Lift', '+18%'), metric('Reach', '42k'), metric('SLA', '2.4h')] },
     { layout: 'pyramid', kicker: 'pyramid', title: 'Layered structure page', layers: [item(1, 'Data'), item(2, 'Model'), item(3, 'Process'), item(4, 'Governance'), item(5, 'Value')], note: 'Layer order and width should remain balanced.' },

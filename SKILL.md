@@ -134,7 +134,7 @@ node assets/template-cmb-all-layouts.js
 
 - `assets/template-magazine.js`：电子杂志 / 电子墨水风格。
 - `assets/template-swiss.js`：瑞士国际主义风格。
-- `assets/template-cmb.js`：独立招商银行品牌风格模板，使用 `style: "cmb"`，内置页眉白底 PNG logo 和页眉外透明 SVG 纯图 logo，适合银行、金融、经营汇报场景。用户要求招商银行、CMB、银行品牌配色或红灰白商务汇报时，优先参考此模板或 `--sample-style cmb`。`assets/template-cmb-all-layouts.js` 会生成覆盖 CMB 当前全部支持 layout 的 31 页检查文件，用于人工检查排版。
+- `assets/template-cmb.js`：独立招商银行品牌风格模板，使用 `style: "cmb"`，内置页眉白底 PNG logo 和页眉外透明 SVG 纯图 logo，适合银行、金融、经营汇报场景。用户要求招商银行、CMB、银行品牌配色或红灰白商务汇报时，优先参考此模板或 `--sample-style cmb`。`assets/template-cmb-all-layouts.js` 会生成覆盖 CMB 当前全部支持 layout 的 33 页检查文件，用于人工检查排版。
 
 ### 校验 PPTX
 
@@ -212,7 +212,9 @@ JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 
 - `bigQuote`: 大引用/金句。
 - `compare`: Before / After 并列对比。
 - `textImage`: 大段正文 + 辅助图。
-- `article`: 2-3 列高密度文字页。
+- `article`: 2-3 列高密度文字页。CMB 风格下会映射到更适合长文本的 briefing 总分总版式。
+- `briefing`: CMB 纯文本高密度页，结构为顶部总领、中部 2-4 个分析卡片、底部结论，适合管理汇报中的长段逻辑。
+- `textWeave`: CMB 非均匀纯文本卡片页，支持 1-6 个 `sections` / `items` / `columns`，适合 5-6 个文本框但不想做普通分栏。
 - `dataSheet`: 表格 + 右侧解释页。
 - `chart`: 单主图表 + 右侧洞察页。
 - `dashboard`: KPI 数字条 + 双图表页。
@@ -230,8 +232,8 @@ JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 
 - `imageHero`: 顶部 21:9 主图 + 下方说明/KPI；无用户图片且无显式 `chart` 时显示 `IMAGE SLOT` 占位符。
 - `media`: 统一媒体区 + 侧边说明；有用户图片优先放图，没有图片且显式提供 `chart`/`charts` 时放可编辑图表，否则显示 `IMAGE SLOT` 占位符。
 - `mediaGrid` / `gallery`: 1-6 个图片/图表媒体位，自适应一张或多张图。
-- `sectionList`: text-only vertical section list for 3-7 `sections` / `items` / `columns`; preserves `title` + `body` and is the preferred visual alternative when repeated `article` pages need variety without image slots.
-- `textGrid`: 6-9 项三列信息网格。
+- `sectionList`: text-only vertical section list for 3-7 `sections` / `items` / `columns`; preserves `title` + `body` and is the preferred visual alternative when repeated `article` pages need variety without image slots. In CMB style it maps to `briefing` so long text has a top summary, grouped analysis, and takeaway.
+- `textGrid`: 6-9 项三列信息网格。CMB 风格下会映射到 `textWeave`，避免大量文本只落成普通网格。
 - `dataSheet`: Swiss 表格 + 侧边备注页。
 - `chart`: 大图表 + 右侧指标洞察页。
 - `dashboard`: KPI strip + 双图表仪表盘页。
@@ -240,7 +242,7 @@ JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 
 
 通用丰富版式（两套模板同名兼容）：
 
-- `agenda`: 目录/议程/章节导航页，适合 3-8 个主题入口。
+- `agenda`: 目录/议程/章节导航页，适合 3-8 个主题入口。CMB 风格会保留标题和正文，按 `briefing` 方式渲染，避免只显示标题。
 - `caseStudy`: 案例页，图片/证据 + 故事正文 + 关键指标组合；无图且无显式 `chart` 时媒体区显示 `IMAGE SLOT` 占位符。
 - `pyramid`: 分层结构/能力栈/战略金字塔。
 - `radial`: 中心概念 + 周边节点关系图。
@@ -252,8 +254,9 @@ JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 
 Media selection rule: without user-provided images, do not select image/media-slot layouts unless the slide has explicit chart data that will fill the media region. If there are no images and no charts, use text-only layouts and do not create empty image placeholders unless the user explicitly asks for placeholders.
 槽位校验：生成器会在生成前检查每页图片槽位、文本槽位和字段格式。超过布局最大数量的 `items` / `sections` / `steps` / `charts` 会直接报错，避免内容被静默截断；同一组同义字段（如 `sections`、`items`、`columns`）不要同时填写，否则只有第一个字段会被使用并打印警告；分点对象必须至少包含 `text` / `title` / `label` / `body` / `desc` / `note` / `summary` / `value` 之一，避免格式不匹配导致内容不显示。
 内容完整性：每个分点、卡片、栏目不能只写标题，至少补 `body` / `desc` / `note` / `summary` 之一。生成器会对大多数分点只有标题的页面打印警告；生成大纲和 spec 时必须把“标题 + 一句解释/证据/结论”作为最小单元。
+CMB 长文本规则：CMB 的 `article` / `sectionList` / `agenda` 会使用 `briefing`，`textGrid` / `fourCards` 会使用 `textWeave`；卡片正文较长或包含中英文句号、分号、问号、换行时，会在空间允许时于卡片内部自动拆成 01/02/03 编号分点，以提升可读性。该逻辑不截断文本；如果估算仍超出文本框，生成器只输出 warning，要求减少该段字数或拆页。
 自适应分栏：多分点页面必须根据实际条目数排版，不要为了模板默认 6/9/12 个位置而补空内容。`article`、`textGrid`、`matrix`、`fourCards`、`bigNumbers` 会自动选择列数：4 条默认 2×2，`fourCards` 的 5-6 条默认 3×2，7-8 条默认 4×2；`textGrid`/`matrix` 的 7-9 条默认 3 列多行；确需固定列数时才在页面 spec 中显式设置 `columnsCount`。
-页面多样性：规划 deck 时主动避免连续 3 页以上使用同一 layout 或同一视觉节奏。连续说明页应在 `statement`、`textGrid`、`article`、`fourCards`、`matrix`、`chart`、`media`、`mediaGrid`、`imageHero`、`compare`、`timeline`、`agenda`、`caseStudy`、`pyramid`、`radial`、`roadmap`、`swimlane` 之间轮换；如果内容语义相同但页面相邻，优先换成等价版式、调整条目数量、加入图表/表格/图片页或章节页。只有用户明确要求统一模板页时，才允许长段连续重复同一 layout。生成器默认只对连续重复 layout 输出替换建议，不会擅自修改 `slides[].layout`，这样输入 JSON 与生成 PPTX 保持一致。若确实要自动改 layout，必须同时使用 
+页面多样性：规划 deck 时主动避免连续 3 页以上使用同一 layout 或同一视觉节奏。连续说明页应在 `statement`、`textGrid`、`article`、`briefing`、`textWeave`、`fourCards`、`matrix`、`chart`、`media`、`mediaGrid`、`imageHero`、`compare`、`timeline`、`agenda`、`caseStudy`、`pyramid`、`radial`、`roadmap`、`swimlane` 之间轮换；如果内容语义相同但页面相邻，优先换成等价版式、调整条目数量、加入图表/表格/图片页或章节页。只有用户明确要求统一模板页时，才允许长段连续重复同一 layout。生成器默认只对连续重复 layout 输出替换建议，不会擅自修改 `slides[].layout`，这样输入 JSON 与生成 PPTX 保持一致。若确实要自动改 layout，必须同时使用 
 Layout gating rule: if a slide has no user-provided image fields (`image`, `images`, `gallery`, or image media items), do not choose image/media-slot layouts (`media`, `mediaGrid`, `gallery`, `imageGrid`, `imageHero`, `quoteImage`, `textImage`, `caseStudy`) just for visual variety. Use text/structure layouts instead. If the slide has explicit `chart` / `charts` or `table` data, use `chart`, `dashboard`, or `dataSheet` as the preferred variation. The generator layout suggestions follow the same filtering rule.
 `--diversify-layouts --write-normalized-spec path/to/normalized.json`，并以后续 normalized JSON 作为真实源文件；否则可能出现“PPT 已换 layout、原 JSON 未变、内容字段不匹配”的问题。
 
@@ -290,7 +293,7 @@ Layout gating rule: if a slide has no user-provided image fields (`image`, `imag
 - `scripts/pptxgen/ARCHITECTURE.md`: read this first when modifying generator internals; it maps modules, engine sections, and style/layout extension points.
 - `assets/template-magazine.js`: 电子杂志 / 电子墨水完整示例模板，可直接运行生成 `assets/outputs/deck-magazine.pptx`。
 - `assets/template-swiss.js`: 瑞士国际主义完整示例模板，可直接运行生成 `assets/outputs/deck-swiss.pptx`。
-- `assets/template-cmb.js`: 招商银行独立品牌风格完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "cmb"`、`theme: "classic"`、`logoHeader: "logos/cmb-logo-lockup.png"`、`logoMark: "logos/cmb-logo-mark.svg"`，logo 会自动从技能内置 `assets/logos/` 解析。`assets/template-cmb-all-layouts.js` 可直接生成 `assets/outputs/deck-cmb-all-layouts.pptx`，包含 CMB 当前全部 31 个支持 layout 的排版检查页。
+- `assets/template-cmb.js`: 招商银行独立品牌风格完整示例模板，可直接运行生成 `assets/outputs/deck-cmb.pptx`；该模板使用 `style: "cmb"`、`theme: "classic"`、`logoHeader: "logos/cmb-logo-lockup.png"`、`logoMark: "logos/cmb-logo-mark.svg"`，logo 会自动从技能内置 `assets/logos/` 解析。`assets/template-cmb-all-layouts.js` 可直接生成 `assets/outputs/deck-cmb-all-layouts.pptx`，包含 CMB 当前全部 33 个支持 layout 的排版检查页。
 - 主题色只能从生成器内置的 `magazine` 预设中选：`ink`、`indigo`、`forest`、`kraft`、`dune` 或 `cmb`；不要任意混搭 hex。
 - 只用一个高饱和 accent：`ikb`、`lemon`、`green`、`orange` 或 `cmb`；不要在同页混用多个 accent。
 

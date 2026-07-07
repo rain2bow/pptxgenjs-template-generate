@@ -308,8 +308,16 @@ Swiss 的视觉特征：
 - `cmbSection()`
 - `cmbStatement()`
 - `cmbClosing()`
+- `cmbBriefing()`: CMB 高密度纯文本总分总页面，顶部 summary，中部 2-4 个分析卡片，底部 takeaway。
+- `cmbTextWeave()`: CMB 非均匀纯文本卡片页面，支持 1-6 个文本块，避免普通三栏网格在长文本下显得杂乱。
+- `addCmbTextCard()` / `addNumberedCardBody()`: CMB 卡片文本渲染；长正文会在空间允许时拆成编号分点，不截断文本。
 
-CMB 复用 Swiss renderer 的 layout：
+CMB 专用映射：
+
+- `article`、`sectionList`、`agenda`、`briefing`、`executiveBrief`、`contentBrief` -> `cmbBriefing()`
+- `textGrid`、`fourCards`、`textWeave`、`contentSynthesis`、`denseText` -> `cmbTextWeave()`
+
+CMB 继续复用 Swiss renderer 的 layout：
 
 - `dashboard`
 - `dataSheet`
@@ -325,11 +333,7 @@ CMB 复用 Swiss renderer 的 layout：
 - `timeline`
 - `pipeline`
 - `roadmap`
-- `textGrid`
-- `article`
-- `fourCards`
 - `matrix`
-- `agenda`
 - `caseStudy`
 - `pyramid`
 - `radial`
@@ -346,6 +350,7 @@ CMB 复用 Swiss renderer 的 layout：
 - 页眉外装饰和水印使用 `logos/cmb-logo-mark.svg`。
 - 所有 logo 通过 `addImageAsset()` 保持比例。
 - 内容页右上角水印透明度由 `addCmbLogoWatermark()` 控制。
+- 高密度文本优先换用 `briefing` / `textWeave`；过长正文只 warning，不截断。
 
 ### 8. 文本、图标和 bullet
 

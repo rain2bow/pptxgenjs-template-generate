@@ -258,6 +258,9 @@ function renderMagazine(slide, ctx) {
     splitCompare: magazineCompare,
     textImage: magazineTextImage,
     article: magazineArticle,
+    briefing: magazineArticle,
+    executiveBrief: magazineArticle,
+    contentBrief: magazineArticle,
     sectionList: magazineSectionList,
     statement: magazineStatementCompat,
     kpiTower: magazineBigNumbers,
@@ -267,6 +270,9 @@ function renderMagazine(slide, ctx) {
     fourCards: magazineMatrixCompat,
     imageHero: magazineImageHeroCompat,
     textGrid: magazineMatrixCompat,
+    textWeave: magazineMatrixCompat,
+    contentSynthesis: magazineMatrixCompat,
+    denseText: magazineMatrixCompat,
     dataSheet: magazineDataSheet,
     chart: magazineChart,
     dashboard: magazineDashboard,
@@ -309,6 +315,9 @@ function renderSwiss(slide, ctx) {
     splitCompare: swissDuoCompare,
     textImage: swissTextImageCompat,
     article: swissTextGrid,
+    briefing: swissSectionList,
+    executiveBrief: swissSectionList,
+    contentBrief: swissSectionList,
     sectionList: swissSectionList,
     statement: swissStatement,
     kpiTower: swissKpiTower,
@@ -318,6 +327,9 @@ function renderSwiss(slide, ctx) {
     fourCards: swissFourCards,
     imageHero: swissImageHero,
     textGrid: swissTextGrid,
+    textWeave: swissTextGrid,
+    contentSynthesis: swissTextGrid,
+    denseText: swissTextGrid,
     dataSheet: swissDataSheet,
     chart: swissChart,
     dashboard: swissDashboard,
@@ -366,12 +378,18 @@ function renderCmb(slide, ctx) {
     timeline: swissTimeline,
     pipeline: swissTimeline,
     roadmap: swissRoadmap,
-    textGrid: swissTextGrid,
-    article: swissTextGrid,
-    sectionList: swissSectionList,
-    fourCards: swissFourCards,
+    textGrid: cmbTextWeave,
+    textWeave: cmbTextWeave,
+    contentSynthesis: cmbTextWeave,
+    denseText: cmbTextWeave,
+    article: cmbBriefing,
+    sectionList: cmbBriefing,
+    briefing: cmbBriefing,
+    executiveBrief: cmbBriefing,
+    contentBrief: cmbBriefing,
+    fourCards: cmbTextWeave,
     matrix: swissMatrix,
-    agenda: swissAgenda,
+    agenda: cmbBriefing,
     caseStudy: swissCaseStudy,
     pyramid: swissPyramid,
     radial: swissRadial,
@@ -470,6 +488,198 @@ function cmbStatement(slide, ctx, s) {
 
 function cmbClosing(slide, ctx, s) {
   cmbCover(slide, { ...ctx, slideSpec: { ...ctx.slideSpec, kicker: ctx.slideSpec.kicker || 'THANK YOU', title: ctx.slideSpec.title || '谢谢观看', subtitle: ctx.slideSpec.subtitle || 'CHINA MERCHANTS BANK' } }, s);
+}
+
+function cmbBriefing(slide, ctx, s) {
+  const data = ctx.slideSpec;
+  addPageHead(slide, data, s.fg, 'swiss', 0.82);
+  const items = cmbTextItems(data).slice(0, 6);
+  const hasLead = !!(data.summary || data.body || data.lead);
+  const lead = hasLead
+    ? { title: data.summaryTitle || data.leadTitle || data.kicker || 'Executive focus', body: data.summary || data.body || data.lead }
+    : (items[0] || { title: data.title || '', body: data.subtitle || '' });
+  const rest = (hasLead ? items : items.slice(1)).slice(0, 4);
+  const conclusionText = data.conclusion || data.takeaway || data.footerSummary || data.nextStep || '';
+  const y0 = data.subtitle ? 2.78 : 2.45;
+  addCmbTextCard(slide, ctx, lead, { x: 0.78, y: y0, w: 11.45, h: 1.12 }, 0, { lead: true, accent: true, label: 'SUMMARY', maxPoints: 3 });
+
+  const midY = y0 + 1.34;
+  const bottomReserved = conclusionText ? 0.82 : 0;
+  const midBottom = 6.48 - bottomReserved;
+  if (rest.length) {
+    if (rest.length <= 4) {
+      const gap = 0.28;
+      const w = (11.45 - gap * (rest.length - 1)) / rest.length;
+      rest.forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + i * (w + gap), y: midY, w, h: Math.max(1.85, midBottom - midY) }, i + 1, { maxPoints: 3 }));
+    } else {
+      const gapX = 0.28;
+      const gapY = 0.18;
+      const w = (11.45 - gapX) / 2;
+      const h = Math.max(1.0, (midBottom - midY - gapY) / 2);
+      rest.forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + (i % 2) * (w + gapX), y: midY + Math.floor(i / 2) * (h + gapY), w, h }, i + 1, { maxPoints: 3 }));
+    }
+  }
+
+  if (conclusionText) {
+    addCmbTextCard(slide, ctx, { title: data.conclusionTitle || 'Conclusion', body: conclusionText }, { x: 0.78, y: 5.88, w: 11.45, h: 0.62 }, 6, { compact: true, label: 'TAKEAWAY', accent: true, maxPoints: 2 });
+  }
+  addFoot(slide, ctx, s.fg, 'swiss');
+}
+
+function cmbTextWeave(slide, ctx, s) {
+  const data = ctx.slideSpec;
+  addPageHead(slide, data, s.fg, 'swiss', 0.82);
+  const items = cmbTextItems(data).slice(0, 6);
+  const y0 = data.subtitle ? 2.78 : 2.42;
+  const bottom = 6.48;
+  if (!items.length) {
+    if (data.body) addCmbTextCard(slide, ctx, { title: data.title || '', body: data.body }, { x: 0.78, y: y0, w: 11.45, h: bottom - y0 }, 0, { lead: true, accent: true, maxPoints: 5 });
+    addFoot(slide, ctx, s.fg, 'swiss');
+    return;
+  }
+
+  if (items.length <= 5) {
+    const leadW = 3.85;
+    const gapX = 0.28;
+    addCmbTextCard(slide, ctx, items[0], { x: 0.78, y: y0, w: leadW, h: bottom - y0 }, 0, { lead: true, accent: true, maxPoints: 5 });
+    const right = items.slice(1);
+    const cardW = (11.45 - leadW - gapX * 2) / 2;
+    const rowGap = 0.24;
+    const cardH = (bottom - y0 - rowGap) / 2;
+    right.forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + leadW + gapX + (i % 2) * (cardW + gapX), y: y0 + Math.floor(i / 2) * (cardH + rowGap), w: cardW, h: cardH }, i + 1, { maxPoints: 3 }));
+  } else {
+    addCmbTextCard(slide, ctx, items[0], { x: 0.78, y: y0, w: 11.45, h: 0.9 }, 0, { lead: true, accent: true, compact: true, maxPoints: 2 });
+    const rest = items.slice(1);
+    const gridY = y0 + 1.12;
+    const leftW = 3.72;
+    const gapX = 0.28;
+    addCmbTextCard(slide, ctx, rest[0], { x: 0.78, y: gridY, w: leftW, h: bottom - gridY }, 1, { maxPoints: 4 });
+    const cardW = (11.45 - leftW - gapX * 2) / 2;
+    const rowGap = 0.2;
+    const cardH = (bottom - gridY - rowGap) / 2;
+    rest.slice(1).forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + leftW + gapX + (i % 2) * (cardW + gapX), y: gridY + Math.floor(i / 2) * (cardH + rowGap), w: cardW, h: cardH }, i + 2, { maxPoints: 3 }));
+  }
+  addFoot(slide, ctx, s.fg, 'swiss');
+}
+
+function cmbTextItems(data) {
+  return normalizeSections(data.sections || data.items || data.columns || data.points || data.agenda || [])
+    .map((item) => (item && typeof item === 'object') ? item : { body: String(item || '') })
+    .filter((item) => cmbItemTitle(item) || cmbItemBody(item));
+}
+
+function cmbItemTitle(item) {
+  return String(item?.title || item?.label || item?.name || item?.heading || '').trim();
+}
+
+function cmbItemBody(item) {
+  return String(item?.body || item?.desc || item?.note || item?.summary || item?.detail || item?.text || item?.story || '').trim();
+}
+
+function addCmbTextCard(slide, ctx, item, box, index, options = {}) {
+  const accent = ctx.theme.accent;
+  const ink = ctx.theme.ink;
+  const hot = !!options.accent;
+  const fill = hot ? accent : ctx.theme.paper;
+  const line = hot ? accent : ctx.theme.grey2;
+  const color = hot ? ctx.theme.accentOn : ink;
+  const shadow = hot ? 0 : 22;
+  slide.addShape(pptx.ShapeType.rect, { x: box.x, y: box.y, w: box.w, h: box.h, fill: { color: fill, transparency: hot ? 0 : 4 }, line: { color: line, transparency: hot ? 100 : 16, width: 0.7 }, shadow: { type: 'outer', color: '000000', opacity: shadow, blur: 1, angle: 45, distance: 1 } });
+  if (!hot) slide.addShape(pptx.ShapeType.rect, { x: box.x, y: box.y, w: 0.08, h: box.h, fill: { color: accent, transparency: 8 }, line: { color: accent, transparency: 100 } });
+
+  const padX = options.compact ? 0.2 : 0.26;
+  const padTop = options.compact ? 0.12 : 0.18;
+  const label = options.label || String(index + 1).padStart(2, '0');
+  slide.addText(label, { x: box.x + padX, y: box.y + padTop, w: Math.min(1.25, box.w - padX * 2), h: 0.2, fontFace: 'JetBrains Mono', fontSize: 7.4, bold: true, charSpace: 0.8, color, transparency: hot ? 4 : 30, margin: 0, fit: 'shrink' });
+
+  const title = cmbItemTitle(item);
+  const body = cmbItemBody(item) || (!title ? String(item?.value || '') : '');
+  const contentX = box.x + padX;
+  const contentW = box.w - padX * 2;
+  const titleY = box.y + (options.compact ? 0.36 : 0.48);
+  const titleFont = options.lead ? 15.2 : 13.2;
+  const titleH = title ? estimateTextHeight(title, contentW, titleFont, { min: 0.28, max: options.compact ? 0.34 : 0.54, lineHeight: 1.16, padding: 0.02 }) : 0;
+  if (title) slide.addText(title, { x: contentX, y: titleY, w: contentW, h: titleH, fontFace: FONTS.sansZh, fontSize: titleFont, bold: true, color, margin: 0, valign: 'top' });
+
+  if (!body) return;
+  const bodyY = titleY + titleH + (title ? 0.13 : 0);
+  const bodyH = Math.max(0.24, box.y + box.h - bodyY - (options.compact ? 0.12 : 0.18));
+  const fontSize = READABILITY.minFontSize;
+  const maxPoints = options.maxPoints || 3;
+  if (canUseNumberedCardBody(body, contentW, bodyH, fontSize, maxPoints)) {
+    addNumberedCardBody(slide, body, { x: contentX, y: bodyY, w: contentW, h: bodyH }, { color, accent: hot ? ctx.theme.accentOn : accent, transparency: hot ? 4 : 22, maxPoints, fontSize });
+  } else {
+    slide.addText(body, { x: contentX, y: bodyY, w: contentW, h: bodyH, fontFace: FONTS.sansZh, fontSize, color, transparency: hot ? 6 : 24, margin: 0.02, valign: 'top' });
+  }
+}
+
+function shouldNumberCmbBody(text, boxW = 0, boxH = 0) {
+  const raw = String(text || '').trim();
+  if (!raw) return false;
+  if (Number(boxW) < 2.35 || Number(boxH) < 0.72) return false;
+  return /\n|[;\uFF1B\u3002.!\uFF01?\uFF1F]/.test(raw) || textVisualLength(raw) > 52;
+}
+
+function canUseNumberedCardBody(text, boxW, boxH, fontSize, maxPoints) {
+  if (!shouldNumberCmbBody(text, boxW, boxH)) return false;
+  const points = splitBodyIntoPoints(text, maxPoints);
+  if (points.length < 2) return false;
+  const gapY = 0.05;
+  const textW = Math.max(0.2, boxW - 0.46);
+  const needed = points.reduce((sum, point) => sum + estimateTextHeight(point, textW, fontSize, { min: 0.24, max: 10, lineHeight: 1.28, padding: 0.02 }), 0) + gapY * Math.max(0, points.length - 1);
+  return needed <= boxH * 1.08;
+}
+
+function addNumberedCardBody(slide, text, box, options = {}) {
+  const points = splitBodyIntoPoints(text, options.maxPoints || 3);
+  if (!points.length) return;
+  const gapY = 0.05;
+  const numW = 0.34;
+  const textX = box.x + numW + 0.12;
+  const textW = Math.max(0.2, box.w - numW - 0.12);
+  const fontSize = options.fontSize || READABILITY.minFontSize;
+  const demands = points.map((point) => estimateTextHeight(point, textW, fontSize, { min: 0.24, max: Math.max(0.24, box.h), lineHeight: 1.28, padding: 0.02 }));
+  const rowHeights = distributeRowHeights(demands, points.length, 1, 0.28, box.h, gapY);
+  let y = box.y;
+  points.forEach((point, i) => {
+    const h = rowHeights[i] || 0.3;
+    slide.addText(String(i + 1).padStart(2, '0'), { x: box.x, y: y + 0.02, w: numW, h: Math.min(0.24, h), fontFace: 'JetBrains Mono', fontSize: 7.2, bold: true, color: options.accent || options.color, transparency: 10, margin: 0, fit: 'shrink' });
+    slide.addText(point, { x: textX, y, w: textW, h, fontFace: FONTS.sansZh, fontSize, color: options.color || '111111', transparency: options.transparency ?? 24, margin: 0.01, valign: 'top' });
+    y += h + gapY;
+  });
+}
+
+function splitBodyIntoPoints(text, maxPoints = 3) {
+  const raw = String(text || '').replace(/\r/g, '').replace(/\s+/g, ' ').trim();
+  if (!raw) return [];
+  let pieces = raw
+    .split(/(?:\n+|[;\uFF1B\u3002.!\uFF01?\uFF1F]+)\s*/g)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (pieces.length < 2 && textVisualLength(raw) > 52) pieces = chunkTextByVisualLength(raw, Math.ceil(textVisualLength(raw) / Math.max(2, maxPoints)));
+  if (pieces.length <= maxPoints) return pieces;
+  const grouped = [];
+  const perGroup = Math.ceil(pieces.length / maxPoints);
+  for (let i = 0; i < pieces.length; i += perGroup) grouped.push(pieces.slice(i, i + perGroup).join('; '));
+  return grouped.slice(0, maxPoints);
+}
+
+function chunkTextByVisualLength(text, targetLength) {
+  const chunks = [];
+  let buf = '';
+  let len = 0;
+  String(text || '').split('').forEach((ch) => {
+    const add = textVisualLength(ch);
+    if (buf && len + add > targetLength) {
+      chunks.push(buf.trim());
+      buf = '';
+      len = 0;
+    }
+    buf += ch;
+    len += add;
+  });
+  if (buf.trim()) chunks.push(buf.trim());
+  return chunks;
 }
 
 function addCmbLogoMark(slide, ctx, box) {
@@ -2753,7 +2963,13 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     matrix: [titleOnlyMatrixRule],
     fourCards: [{ keys: ['items'], max: 8, min: 1, label: 'cards' }],
     article: [{ keys: ['sections', 'items', 'columns'], max: 6, min: 1, label: 'article sections' }],
+    briefing: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
+    executiveBrief: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
+    contentBrief: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
     textGrid: [{ keys: ['sections', 'items', 'columns'], max: 9, min: 1, label: 'text grid cells' }],
+    textWeave: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 1, label: 'text weave blocks' }],
+    contentSynthesis: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 1, label: 'text weave blocks' }],
+    denseText: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 1, label: 'dense text blocks' }],
     sectionList: [{ keys: ['sections', 'items', 'columns'], max: 7, min: 1, label: 'section list items' }],
     agenda: [{ keys: ['items', 'sections', 'agenda'], max: 8, min: 1, label: 'agenda items' }],
     pyramid: [{ keys: ['layers', 'items', 'sections'], max: 5, min: 1, label: 'pyramid layers' }],

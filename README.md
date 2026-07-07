@@ -171,7 +171,7 @@ python path/to/skill-creator/scripts/quick_validate.py path/to/pptxgenjs-templat
 
 - `magazine`：电子杂志 / 电子墨水风格，适合观点、叙事、报告型页面。
 - `swiss`：瑞士国际主义风格，适合科技、数据、方法论和产品说明。
-- `cmb`：招商银行独立品牌风格，适合银行、金融、经营汇报和商务汇报。
+- `cmb`：招商银行独立品牌风格，适合银行、金融、经营汇报和商务汇报；长文本页优先使用 `briefing` / `textWeave`，普通 `article` / `textGrid` 会在 CMB 下映射为更适合高密度文本的专用版式。
 
 默认主题：
 
@@ -241,7 +241,7 @@ JSON 引号与编码规则：
 - 结论页：`statement`、`bigQuote`
 - 数据页：`kpiTower`、`bigNumbers`、`dashboard`、`chart`、`dataSheet`
 - 图文页：`media`、`mediaGrid`、`gallery`、`imageGrid`、`imageHero`、`quoteImage`、`textImage`
-- 结构页：`compare`、`duoCompare`、`timeline`、`pipeline`、`roadmap`、`textGrid`、`article`、`fourCards`、`matrix`、`agenda`、`caseStudy`、`pyramid`、`radial`、`swimlane`
+- 结构页：`compare`、`duoCompare`、`timeline`、`pipeline`、`roadmap`、`textGrid`、`article`、`briefing`、`textWeave`、`fourCards`、`matrix`、`agenda`、`caseStudy`、`pyramid`、`radial`、`swimlane`
 
 Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/engine.js`; style/theme design configuration is centralized in `scripts/pptxgen/config.js`. The generator checks text, image, chart, and table slots before output to avoid missing or mismatched content.
 
@@ -261,6 +261,8 @@ bar, column, line, pie, doughnut, area, radar, scatter
 ```
 
 ## 布局多样性
+
+CMB 高密度纯文本页可使用 `briefing` 和 `textWeave`；卡片正文过长且空间允许时会自动拆成编号分点并保留完整文本，若估算仍超出容量则输出 warning。
 
 规划 deck 时应避免连续 3 页以上使用同一 layout 或同一视觉节奏。生成器默认只输出重复 layout 的替换建议，不会擅自修改输入 JSON，保证 JSON 与 PPTX 一致。
 
