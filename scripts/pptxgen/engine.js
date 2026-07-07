@@ -727,6 +727,10 @@ function addNumberedCardBody(slide, points, box, options = {}) {
     options: {
       bullet: { type: 'number', style: 'arabicPeriod', startAt: i + 1 },
       breakLine: i < points.length - 1,
+      fontFace: FONTS.sansZh,
+      fontSize,
+      color: options.color || '111111',
+      transparency: options.transparency ?? 24,
     },
   }));
   slide.addText(runs, {
