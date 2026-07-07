@@ -194,7 +194,7 @@ CMB 风格使用技能内置 logo 资源：
 ```json
 {
   "title": "招商银行经营汇报",
-  "subtitle": "Business Review",
+  "subtitle": "经营汇报",
   "style": "cmb",
   "theme": "classic",
   "logoHeader": "logos/cmb-logo-lockup.png",
@@ -202,24 +202,24 @@ CMB 风格使用技能内置 logo 资源：
   "slides": [
     {
       "layout": "cover",
-      "kicker": "CHINA MERCHANTS BANK / 2026",
+      "kicker": "招商银行 / 2026",
       "title": "业务增长与数字化经营汇报",
       "subtitle": "围绕客户经营、风险控制与效率提升"
     },
     {
       "layout": "media",
-      "kicker": "Customer Operation",
+      "kicker": "客户经营",
       "title": "客户经营从单点触达转向分层运营",
       "body": "通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。",
       "chart": {
         "chartType": "line",
         "title": "客户活跃趋势",
-        "labels": ["Q1", "Q2", "Q3", "Q4"],
+        "labels": ["一季度", "二季度", "三季度", "四季度"],
         "values": [42, 51, 63, 78]
       },
       "items": [
         { "icon": "users", "title": "客户分层", "body": "按资产、行为与生命周期拆分运营策略。" },
-        { "icon": "workflow", "title": "渠道协同", "body": "联动 App、网点、远程服务与客户经理。" }
+        { "icon": "workflow", "title": "渠道协同", "body": "联动手机银行、网点、远程服务与客户经理。" }
       ]
     }
   ]
@@ -252,7 +252,7 @@ Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/
 - `mediaGrid` / `gallery` / `imageGrid` 未显式设置 `mediaCount` 时，槽位数自动等于图片数、显式图表数或 caption 数。
 - 显式设置 `mediaCount` 时必须与图片数量匹配，除非明确允许空槽。
 - 没有用户图片但提供 `chart` / `charts` 时，使用 PowerPoint 原生图表。
-- 没有图片和显式图表时，显示 `IMAGE SLOT` 占位符，不再默认填充图表。
+- 没有图片和显式图表时，显示图片占位符，不再默认填充图表。
 - `statement` 只支持 1 个图片槽位，不支持 chart；多图请使用 `mediaGrid` / `imageGrid`。
 
 图表类型支持：
@@ -263,7 +263,7 @@ bar, column, line, pie, doughnut, area, radar, scatter
 
 ## 布局多样性
 
-CMB 高密度纯文本页可使用 `briefing` 和 `textWeave`；卡片正文过长且空间允许时会自动拆成编号分点并保留完整文本，若估算仍超出容量则输出 warning。
+CMB 高密度纯文本页可使用 `briefing` 和 `textWeave`；需要编号分点时，应在 JSON 中显式写入 `points` / `bullets` / `list` 数组，生成器按数组顺序编号渲染，不会自动把一段正文拆句。若估算超出容量则输出 warning。
 
 规划 deck 时应避免连续 3 页以上使用同一 layout 或同一视觉节奏。生成器默认只输出重复 layout 的替换建议，不会擅自修改输入 JSON，保证 JSON 与 PPTX 一致。
 

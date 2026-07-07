@@ -13,7 +13,7 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 
 const deckSpec = {
   title: '招商银行经营汇报模板',
-  subtitle: 'China Merchants Bank / Business Review',
+  subtitle: '招商银行 / 经营汇报',
   author: '招商银行 / 项目团队',
   style: 'cmb',
   theme: 'classic',
@@ -27,24 +27,24 @@ const deckSpec = {
   slides: [
     {
       layout: 'cover',
-      chromeLeft: 'CMB / Business Review',
-      kicker: 'CHINA MERCHANTS BANK / 2026',
+      chromeLeft: '招商银行 / 经营汇报',
+      kicker: '招商银行 / 2026',
       title: '招商银行业务增长与数字化经营汇报',
       subtitle: '围绕客户经营、风险控制与效率提升的阶段性复盘',
       foot: '招商银行 / 内部汇报 / 2026',
     },
     {
       layout: 'statement',
-      chromeLeft: 'Executive Summary / 01',
-      kicker: 'Executive Summary',
+      chromeLeft: '核心摘要 / 01',
+      kicker: '核心摘要',
       title: '以客户价值为核心，形成增长、风控与效率的闭环。',
       body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。',
       callout: '稳健经营\n价值增长\n风险可控',
     },
     {
       layout: 'kpiTower',
-      chromeLeft: 'Performance / KPI',
-      kicker: 'Performance Snapshot',
+      chromeLeft: '经营指标 / KPI',
+      kicker: '经营表现',
       title: '关键经营指标保持稳健改善',
       items: [
         { label: '零售客户增长', value: '+18%', valueNum: 18, note: '同比保持双位数增长。' },
@@ -55,27 +55,27 @@ const deckSpec = {
     },
     {
       layout: 'media',
-      chromeLeft: 'Customer / Insight',
-      kicker: 'Customer Operation',
+      chromeLeft: '客户经营 / 洞察',
+      kicker: '客户经营',
       title: '客户经营从单点触达转向分层运营',
-      body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。没有用户图片且显式提供 chart 时，媒体区会插入可编辑图表；否则显示 IMAGE SLOT 占位符。',
+      body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。没有用户图片且显式提供 chart 时，媒体区会插入可编辑图表；否则显示图片占位符。',
       chart: {
         chartType: 'line',
         title: '客户活跃趋势',
-        labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+        labels: ['一季度', '二季度', '三季度', '四季度'],
         values: [42, 51, 63, 78],
         showValue: true,
       },
       items: [
         { icon: 'users', title: '客群分层', body: '按资产、行为与生命周期拆分运营策略。' },
         { icon: 'scan-search', title: '信号识别', body: '捕捉高价值触点与潜在流失风险。' },
-        { icon: 'workflow', title: '渠道协同', body: '联动 App、网点、远程服务与客户经理。' },
+        { icon: 'workflow', title: '渠道协同', body: '联动手机银行、网点、远程服务与客户经理。' },
       ],
     },
     {
       layout: 'dashboard',
-      chromeLeft: 'Data / Dashboard',
-      kicker: 'Risk & Efficiency Dashboard',
+      chromeLeft: '数据看板 / 监控',
+      kicker: '风险与效率看板',
       title: '风险与效率指标联动监控',
       metrics: [
         { label: '风险命中', value: '87%' },
@@ -85,13 +85,13 @@ const deckSpec = {
       ],
       charts: [
         { chartType: 'column', title: '风险事件处置量', labels: ['1月', '2月', '3月', '4月'], values: [120, 148, 176, 214] },
-        { chartType: 'doughnut', title: '渠道结构', labels: ['App', '网点', '远程', '客户经理'], values: [46, 18, 21, 15], showLegend: true },
+        { chartType: 'doughnut', title: '渠道结构', labels: ['手机银行', '网点', '远程', '客户经理'], values: [46, 18, 21, 15], showLegend: true },
       ],
     },
     {
       layout: 'roadmap',
-      chromeLeft: 'Roadmap / Next',
-      kicker: 'Implementation Roadmap',
+      chromeLeft: '推进路径 / 下一步',
+      kicker: '推进路径',
       title: '下一阶段推进路径',
       steps: [
         { label: '01', title: '统一指标', body: '明确经营、风险和体验的核心口径。' },
@@ -122,10 +122,10 @@ const deckSpec = {
     },
     {
       layout: 'closing',
-      chromeLeft: 'Closing / CMB',
-      kicker: 'THANK YOU',
+      chromeLeft: '结束页 / 招商银行',
+      kicker: '谢谢',
       title: '稳健经营，持续创造客户价值。',
-      subtitle: 'CHINA MERCHANTS BANK',
+      subtitle: '招商银行',
     },
   ],
 };

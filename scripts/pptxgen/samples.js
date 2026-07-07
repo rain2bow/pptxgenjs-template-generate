@@ -2,23 +2,23 @@ function sampleSpec(style = 'swiss') {
   if (style === 'cmb') {
     return {
       title: '招商银行经营汇报',
-      subtitle: 'Business Review / Customer Operation / Risk Control',
-      author: 'China Merchants Bank',
+      subtitle: '经营复盘 / 客户运营 / 风险控制',
+      author: '招商银行',
       style: 'cmb',
       theme: 'classic',
       logoHeader: 'logos/cmb-logo-lockup.png',
       logoMark: 'logos/cmb-logo-mark.svg',
       headY: 1.06,
       slides: [
-        { layout: 'cover', kicker: 'CHINA MERCHANTS BANK / 2026', title: '招商银行业务增长与数字化经营汇报', subtitle: '围绕客户经营、风险控制与效率提升的阶段性复盘' },
-        { layout: 'statement', allowEmptyMediaSlots: true, kicker: 'Executive Summary', title: '以客户价值为核心，形成增长、风控与效率的闭环。', body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。', callout: '稳健经营\n价值增长\n风险可控' },
-        { layout: 'kpiTower', kicker: 'Performance Snapshot', title: '关键经营指标保持稳健改善', items: [
+        { layout: 'cover', kicker: '招商银行 / 2026', title: '招商银行业务增长与数字化经营汇报', subtitle: '围绕客户经营、风险控制与效率提升的阶段性复盘' },
+        { layout: 'statement', allowEmptyMediaSlots: true, kicker: '核心摘要', title: '以客户价值为核心，形成增长、风控与效率的闭环。', body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。', callout: '稳健经营\n价值增长\n风险可控' },
+        { layout: 'kpiTower', kicker: '经营表现', title: '关键经营指标保持稳健改善', items: [
           { label: '零售客户增长', value: '+18%', valueNum: 18, note: '同比保持双位数增长。' },
           { label: '活跃客户提升', value: '+32%', valueNum: 32, note: '数字渠道贡献主要增量。' },
           { label: '风险预警覆盖', value: '96%', valueNum: 96, note: '重点客群实现全面监测。' },
           { label: '流程时效缩短', value: '-24%', valueNum: 24, note: '自动化处置压缩等待时间。' },
         ] },
-        { layout: 'dashboard', kicker: 'Risk & Efficiency Dashboard', title: '风险与效率指标联动监控', metrics: [
+        { layout: 'dashboard', kicker: '风险与效率看板', title: '风险与效率指标联动监控', metrics: [
           { label: '风险命中', value: '87%' },
           { label: '处置时效', value: '2.4h' },
           { label: '自动化率', value: '68%' },
@@ -26,26 +26,26 @@ function sampleSpec(style = 'swiss') {
 
         ], charts: [
           { chartType: 'column', title: '风险事件处置量', labels: ['1月', '2月', '3月', '4月'], values: [120, 148, 176, 214] },
-          { chartType: 'doughnut', title: '渠道结构', labels: ['App', '网点', '远程', '客户经理'], values: [46, 18, 21, 15], showLegend: true },
+          { chartType: 'doughnut', title: '渠道结构', labels: ['手机银行', '网点', '远程', '客户经理'], values: [46, 18, 21, 15], showLegend: true },
         ] },
-        { layout: 'briefing', kicker: 'Operating Brief', title: 'Readable operating brief.', summary: 'Dense material is grouped into summary, actions and takeaway for review.', sections: [
-          { title: 'Segments', body: 'Segment by assets, behavior and lifecycle. Match each group with an offer and owner.' },
-          { title: 'Signal capture', body: 'Capture high-value moments, churn signals and service friction across key channels.' },
-          { title: 'Closed-loop action', body: 'Assign owners, trigger actions and review conversion weekly.' },
-          { title: 'Risk coordination', body: 'Combine behavior alerts and review thresholds. Escalate only material exceptions.' },
-        ], conclusion: 'Use when ordinary columns are too fragmented.' },
-        { layout: 'media', kicker: 'Customer Operation', title: '客户经营从单点触达转向分层运营', body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。', chart: { chartType: 'line', title: '客户活跃趋势', labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [42, 51, 63, 78], showValue: true }, items: [
+        { layout: 'briefing', kicker: '经营简报', title: '高密度经营信息保持清晰可读', summaryTitle: '经营重点', summary: '将总览判断、分组分析和底部结论放在同一页，便于管理层快速审阅。', sections: [
+          { title: '客群分层', points: ['按资产、行为和生命周期识别重点客群。', '匹配对应权益、触达策略和责任人。'] },
+          { title: '信号捕捉', points: ['捕捉高价值触点、流失风险和服务摩擦。', '将关键事件纳入统一监控口径。'] },
+          { title: '闭环行动', points: ['明确动作责任人和触发条件。', '按周复盘转化表现并调整策略。'] },
+          { title: '风险协同', points: ['联动行为预警和复核阈值。', '仅对重要异常进行升级处理。'] },
+        ], conclusionTitle: '结论', conclusion: '当普通分栏过于碎片化时，优先使用简报页统一呈现经营逻辑。' },
+        { layout: 'media', kicker: '客户经营', title: '客户经营从单点触达转向分层运营', body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。', chart: { chartType: 'line', title: '客户活跃趋势', labels: ['一季度', '二季度', '三季度', '四季度'], values: [42, 51, 63, 78], showValue: true }, items: [
           { icon: 'users', title: '客群分层', body: '按资产、行为与生命周期拆分运营策略。' },
           { icon: 'scan-search', title: '信号识别', body: '捕捉高价值触点与潜在流失风险。' },
-          { icon: 'workflow', title: '渠道协同', body: '联动 App、网点、远程服务与客户经理。' },
+          { icon: 'workflow', title: '渠道协同', body: '联动手机银行、网点、远程服务与客户经理。' },
         ] },
-        { layout: 'roadmap', kicker: 'Implementation Roadmap', title: '下一阶段推进路径', steps: [
+        { layout: 'roadmap', kicker: '推进路径', title: '下一阶段推进路径', steps: [
           { label: '01', title: '统一指标', body: '明确经营、风险和体验的核心口径。' },
           { label: '02', title: '试点验证', body: '选择重点客群和重点分行进行闭环验证。' },
           { label: '03', title: '规模推广', body: '沉淀可复制流程并接入自动化运营。' },
           { label: '04', title: '持续评估', body: '按月复盘指标并优化模型和策略。' },
         ] },
-        { layout: 'closing', kicker: 'THANK YOU', title: '稳健经营，持续创造客户价值。', subtitle: 'CHINA MERCHANTS BANK' },
+        { layout: 'closing', kicker: '谢谢', title: '稳健经营，持续创造客户价值。', subtitle: '招商银行' },
       ],
     };
   }

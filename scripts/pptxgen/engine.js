@@ -217,7 +217,7 @@ function warnTextExceedsBox(text, options = {}) {
     ? text.map((run) => String(run && run.text != null ? run.text : '')).join('')
     : String(text || '');
   if (!raw.trim() || isSymbolText(options, raw)) return text;
-  const maxVisual = estimatedBoxTextCapacity(options, Array.isArray(text) ? richTextMaxFontSize(text, options) : undefined);
+  const maxVisual = estimatedBoxTextCapacity(options, Array.isArray(text) ? richTextMaxFontSize(text, options) : undefined, raw);
   if (!Number.isFinite(maxVisual) || maxVisual <= 0) return text;
   const actualVisual = textVisualLength(raw);
   if (actualVisual > maxVisual) warnTextOverCapacity(raw, actualVisual, maxVisual, options);
@@ -231,21 +231,38 @@ function richTextMaxFontSize(runs, options) {
   }, Number(options.fontSize) || READABILITY.minFontSize);
 }
 
-function estimatedBoxTextCapacity(options = {}, explicitFontSize) {
+function estimatedBoxTextCapacity(options = {}, explicitFontSize, sampleText = '') {
   const w = Number(options.w);
   const h = Number(options.h);
   if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return Infinity;
   const fontSize = Number(explicitFontSize || options.fontSize || READABILITY.minFontSize);
   if (!Number.isFinite(fontSize) || fontSize <= 0) return Infinity;
   const margins = textBoxMargins(options.margin);
-  const boxW = Math.max(0.05, w - margins.left - margins.right);
-  const boxH = Math.max(0.05, h - margins.top - margins.bottom);
-  const lineHeight = Number(options.textLimitLineHeight || options.lineHeight) || 1.24;
-  const charsPerLine = Math.max(1, (boxW * 72) / (fontSize * 0.58));
+  const boxW = roundCapacityDimension(Math.max(0.05, w - margins.left - margins.right));
+  const boxH = roundCapacityDimension(Math.max(0.05, h - margins.top - margins.bottom));
+  const lineHeight = Number(options.textLimitLineHeight || options.lineHeight) || defaultTextLimitLineHeight(sampleText);
+  const charWidthRatio = Number(options.textLimitCharWidthRatio) || defaultTextLimitCharWidthRatio(sampleText);
+  const charsPerLine = Math.max(1, (boxW * 72) / (fontSize * charWidthRatio));
   const lines = Math.max(1, Math.floor((boxH * 72) / (fontSize * lineHeight)));
   const reserve = Number(options.textLimitReserveRatio);
-  const reserveRatio = Number.isFinite(reserve) ? clamp(reserve, 0.55, 1) : 0.88;
+  const reserveRatio = Number.isFinite(reserve) ? clamp(reserve, 0.55, 1) : defaultTextLimitReserveRatio(sampleText);
   return Math.max(1, Math.floor(charsPerLine * lines * reserveRatio));
+}
+
+function roundCapacityDimension(value) {
+  return Math.round(Number(value) * 1000) / 1000;
+}
+
+function defaultTextLimitCharWidthRatio(text = '') {
+  return /[\u2E80-\u9FFF\uF900-\uFAFF]/.test(String(text || '')) ? 1 : 0.62;
+}
+
+function defaultTextLimitLineHeight(text = '') {
+  return /[\u2E80-\u9FFF\uF900-\uFAFF]/.test(String(text || '')) ? 1.12 : 1.18;
+}
+
+function defaultTextLimitReserveRatio(text = '') {
+  return /[\u2E80-\u9FFF\uF900-\uFAFF]/.test(String(text || '')) ? 0.99 : 0.92;
 }
 
 function textBoxMargins(margin) {
@@ -513,7 +530,7 @@ function cmbCover(slide, ctx, s) {
   const data = ctx.slideSpec;
   const headY = pageHeadY(ctx, 1.08);
   addCmbLogoMark(slide, ctx, { x: 10.62, y: 1.02, w: 1.72, h: 1.72 });
-  slide.addText(data.kicker || 'CHINA MERCHANTS BANK', { x: 0.78, y: headY, w: 6.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8.6, bold: true, charSpace: 1.5, color: s.fg, transparency: 18, margin: 0, fit: 'shrink' });
+  slide.addText(data.kicker || '招商银行', { x: 0.78, y: headY, w: 6.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8.6, bold: true, charSpace: 1.5, color: s.fg, transparency: 18, margin: 0, fit: 'shrink' });
   slide.addText(data.title || ctx.spec.title, { x: 0.78, y: headY + 0.6, w: 10.2, h: 2.15, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || ctx.spec.title, 47, 31), bold: true, color: s.fg, margin: 0, fit: 'shrink' , typographyRole: 'coverTitle' });
   slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: headY + 3.15, w: 1.55, h: 0.09, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
   slide.addText(data.subtitle || ctx.spec.subtitle || '', { x: 0.78, y: headY + 3.5, w: 6.7, h: 0.72, fontFace: FONTS.sansZh, fontSize: 15.2, color: s.fg, transparency: 10, margin: 0, fit: 'shrink' });
@@ -528,15 +545,15 @@ function cmbStatement(slide, ctx, s) {
   const data = ctx.slideSpec;
   const headY = pageHeadY(ctx, 1.06);
   slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: headY - 0.02, w: 0.12, h: 0.7, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
-  slide.addText(data.kicker || 'Executive Summary', { x: 1.05, y: headY, w: 5.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8, bold: true, charSpace: 1.1, color: ctx.theme.accent, margin: 0, fit: 'shrink' });
+  slide.addText(data.kicker || '核心摘要', { x: 1.05, y: headY, w: 5.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8, bold: true, charSpace: 1.1, color: ctx.theme.accent, margin: 0, fit: 'shrink' });
   slide.addText(data.title || '', { x: 1.02, y: headY + 0.48, w: 6.85, h: 1.58, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || '', 34, 26), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
   if (data.body || data.subtitle) slide.addText(data.body || data.subtitle, { x: 1.05, y: headY + 2.42, w: 6.45, h: 1.1, fontFace: FONTS.sansZh, fontSize: 14.2, color: s.fg, transparency: 14, margin: 0, fit: 'shrink', valign: 'top' });
-  addStatementImageSlot(slide, ctx, { x: 8.05, y: headY + 1.72, w: 3.85, h: 3.0 }, ctx.theme.accent, data.imageLabel || 'IMAGE SLOT');
+  addStatementImageSlot(slide, ctx, { x: 8.05, y: headY + 1.72, w: 3.85, h: 3.0 }, ctx.theme.accent, data.imageLabel || '图片占位');
   addFoot(slide, ctx, s.fg, 'swiss');
 }
 
 function cmbClosing(slide, ctx, s) {
-  cmbCover(slide, { ...ctx, slideSpec: { ...ctx.slideSpec, kicker: ctx.slideSpec.kicker || 'THANK YOU', title: ctx.slideSpec.title || '谢谢观看', subtitle: ctx.slideSpec.subtitle || 'CHINA MERCHANTS BANK' } }, s);
+  cmbCover(slide, { ...ctx, slideSpec: { ...ctx.slideSpec, kicker: ctx.slideSpec.kicker || '谢谢', title: ctx.slideSpec.title || '谢谢观看', subtitle: ctx.slideSpec.subtitle || '招商银行' } }, s);
 }
 
 function cmbBriefing(slide, ctx, s) {
@@ -545,13 +562,13 @@ function cmbBriefing(slide, ctx, s) {
   const items = cmbTextItems(data).slice(0, 6);
   const hasLead = !!(data.summary || data.body || data.lead);
   const lead = hasLead
-    ? { title: data.summaryTitle || data.leadTitle || data.kicker || 'Executive focus', body: data.summary || data.body || data.lead }
+    ? { title: data.summaryTitle || data.leadTitle || data.focusTitle || data.kicker || '经营重点', body: data.summary || data.body || data.lead }
     : (items[0] || { title: data.title || '', body: data.subtitle || '' });
   const conclusionText = data.conclusion || data.takeaway || data.footerSummary || data.nextStep || '';
   const restLimit = conclusionText ? 4 : 5;
   const rest = (hasLead ? items : items.slice(1)).slice(0, restLimit);
   const y0 = data.subtitle ? 2.78 : 2.45;
-  addCmbTextCard(slide, ctx, lead, { x: 0.78, y: y0, w: 11.45, h: 1.12 }, 0, { lead: true, accent: true, label: 'SUMMARY', maxPoints: 3 });
+  addCmbTextCard(slide, ctx, lead, { x: 0.78, y: y0, w: 11.45, h: 1.12 }, 0, { lead: true, accent: true, label: '摘要', maxPoints: 3, titleFontSize: 13.2 });
 
   const midY = y0 + 1.34;
   const conclusionBox = { x: 0.78, y: 5.62, w: 11.45, h: 0.86 };
@@ -574,7 +591,7 @@ function cmbBriefing(slide, ctx, s) {
   }
 
   if (conclusionText) {
-    addCmbTextCard(slide, ctx, { title: data.conclusionTitle || 'Conclusion', body: conclusionText }, conclusionBox, 6, { compact: true, label: 'TAKEAWAY', accent: true, maxPoints: 2 });
+    addCmbTextCard(slide, ctx, { title: data.conclusionTitle || data.takeawayTitle || data.footerSummaryTitle || data.nextStepTitle || '结论', body: conclusionText }, conclusionBox, 6, { compact: true, label: '结论', accent: true, maxPoints: 2, titleFontSize: 13.2 });
   }
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -596,10 +613,11 @@ function cmbTextWeave(slide, ctx, s) {
     const gapX = 0.28;
     addCmbTextCard(slide, ctx, items[0], { x: 0.78, y: y0, w: leadW, h: bottom - y0 }, 0, { lead: true, accent: true, maxPoints: 5 });
     const right = items.slice(1);
-    const cardW = (11.45 - leadW - gapX * 2) / 2;
+    const rightX = 0.78 + leadW + gapX;
+    const rightW = 11.45 - leadW - gapX;
     const rowGap = 0.24;
-    const cardH = (bottom - y0 - rowGap) / 2;
-    right.forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + leadW + gapX + (i % 2) * (cardW + gapX), y: y0 + Math.floor(i / 2) * (cardH + rowGap), w: cardW, h: cardH }, i + 1, { maxPoints: 3 }));
+    const rightBoxes = cmbTextWeaveRightBoxes(right.length, rightX, y0, rightW, bottom - y0, gapX, rowGap);
+    right.forEach((item, i) => addCmbTextCard(slide, ctx, item, rightBoxes[i], i + 1, { maxPoints: 3 }));
   } else {
     addCmbTextCard(slide, ctx, items[0], { x: 0.78, y: y0, w: 11.45, h: 0.9 }, 0, { lead: true, accent: true, compact: true, maxPoints: 2 });
     const rest = items.slice(1);
@@ -615,10 +633,32 @@ function cmbTextWeave(slide, ctx, s) {
   addFoot(slide, ctx, s.fg, 'swiss');
 }
 
+function cmbTextWeaveRightBoxes(count, x, y, w, h, gapX, rowGap) {
+  const halfW = (w - gapX) / 2;
+  const halfH = (h - rowGap) / 2;
+  if (count <= 0) return [];
+  if (count === 1) return [{ x, y, w, h }];
+  if (count === 2) return [
+    { x, y, w: halfW, h },
+    { x: x + halfW + gapX, y, w: halfW, h },
+  ];
+  if (count === 3) return [
+    { x, y, w: halfW, h },
+    { x: x + halfW + gapX, y, w: halfW, h: halfH },
+    { x: x + halfW + gapX, y: y + halfH + rowGap, w: halfW, h: halfH },
+  ];
+  return Array.from({ length: Math.min(count, 4) }, (_, i) => ({
+    x: x + (i % 2) * (halfW + gapX),
+    y: y + Math.floor(i / 2) * (halfH + rowGap),
+    w: halfW,
+    h: halfH,
+  }));
+}
+
 function cmbTextItems(data) {
   return normalizeSections(data.sections || data.items || data.columns || data.points || data.agenda || [])
     .map((item) => (item && typeof item === 'object') ? item : { body: String(item || '') })
-    .filter((item) => cmbItemTitle(item) || cmbItemBody(item));
+    .filter((item) => cmbItemTitle(item) || cmbItemBody(item) || cmbItemPoints(item).length);
 }
 
 function cmbItemTitle(item) {
@@ -627,6 +667,15 @@ function cmbItemTitle(item) {
 
 function cmbItemBody(item) {
   return String(item?.body || item?.desc || item?.note || item?.summary || item?.detail || item?.text || item?.story || '').trim();
+}
+
+function cmbItemPoints(item) {
+  const raw = item?.points || item?.bullets || item?.list;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((point) => {
+    if (point && typeof point === 'object') return String(point.body || point.text || point.title || point.label || '').trim();
+    return String(point || '').trim();
+  }).filter(Boolean);
 }
 
 function addCmbTextCard(slide, ctx, item, box, index, options = {}) {
@@ -654,41 +703,24 @@ function addCmbTextCard(slide, ctx, item, box, index, options = {}) {
   const titleX = contentX + 0.38;
   const titleW = Math.max(0.3, contentW - 0.38);
   const titleText = title || fallbackLabel;
-  const titleFont = options.lead ? 15.2 : options.compact ? 12.2 : 13.2;
+  const titleFont = Number(options.titleFontSize) || (options.lead ? 15.2 : options.compact ? 12.2 : 13.2);
   const titleH = estimateTextHeight(titleText, titleW, titleFont, { min: 0.26, max: options.compact ? 0.34 : 0.5, lineHeight: 1.14, padding: 0.02 });
   slide.addText(titleText, { x: titleX, y: headerY, w: titleW, h: titleH, fontFace: FONTS.sansZh, fontSize: titleFont, bold: true, color, margin: 0, valign: 'top' });
 
-  if (!body) return;
+  const points = cmbItemPoints(item);
+  if (!body && !points.length) return;
   const bodyY = headerY + titleH + 0.13;
   const bodyH = Math.max(0.24, box.y + box.h - bodyY - (options.compact ? 0.12 : 0.18));
   const fontSize = READABILITY.minFontSize;
-  const maxPoints = options.maxPoints || 3;
-  if (canUseNumberedCardBody(body, contentW, bodyH, fontSize, maxPoints)) {
-    addNumberedCardBody(slide, body, { x: contentX, y: bodyY, w: contentW, h: bodyH }, { color, accent: hot ? ctx.theme.accentOn : accent, transparency: hot ? 4 : 22, maxPoints, fontSize });
+  if (points.length) {
+    addNumberedCardBody(slide, points, { x: contentX, y: bodyY, w: contentW, h: bodyH }, { color, accent: hot ? ctx.theme.accentOn : accent, transparency: hot ? 4 : 22, fontSize });
   } else {
     slide.addText(body, { x: contentX, y: bodyY, w: contentW, h: bodyH, fontFace: FONTS.sansZh, fontSize, color, transparency: hot ? 6 : 24, margin: 0.02, valign: 'top' });
   }
 }
 
-function shouldNumberCmbBody(text, boxW = 0, boxH = 0) {
-  const raw = String(text || '').trim();
-  if (!raw) return false;
-  if (Number(boxW) < 2.35 || Number(boxH) < 0.72) return false;
-  return /\n|[;\uFF1B\u3002.!\uFF01?\uFF1F]/.test(raw) || textVisualLength(raw) > 52;
-}
+function addNumberedCardBody(slide, points, box, options = {}) {
 
-function canUseNumberedCardBody(text, boxW, boxH, fontSize, maxPoints) {
-  if (!shouldNumberCmbBody(text, boxW, boxH)) return false;
-  const points = splitBodyIntoPoints(text, maxPoints);
-  if (points.length < 2) return false;
-  const gapY = 0.05;
-  const textW = Math.max(0.2, boxW - 0.46);
-  const needed = points.reduce((sum, point) => sum + estimateTextHeight(point, textW, fontSize, { min: 0.24, max: 10, lineHeight: 1.28, padding: 0.02 }), 0) + gapY * Math.max(0, points.length - 1);
-  return needed <= boxH * 1.08;
-}
-
-function addNumberedCardBody(slide, text, box, options = {}) {
-  const points = splitBodyIntoPoints(text, options.maxPoints || 3);
   if (!points.length) return;
   const fontSize = options.fontSize || READABILITY.minFontSize;
   const numberedText = points.map((point, i) => String(i + 1).padStart(2, '0') + '  ' + point).join('\n');
@@ -705,39 +737,6 @@ function addNumberedCardBody(slide, text, box, options = {}) {
     breakLine: false,
     valign: 'top',
   });
-}
-
-function splitBodyIntoPoints(text, maxPoints = 3) {
-  const raw = String(text || '').replace(/\r/g, '').replace(/\s+/g, ' ').trim();
-  if (!raw) return [];
-  let pieces = raw
-    .split(/(?:\n+|[;\uFF1B\u3002.!\uFF01?\uFF1F]+)\s*/g)
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (pieces.length < 2 && textVisualLength(raw) > 52) pieces = chunkTextByVisualLength(raw, Math.ceil(textVisualLength(raw) / Math.max(2, maxPoints)));
-  if (pieces.length <= maxPoints) return pieces;
-  const grouped = [];
-  const perGroup = Math.ceil(pieces.length / maxPoints);
-  for (let i = 0; i < pieces.length; i += perGroup) grouped.push(pieces.slice(i, i + perGroup).join('; '));
-  return grouped.slice(0, maxPoints);
-}
-
-function chunkTextByVisualLength(text, targetLength) {
-  const chunks = [];
-  let buf = '';
-  let len = 0;
-  String(text || '').split('').forEach((ch) => {
-    const add = textVisualLength(ch);
-    if (buf && len + add > targetLength) {
-      chunks.push(buf.trim());
-      buf = '';
-      len = 0;
-    }
-    buf += ch;
-    len += add;
-  });
-  if (buf.trim()) chunks.push(buf.trim());
-  return chunks;
 }
 
 function addCmbLogoMark(slide, ctx, box) {
@@ -1620,7 +1619,7 @@ function magazineSwimlane(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'magazine', 0.78);
   const lanes = (data.lanes || data.sections || []).slice(0, 4);
-  const stages = data.stages || data.columns || ['Now', 'Next', 'Later'];
+  const stages = data.stages || data.columns || ['现在', '下一步', '后续'];
   const x0 = 1.55;
   const y0 = 2.55;
   const laneH = 0.86;
@@ -1651,7 +1650,7 @@ function magazineStatementCompat(slide, ctx, s) {
   slide.addText(data.title || data.quote || ctx.spec.title || '', { x: 0.78, y: headY + 0.55, w: 6.35, h: 2.28, fontFace: FONTS.serifZh, fontSize: fitTitle(data.title || data.quote || ctx.spec.title || '', 37, 27), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
   slide.addShape(pptx.ShapeType.line, { x: 0.82, y: headY + 3.18, w: 2.35, h: 0, line: { color: s.fg, transparency: 55, width: 0.8 } });
   slide.addText(data.body || data.subtitle || data.cite || '', { x: 0.82, y: headY + 3.48, w: 5.65, h: 0.85, fontFace: FONTS.sansZh, fontSize: 13.8, color: s.fg, transparency: 20, margin: 0, fit: 'shrink', valign: 'top' });
-  addStatementImageSlot(slide, ctx, { x: 7.35, y: headY + 0.48, w: 4.55, h: 3.85 }, s.fg, data.imageLabel || 'IMAGE SLOT');
+  addStatementImageSlot(slide, ctx, { x: 7.35, y: headY + 0.48, w: 4.55, h: 3.85 }, s.fg, data.imageLabel || '图片占位');
   addFoot(slide, ctx, s.fg, 'magazine');
 }
 
@@ -1687,7 +1686,7 @@ function swissStatement(slide, ctx, s) {
   if (data.body || data.subtitle) {
     slide.addText(data.body || data.subtitle, { x: 0.72, y: headY + 3.22, w: 5.9, h: 0.95, fontFace: FONTS.sansZh, fontSize: 15.5, color: s.fg, transparency: 20, margin: 0, fit: 'shrink', valign: 'top' });
   }
-  addStatementImageSlot(slide, ctx, { x: 7.38, y: headY + 0.74, w: 4.25, h: 3.65 }, s.fg, data.imageLabel || 'IMAGE SLOT');
+  addStatementImageSlot(slide, ctx, { x: 7.38, y: headY + 0.74, w: 4.25, h: 3.65 }, s.fg, data.imageLabel || '图片占位');
   addFoot(slide, ctx, s.fg, 'swiss');
 }
 function swissKpiTower(slide, ctx, s) {
@@ -2156,7 +2155,7 @@ function swissSwimlane(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'swiss', 0.78);
   const lanes = (data.lanes || data.sections || []).slice(0, 4);
-  const stages = data.stages || data.columns || ['Now', 'Next', 'Later'];
+  const stages = data.stages || data.columns || ['现在', '下一步', '后续'];
   const x0 = 1.5;
   const y0 = 2.45;
   const laneH = 0.86;
@@ -2656,7 +2655,7 @@ function addBulletIcon(slide, icon, x, y, size, color, fill, transparency, mode,
   }
 }
 
-function addImagePlaceholder(slide, x, y, w, h, color, label = 'IMAGE SLOT') {
+function addImagePlaceholder(slide, x, y, w, h, color, label = '图片占位') {
   slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: 'FFFFFF', transparency: 100 }, line: { color, transparency: 45, width: 0.8, dash: 'dash' } });
   slide.addText(label, { x: x + 0.25, y: y + h / 2 - 0.12, w: Math.max(0.5, w - 0.5), h: 0.24, fontFace: FONTS.mono, fontSize: 8, charSpace: 1.8, color, transparency: 45, align: 'center', margin: 0 });
 }
@@ -2667,9 +2666,9 @@ function addImageOrPlaceholder(slide, ctx, image, x, y, w, h, color, label) {
     addImageAsset(slide, imgPath, { x, y, w, h });
     return;
   }
-  addImagePlaceholder(slide, x, y, w, h, color, label || 'IMAGE SLOT');
+  addImagePlaceholder(slide, x, y, w, h, color, label || '图片占位');
 }
-function addStatementImageSlot(slide, ctx, box, color, label = 'IMAGE SLOT') {
+function addStatementImageSlot(slide, ctx, box, color, label = '图片占位') {
   const images = normalizeMediaImages(ctx.slideSpec || {});
   if (images[0]) {
     addImageOrPlaceholder(slide, ctx, images[0], box.x, box.y, box.w, box.h, color, label);
@@ -2708,7 +2707,7 @@ function addMediaOrChart(slide, ctx, data, box, s, mode, label = 'MEDIA', index 
     addChartBlock(slide, ctx, { ...chart, x: box.x, y: box.y, w: box.w, h: box.h }, box, s, mode);
     return 'chart';
   }
-  addImagePlaceholder(slide, box.x, box.y, box.w, box.h, s.fg, label || 'IMAGE SLOT');
+  addImagePlaceholder(slide, box.x, box.y, box.w, box.h, s.fg, label || '图片占位');
   return 'placeholder';
 }
 
@@ -2718,11 +2717,11 @@ function addMediaGrid(slide, ctx, data, boxes, s, mode) {
   const captions = normalizeSections(data.captions || data.items || data.sections || []);
   boxes.forEach((box, i) => {
     if (images[i]) {
-      addImageOrPlaceholder(slide, ctx, images[i], box.x, box.y, box.w, box.h, s.fg, 'IMAGE SLOT');
+      addImageOrPlaceholder(slide, ctx, images[i], box.x, box.y, box.w, box.h, s.fg, '图片占位');
     } else if (charts[i]) {
       addChartBlock(slide, ctx, { ...charts[i], x: box.x, y: box.y, w: box.w, h: box.h }, box, s, mode);
     } else {
-      addImagePlaceholder(slide, box.x, box.y, box.w, box.h, s.fg, 'IMAGE SLOT');
+      addImagePlaceholder(slide, box.x, box.y, box.w, box.h, s.fg, '图片占位');
     }
     const caption = imageCaption(images[i]) || charts[i]?.caption || captions[i]?.caption || captions[i]?.title || captions[i]?.label;
     addCaption(slide, caption, box.x, box.y + box.h + 0.08, box.w, s.fg, mode);
@@ -3259,11 +3258,12 @@ function resolveMediaSlotCount(data) {
 }
 function warnThinContent(spec) {
   spec.slides.forEach((slide, index) => {
+    if (['matrix'].includes(slide.layout || '')) return;
     const candidates = normalizeSections(slide.sections || slide.items || slide.columns || slide.nodes || slide.layers || slide.steps || slide.milestones || slide.agenda || []);
     if (candidates.length < 3) return;
     const titleOnly = candidates.filter((item) => {
       const title = item.title || item.label || item.name;
-      const body = item.body || item.desc || item.note || item.text || item.summary || item.detail;
+      const body = item.body || item.desc || item.note || item.text || item.summary || item.detail || (Array.isArray(item.points) && item.points.length) || (Array.isArray(item.bullets) && item.bullets.length) || (Array.isArray(item.list) && item.list.length);
       return title && !body;
     }).length;
     if (titleOnly >= Math.ceil(candidates.length * 0.6)) {

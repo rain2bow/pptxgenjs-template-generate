@@ -73,14 +73,14 @@ function multiCollectionSlots(keys, label, minItems, maxItems, titleMin, titleMa
 function cmbBriefingSlots(name) {
   return slots([
     ['title', 'page title', 8, 32], ['summary', 'top summary body', 35, 90, 'Use body/lead if summary is omitted.'], ['body', 'top summary body alias', 35, 90], ['lead', 'top summary body alias', 35, 90],
-    ['sections[].title', 'analysis card title', 4, 14], ['sections[].body', 'analysis card body', 18, 58], ['items[].title', 'analysis card title', 4, 14], ['items[].body', 'analysis card body', 18, 58], ['agenda[].title', 'analysis card title', 4, 14], ['agenda[].body', 'analysis card body', 18, 58],
+    ['sections[].title', 'analysis card title', 4, 14], ['sections[].body', 'analysis card body', 18, 58], ['sections[].points[]', 'analysis card explicit numbered point', 8, 24], ['items[].title', 'analysis card title', 4, 14], ['items[].body', 'analysis card body', 18, 58], ['items[].points[]', 'analysis card explicit numbered point', 8, 24], ['agenda[].title', 'analysis card title', 4, 14], ['agenda[].body', 'analysis card body', 18, 58], ['agenda[].points[]', 'analysis card explicit numbered point', 8, 24],
     ['conclusion', 'bottom conclusion body', 12, 48], ['takeaway', 'bottom conclusion body alias', 12, 48],
   ], name + ': CMB top summary + middle analysis cards + bottom takeaway.');
 }
 
 function cmbTextWeaveSlots(name) {
   return slots([
-    ['title', 'page title', 8, 32], ['sections[].title', 'text card title', 4, 14], ['sections[].body', 'text card body', 15, 52], ['items[].title', 'text card title', 4, 14], ['items[].body', 'text card body', 15, 52], ['columns[].title', 'text card title', 4, 14], ['columns[].body', 'text card body', 15, 52],
+    ['title', 'page title', 8, 32], ['sections[].title', 'text card title', 4, 14], ['sections[].body', 'text card body', 15, 52], ['sections[].points[]', 'text card explicit numbered point', 8, 24], ['items[].title', 'text card title', 4, 14], ['items[].body', 'text card body', 15, 52], ['items[].points[]', 'text card explicit numbered point', 8, 24], ['columns[].title', 'text card title', 4, 14], ['columns[].body', 'text card body', 15, 52], ['columns[].points[]', 'text card explicit numbered point', 8, 24],
   ], name + ': CMB asymmetric 1-6 text cards; 5-6 cards need shorter bodies.');
 }
 
@@ -124,6 +124,10 @@ function warnSpecTextCapacity(spec) {
   const guide = guideForStyle(style);
   (spec.slides || []).forEach((slide, index) => {
     const layout = slide.layout || 'statement';
+    if (style === 'cmb' && isCmbTextWeaveLayout(layout)) {
+      warnCmbTextWeaveCapacity(slide, index, layout);
+      return;
+    }
     const layoutGuide = guide[layout] || COMMON_GUIDE[layout];
     if (!layoutGuide || !Array.isArray(layoutGuide.slots)) return;
     layoutGuide.slots.forEach((slot) => warnSlot(slide, index, layout, slot));
@@ -142,6 +146,139 @@ function warnSlot(slide, index, layout, slot) {
   });
 }
 
+
+function isCmbTextWeaveLayout(layout) {
+  return ['textGrid', 'fourCards', 'textWeave', 'contentSynthesis', 'denseText'].includes(layout);
+}
+
+function warnCmbTextWeaveCapacity(slide, index, layout) {
+  const sourceKey = firstCollectionKey(slide, ['sections', 'items', 'columns', 'points', 'agenda']);
+  if (!sourceKey) return;
+  const items = normalizeItems(slide[sourceKey]).slice(0, 6);
+  if (!items.length) return;
+  cmbTextWeaveCardBoxes(items.length, !!slide.subtitle).forEach(({ box, options }, itemIndex) => {
+    const item = items[itemIndex];
+    if (!item) return;
+    const title = itemTitle(item) || String(itemIndex + 1).padStart(2, '0');
+    const body = itemBody(item);
+    const points = itemPoints(item);
+    const text = points.length ? points.join('\n') : body;
+    if (!text) return;
+    const cap = cmbCardBodyCapacity(box, title, options);
+    const actual = Math.ceil(textVisualLength(text));
+    if (actual > cap.max) {
+      const field = sourceKey + '[' + itemIndex + '].' + (points.length ? 'points' : 'body');
+      const preview = text.replace(/\s+/g, ' ').slice(0, 54);
+      console.warn('Warning: slide ' + (index + 1) + ' layout "' + layout + '" field ' + field + ' has ' + actual + ' visual chars; estimated card capacity ' + cap.max + ' at 12pt Microsoft YaHei. Shorten this field in JSON, split it, or use fewer cards: ' + preview);
+    }
+  });
+}
+
+function firstCollectionKey(slide, keys) {
+  return keys.find((key) => slide[key] !== undefined && slide[key] !== null);
+}
+
+function cmbTextWeaveCardBoxes(count, hasSubtitle) {
+  const y0 = hasSubtitle ? 2.78 : 2.42;
+  const bottom = 6.48;
+  if (count <= 5) {
+    const leadW = 3.85;
+    const gapX = 0.28;
+    const boxes = [{ box: { x: 0.78, y: y0, w: leadW, h: bottom - y0 }, options: { lead: true } }];
+    const right = count - 1;
+    const rightX = 0.78 + leadW + gapX;
+    const rightW = 11.45 - leadW - gapX;
+    cmbTextWeaveRightBoxes(right, rightX, y0, rightW, bottom - y0, gapX, 0.24)
+      .forEach((box) => boxes.push({ box, options: {} }));
+    return boxes;
+  }
+  const boxes = [{ box: { x: 0.78, y: y0, w: 11.45, h: 0.9 }, options: { lead: true, compact: true } }];
+  const rest = count - 1;
+  const gridY = y0 + 1.12;
+  const leftW = 3.72;
+  const gapX = 0.28;
+  boxes.push({ box: { x: 0.78, y: gridY, w: leftW, h: bottom - gridY }, options: {} });
+  const cardW = (11.45 - leftW - gapX * 2) / 2;
+  const rowGap = 0.2;
+  const cardH = (bottom - gridY - rowGap) / 2;
+  for (let i = 1; i < rest; i += 1) {
+    boxes.push({ box: { x: 0.78 + leftW + gapX + ((i - 1) % 2) * (cardW + gapX), y: gridY + Math.floor((i - 1) / 2) * (cardH + rowGap), w: cardW, h: cardH }, options: {} });
+  }
+  return boxes;
+}
+
+function cmbTextWeaveRightBoxes(count, x, y, w, h, gapX, rowGap) {
+  const halfW = (w - gapX) / 2;
+  const halfH = (h - rowGap) / 2;
+  if (count <= 0) return [];
+  if (count === 1) return [{ x, y, w, h }];
+  if (count === 2) return [
+    { x, y, w: halfW, h },
+    { x: x + halfW + gapX, y, w: halfW, h },
+  ];
+  if (count === 3) return [
+    { x, y, w: halfW, h },
+    { x: x + halfW + gapX, y, w: halfW, h: halfH },
+    { x: x + halfW + gapX, y: y + halfH + rowGap, w: halfW, h: halfH },
+  ];
+  return Array.from({ length: Math.min(count, 4) }, (_, i) => ({
+    x: x + (i % 2) * (halfW + gapX),
+    y: y + Math.floor(i / 2) * (halfH + rowGap),
+    w: halfW,
+    h: halfH,
+  }));
+}
+
+function cmbCardBodyCapacity(box, title, options = {}) {
+  const padX = options.compact ? 0.2 : 0.26;
+  const padTop = options.compact ? 0.12 : 0.18;
+  const contentW = box.w - padX * 2;
+  const titleW = Math.max(0.3, contentW - 0.38);
+  const titleFont = options.titleFontSize || (options.lead ? 15.2 : options.compact ? 12.2 : 13.2);
+  const titleH = estimateTextHeight(title, titleW, titleFont, { min: 0.26, max: options.compact ? 0.34 : 0.5, lineHeight: 1.14, padding: 0.02 });
+  const bodyY = box.y + padTop + titleH + 0.13;
+  const bodyH = roundCapacityDimension(Math.max(0.24, box.y + box.h - bodyY - (options.compact ? 0.12 : 0.18)));
+  return { max: estimatedChineseCapacity(contentW, bodyH, 12, 0.02) };
+}
+
+function estimatedChineseCapacity(w, h, fontSize, margin = 0) {
+  const boxW = roundCapacityDimension(Math.max(0.05, w - margin * 2));
+  const boxH = roundCapacityDimension(Math.max(0.05, h - margin * 2));
+  const charsPerLine = Math.max(1, (boxW * 72) / fontSize);
+  const lines = Math.max(1, Math.floor((boxH * 72) / (fontSize * 1.12)));
+  return Math.max(1, Math.floor(charsPerLine * lines * 0.99));
+}
+
+function roundCapacityDimension(value) {
+  return Math.round(Number(value) * 1000) / 1000;
+}
+
+function estimateTextHeight(text, boxW, fontSize, options = {}) {
+  const raw = String(text || '').trim();
+  if (!raw) return options.empty ?? 0;
+  const charsPerLine = Math.max(4, (boxW * 72) / Math.max(1, fontSize));
+  const lines = raw.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(textVisualLength(line) / charsPerLine)), 0);
+  const height = (lines * fontSize * (options.lineHeight || 1.18)) / 72 + (options.padding || 0.04);
+  return Math.max(options.min ?? 0.2, Math.min(options.max ?? 10, height));
+}
+
+function itemTitle(item) {
+  return String(item?.title || item?.label || item?.name || item?.heading || '').trim();
+}
+
+function itemBody(item) {
+  if (!item || typeof item !== 'object') return typeof item === 'string' || typeof item === 'number' ? String(item) : '';
+  return String(item.body || item.desc || item.note || item.summary || item.detail || item.text || item.story || '').trim();
+}
+
+function itemPoints(item) {
+  const raw = item?.points || item?.bullets || item?.list;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((point) => {
+    if (point && typeof point === 'object') return String(point.body || point.text || point.title || point.label || '').trim();
+    return String(point || '').trim();
+  }).filter(Boolean);
+}
 function readFieldValues(source, field) {
   const parts = String(field || '').split('.');
   const results = [];
@@ -159,7 +296,11 @@ function walk(current, parts, pathParts, results) {
   const key = isArray ? part.slice(0, -2) : part;
   if (!current || typeof current !== 'object' || current[key] === undefined || current[key] === null) return;
   const next = current[key];
-  if (isArray) normalizeItems(next).forEach((item, i) => walk(item, parts.slice(1), pathParts.concat(key + '[' + i + ']'), results));
+  if (isArray) {
+    const items = Array.isArray(next) ? next : normalizeItems(next);
+    if (parts.length === 1) items.forEach((item, i) => results.push({ path: pathParts.concat(key + '[' + i + ']').join('.'), value: item }));
+    else normalizeItems(next).forEach((item, i) => walk(item, parts.slice(1), pathParts.concat(key + '[' + i + ']'), results));
+  }
   else walk(next, parts.slice(1), pathParts.concat(key), results);
 }
 
@@ -174,7 +315,7 @@ function normalizeItems(value) {
 function textValue(value) {
   if (value === undefined || value === null) return '';
   if (Array.isArray(value)) return value.map(textValue).filter(Boolean).join(' ');
-  if (typeof value === 'object') return '';
+  if (typeof value === 'object') return String(value.body || value.text || value.title || value.label || '').trim();
   return String(value).trim();
 }
 
