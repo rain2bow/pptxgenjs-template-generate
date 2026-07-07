@@ -712,19 +712,24 @@ function addCmbTextCard(slide, ctx, item, box, index, options = {}) {
   const bodyY = headerY + titleH + 0.13;
   const bodyH = Math.max(0.24, box.y + box.h - bodyY - (options.compact ? 0.12 : 0.18));
   const fontSize = READABILITY.minFontSize;
-  if (points.length) {
-    addNumberedCardBody(slide, points, { x: contentX, y: bodyY, w: contentW, h: bodyH }, { color, accent: hot ? ctx.theme.accentOn : accent, transparency: hot ? 4 : 22, fontSize });
+  if (points.length > 1) {
+    addNumberedCardBody(slide, points, { x: contentX, y: bodyY, w: contentW, h: bodyH }, { color, transparency: hot ? 4 : 22, fontSize });
   } else {
-    slide.addText(body, { x: contentX, y: bodyY, w: contentW, h: bodyH, fontFace: FONTS.sansZh, fontSize, color, transparency: hot ? 6 : 24, margin: 0.02, valign: 'top' });
+    slide.addText(points[0] || body, { x: contentX, y: bodyY, w: contentW, h: bodyH, fontFace: FONTS.sansZh, fontSize, color, transparency: hot ? 6 : 24, margin: 0.02, valign: 'top' });
   }
 }
 
 function addNumberedCardBody(slide, points, box, options = {}) {
-
-  if (!points.length) return;
+  if (!Array.isArray(points) || points.length <= 1) return;
   const fontSize = options.fontSize || READABILITY.minFontSize;
-  const numberedText = points.map((point, i) => String(i + 1).padStart(2, '0') + '  ' + point).join('\n');
-  slide.addText(numberedText, {
+  const runs = points.map((point, i) => ({
+    text: String(point || ''),
+    options: {
+      bullet: { type: 'number', style: 'arabicPeriod', startAt: i + 1 },
+      breakLine: i < points.length - 1,
+    },
+  }));
+  slide.addText(runs, {
     x: box.x,
     y: box.y,
     w: box.w,
@@ -734,7 +739,6 @@ function addNumberedCardBody(slide, points, box, options = {}) {
     color: options.color || '111111',
     transparency: options.transparency ?? 24,
     margin: 0.01,
-    breakLine: false,
     valign: 'top',
   });
 }
