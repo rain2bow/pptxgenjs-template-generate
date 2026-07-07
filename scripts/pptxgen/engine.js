@@ -134,10 +134,12 @@ function enforceReadableSlideText(slide) {
   if (slide.__readabilityPatched) return;
   const originalAddText = slide.addText.bind(slide);
   slide.addText = (text, options = {}) => {
-    const readableText = Array.isArray(text)
-      ? text.map((run) => ({ ...run, options: readableTextOptions(run.options || {}, run.text) }))
-      : text;
-    return originalAddText(readableText, readableTextOptions(options, text));
+    const boxOptions = readableTextOptions(options, text);
+    const limitedText = warnTextExceedsBox(text, boxOptions);
+    const readableText = Array.isArray(limitedText)
+      ? limitedText.map((run) => ({ ...run, options: readableTextOptions(run.options || {}, run.text) }))
+      : limitedText;
+    return originalAddText(readableText, boxOptions);
   };
   slide.__readabilityPatched = true;
 }
@@ -158,6 +160,68 @@ function readableTextOptions(options, text) {
 function isSymbolText(options, text) {
   const raw = Array.isArray(text) ? '' : String(text || '').trim();
   return options.fontFace === 'Segoe UI Symbol' || (raw.length <= 1 && options.align === 'center' && options.valign === 'mid');
+}
+
+function warnTextExceedsBox(text, options = {}) {
+  if (!options || options.noTextLimitWarning || options.noTextLimit || options.allowOverflowText) return text;
+  const raw = Array.isArray(text)
+    ? text.map((run) => String(run && run.text != null ? run.text : '')).join('')
+    : String(text || '');
+  if (!raw.trim() || isSymbolText(options, raw)) return text;
+  const maxVisual = estimatedBoxTextCapacity(options, Array.isArray(text) ? richTextMaxFontSize(text, options) : undefined);
+  if (!Number.isFinite(maxVisual) || maxVisual <= 0) return text;
+  const actualVisual = textVisualLength(raw);
+  if (actualVisual > maxVisual) warnTextOverCapacity(raw, actualVisual, maxVisual, options);
+  return text;
+}
+
+function richTextMaxFontSize(runs, options) {
+  return runs.reduce((max, run) => {
+    const size = Number(run && run.options && run.options.fontSize);
+    return Number.isFinite(size) ? Math.max(max, size) : max;
+  }, Number(options.fontSize) || READABILITY.minFontSize);
+}
+
+function estimatedBoxTextCapacity(options = {}, explicitFontSize) {
+  const w = Number(options.w);
+  const h = Number(options.h);
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return Infinity;
+  const fontSize = Number(explicitFontSize || options.fontSize || READABILITY.minFontSize);
+  if (!Number.isFinite(fontSize) || fontSize <= 0) return Infinity;
+  const margins = textBoxMargins(options.margin);
+  const boxW = Math.max(0.05, w - margins.left - margins.right);
+  const boxH = Math.max(0.05, h - margins.top - margins.bottom);
+  const lineHeight = Number(options.textLimitLineHeight || options.lineHeight) || 1.24;
+  const charsPerLine = Math.max(1, (boxW * 72) / (fontSize * 0.58));
+  const lines = Math.max(1, Math.floor((boxH * 72) / (fontSize * lineHeight)));
+  const reserve = Number(options.textLimitReserveRatio);
+  const reserveRatio = Number.isFinite(reserve) ? clamp(reserve, 0.55, 1) : 0.88;
+  return Math.max(1, Math.floor(charsPerLine * lines * reserveRatio));
+}
+
+function textBoxMargins(margin) {
+  if (typeof margin === 'number') return { left: margin, right: margin, top: margin, bottom: margin };
+  if (Array.isArray(margin)) {
+    const [top = 0, right = top, bottom = top, left = right] = margin.map((value) => Number(value) || 0);
+    return { left, right, top, bottom };
+  }
+  if (margin && typeof margin === 'object') {
+    return {
+      left: Number(margin.left ?? margin.l ?? 0) || 0,
+      right: Number(margin.right ?? margin.r ?? 0) || 0,
+      top: Number(margin.top ?? margin.t ?? 0) || 0,
+      bottom: Number(margin.bottom ?? margin.b ?? 0) || 0,
+    };
+  }
+  return { left: 0, right: 0, top: 0, bottom: 0 };
+}
+
+let TEXT_CAPACITY_WARNING_COUNT = 0;
+function warnTextOverCapacity(original, actualVisual, maxVisual, options = {}) {
+  if (options.silentTextLimit || options.silentTextLimitWarning || TEXT_CAPACITY_WARNING_COUNT >= 30) return;
+  TEXT_CAPACITY_WARNING_COUNT += 1;
+  const preview = String(original || '').replace(/\s+/g, ' ').slice(0, 56);
+  console.warn('Warning: text may overflow box (' + Number(options.w || 0).toFixed(2) + 'x' + Number(options.h || 0).toFixed(2) + '); estimated capacity ' + Math.floor(maxVisual) + ', got ' + Math.ceil(actualVisual) + '. Reduce text length or enlarge/split the card: ' + preview);
 }
 function renderByStyle(style, slide, ctx) {
   const renderers = {

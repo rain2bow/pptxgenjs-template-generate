@@ -157,6 +157,8 @@ JSON spec 输入输出。
 - `buildDeck(spec, specDir, outPath)`
 - `enforceReadableSlideText(slide)`
 - `readableTextOptions(options, text)`
+- `warnTextExceedsBox(text, options)`
+- `estimatedBoxTextCapacity(options, explicitFontSize)`
 
 `normalizeSpec()` 做这些事：
 
@@ -175,7 +177,7 @@ JSON spec 输入输出。
 - 如 spec 尚未归一化，先调用 `normalizeSpec()`。
 - 设置 pptx 元数据和自定义宽屏尺寸。
 - 为每页创建 slide。
-- 给 slide 打 `enforceReadableSlideText()` 补丁，抬高过小字号。
+- 给 slide 打 `enforceReadableSlideText()` 补丁，抬高过小字号，并在最终 `addText()` 前按文本框尺寸估算最大可容纳字数；超出时只输出 warning，不截断、不改写原文。
 - 构造 `ctx = { spec, slideSpec, theme, specDir, index, total }`。
 - 调用 `renderByStyle(spec.style, slide, ctx)`。
 - 写出 PPTX。

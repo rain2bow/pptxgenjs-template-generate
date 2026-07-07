@@ -194,7 +194,7 @@ Read `SKILL.md`, user materials, the deck JSON spec, and only the needed `assets
 - `theme`: 风格 A 可用 `ink`、`indigo`、`forest`、`kraft`、`dune`、`cmb`；风格 B 可用 `ikb`、`lemon`、`green`、`orange`、`cmb`；招商银行独立风格可用 `classic`、`pearl`、`graphite`。
 - `slides[].layout`: 使用下方支持的版式名。
 - 图片/logo 路径解析顺序：绝对路径、相对 spec 文件、相对当前工作目录、相对技能 `assets/`、相对技能根目录。内置素材可直接写 `logos/cmb-logo-lockup.png`、`logos/cmb-logo-mark.svg` 或对应的 `assets/logos/...` 路径，不需要复制到用户项目目录；脚本会按实际文件插入。所有 logo 必须保持素材原始比例，不能为了填满指定 `w/h` 而横向或纵向压扁；生成器会在给定框内等比居中放置。
-- 文本太长时先改写或拆页，不要压到很小字号。
+- 文本太长时先改写或拆页，不要压到很小字号。生成器会按最终文本框 `w/h/fontSize/margin` 估算可容纳字数，超出时只打印 `Warning: text may overflow box`，不会截断或改写原文；看到 warning 后应降低该段字数、放大卡片或拆页。
 JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 时优先由程序对象调用 `JSON.stringify(data, null, 2)` 写出，不要手写拼接字符串。普通中文内容里的引号优先使用 `「」` 或中文弯引号；如果必须在 JSON 字符串中使用英文直引号 `"`，必须写成 `\"`。生成器读取 `--spec` 时会自动尝试修复常见问题：Markdown fenced code block、UTF-8 BOM、`//`/`/* */` 注释、尾逗号、用作 JSON 结构分隔符的中英文弯引号。若自动修复成功，会打印 warning；需要落盘为严格 JSON 时，继续使用 `--write-normalized-spec path/to/normalized.json`。无法可靠判断的未转义英文直引号仍会报错，此时必须人工改成 `\"` 或改用 `「」`。
 
 ## 支持版式
@@ -271,7 +271,7 @@ Layout gating rule: if a slide has no user-provided image fields (`image`, `imag
 招商银行风格：优先使用独立 `style: "cmb"`，主题可选 `classic`、`pearl`、`graphite`，并设置 `logoHeader` / `logoMark`。推荐复用 `assets/template-cmb.js` 或运行 `--sample-style cmb`。不要把它仅当作 `swiss` 的一个主题变体。招商银行模板每页页眉必须整条保持白色，并使用白底 PNG 完整 logo：`logos/cmb-logo-lockup.png`；页眉以外的封面、收尾页或装饰性品牌标识必须使用透明背景 SVG 纯图 logo：`logos/cmb-logo-mark.svg`。封面保留清晰 SVG 纯图 logo，且与内容页右上角 SVG logo 使用相同大小和位置；所有内容页右上角的原圆形装饰必须替换为不透明度 20% 的 SVG 纯图 logo 水印。两者都会自动解析到技能内置 `assets/logos/`，不要提示用户手动复制素材。所有 logo 都必须等比显示，不要只在红色页面上放一个局部白底 logo，也不要用 SVG 纯图 logo 作为页眉品牌标识。
 所有模板都必须保持页首信息位置稳定：同一 deck 内每页 kicker/顶部小标题默认使用统一 headY 基线，避免翻页时顶部文字上下跳动。纯色强调页不能是无层次纯色块，应叠加低透明浅色层、暗色层、线性/弧线纹理或其它 PPT 原生形状做柔化。
 - 不要使用 emoji 作为页面视觉元素；图标需求优先用简单线条/形状，或由用户提供图标资产。
-- 投影可读性优先：页眉、页脚、标签、旁注、图表坐标轴、表格正文等小字必须保持可阅读，生成器会把普通文本、图表文字和表格文字的最小字号抬到约 12pt；内容放不下时拆页、换版式或删减，不要继续压小字。
+- 投影可读性优先：页眉、页脚、标签、旁注、图表坐标轴、表格正文等小字必须保持可阅读，生成器会把普通文本、图表文字和表格文字的最小字号抬到约 12pt，并按文本框容量提示溢出风险。内容放不下时拆页、换版式或删减，不要继续压小字；极特殊文本框可显式设置 `noTextLimitWarning` / `noTextLimit` / `allowOverflowText` 跳过提示。
 - 中文大标题要主动断行。风格 B 的中文超大标题通常比英文小一档。
 - 底部页码、页脚和注释信息不要遮挡主体，至少保留 0.35 英寸安全区。
 
