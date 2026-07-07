@@ -149,17 +149,27 @@ const THEMES = {
 };
 
 const FONTS = {
-  serifZh: 'Noto Serif SC',
-  serifEn: 'Playfair Display',
-  sansZh: 'Noto Sans SC',
-  sans: 'Inter',
-  mono: 'IBM Plex Mono',
+  zh: 'Microsoft YaHei',
+  en: 'Times New Roman',
+  serifZh: 'Microsoft YaHei',
+  serifEn: 'Times New Roman',
+  sansZh: 'Microsoft YaHei',
+  sans: 'Microsoft YaHei',
+  mono: 'Microsoft YaHei',
+};
+
+const TYPOGRAPHY = {
+  coverTitle: 36,
+  pageTitle: 28,
+  itemTitle: 16,
+  body: 14,
+  dense: 12,
 };
 
 const READABILITY = {
-  minFontSize: 12,
-  minChartFontSize: 12,
-  minTableFontSize: 12,
+  minFontSize: TYPOGRAPHY.dense,
+  minChartFontSize: TYPOGRAPHY.dense,
+  minTableFontSize: TYPOGRAPHY.dense,
 };
 
 const BASIC_ICON_NAMES = ['dot', 'square', 'diamond', 'plus', 'minus', 'cross', 'number'];
@@ -214,6 +224,7 @@ module.exports = {
   SLIDE,
   THEMES,
   FONTS,
+  TYPOGRAPHY,
   READABILITY,
   BASIC_ICON_NAMES,
   ICON_ALIASES,

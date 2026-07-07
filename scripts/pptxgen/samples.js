@@ -11,7 +11,7 @@ function sampleSpec(style = 'swiss') {
       headY: 1.06,
       slides: [
         { layout: 'cover', kicker: 'CHINA MERCHANTS BANK / 2026', title: '招商银行业务增长与数字化经营汇报', subtitle: '围绕客户经营、风险控制与效率提升的阶段性复盘' },
-        { layout: 'statement', kicker: 'Executive Summary', title: '以客户价值为核心，形成增长、风控与效率的闭环。', body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。', callout: '稳健经营\n价值增长\n风险可控' },
+        { layout: 'statement', allowEmptyMediaSlots: true, kicker: 'Executive Summary', title: '以客户价值为核心，形成增长、风控与效率的闭环。', body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。', callout: '稳健经营\n价值增长\n风险可控' },
         { layout: 'kpiTower', kicker: 'Performance Snapshot', title: '关键经营指标保持稳健改善', items: [
           { label: '零售客户增长', value: '+18%', valueNum: 18, note: '同比保持双位数增长。' },
           { label: '活跃客户提升', value: '+32%', valueNum: 32, note: '数字渠道贡献主要增量。' },
@@ -28,12 +28,12 @@ function sampleSpec(style = 'swiss') {
           { chartType: 'column', title: '风险事件处置量', labels: ['1月', '2月', '3月', '4月'], values: [120, 148, 176, 214] },
           { chartType: 'doughnut', title: '渠道结构', labels: ['App', '网点', '远程', '客户经理'], values: [46, 18, 21, 15], showLegend: true },
         ] },
-        { layout: 'briefing', kicker: 'Operating Brief', title: 'Readable high-density operating brief.', summary: 'This page demonstrates the CMB text-heavy layout. Long card copy is split into numbered subpoints so dense material remains scannable instead of becoming a flat paragraph.', sections: [
-          { title: 'Customer segmentation', body: 'Segment by assets, behavior and lifecycle. Match each group with an offer and owner.' },
+        { layout: 'briefing', kicker: 'Operating Brief', title: 'Readable operating brief.', summary: 'Dense material is grouped into summary, actions and takeaway for review.', sections: [
+          { title: 'Segments', body: 'Segment by assets, behavior and lifecycle. Match each group with an offer and owner.' },
           { title: 'Signal capture', body: 'Capture high-value moments, churn signals and service friction across key channels.' },
           { title: 'Closed-loop action', body: 'Assign owners, trigger actions and review conversion weekly.' },
           { title: 'Risk coordination', body: 'Combine behavior alerts and review thresholds. Escalate only material exceptions.' },
-        ], conclusion: 'Use this layout when ordinary columns are too fragmented for a management discussion.' },
+        ], conclusion: 'Use when ordinary columns are too fragmented.' },
         { layout: 'media', kicker: 'Customer Operation', title: '客户经营从单点触达转向分层运营', body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。', chart: { chartType: 'line', title: '客户活跃趋势', labels: ['Q1', 'Q2', 'Q3', 'Q4'], values: [42, 51, 63, 78], showValue: true }, items: [
           { icon: 'users', title: '客群分层', body: '按资产、行为与生命周期拆分运营策略。' },
           { icon: 'scan-search', title: '信号识别', body: '捕捉高价值触点与潜在流失风险。' },
@@ -79,6 +79,7 @@ function sampleSpec(style = 'swiss') {
         },
         {
           layout: 'quoteImage',
+          allowEmptyMediaSlots: true,
           kicker: 'But',
           title: '我不是程序员。',
           body: '过去十年做的是 UI 设计和 AI 特效。新的工具链让能力边界被重新折叠。',
@@ -122,6 +123,7 @@ function sampleSpec(style = 'swiss') {
       },
       {
         layout: 'statement',
+        allowEmptyMediaSlots: true,
         kicker: 'Thesis · 01',
         title: '组织正在从人数问题，变成接口问题。',
         body: '当个体能调用足够厚的技能层，公司边界会重新定义。',

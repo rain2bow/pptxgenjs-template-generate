@@ -7,6 +7,7 @@ const {
   SLIDE,
   THEMES,
   FONTS,
+  TYPOGRAPHY,
   READABILITY,
   BASIC_ICON_NAMES,
   ICON_ALIASES,
@@ -67,8 +68,8 @@ async function buildDeck(spec, specDir, outPath) {
   pptx.company = spec.company || '';
   pptx.lang = 'zh-CN';
   pptx.theme = {
-    headFontFace: spec.style === 'magazine' ? FONTS.serifZh : FONTS.sans,
-    bodyFontFace: spec.style === 'magazine' ? FONTS.sansZh : FONTS.sansZh,
+    headFontFace: FONTS.zh,
+    bodyFontFace: FONTS.zh,
     lang: 'zh-CN',
   };
   pptx.defineLayout({ name: 'CUSTOM_WIDE', width: SLIDE.w, height: SLIDE.h });
@@ -103,6 +104,7 @@ async function disableTextAutofit(pptxPath) {
   const buffer = await fs.promises.readFile(pptxPath);
   const zip = await JSZip.loadAsync(buffer);
   const slideFiles = Object.keys(zip.files).filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name));
+  const chartFiles = Object.keys(zip.files).filter((name) => /^ppt\/charts\/chart\d+\.xml$/.test(name));
   let changed = false;
   await Promise.all(slideFiles.map(async (name) => {
     const xml = await zip.file(name).async('string');
@@ -112,9 +114,23 @@ async function disableTextAutofit(pptxPath) {
       changed = true;
     }
   }));
+  await Promise.all(chartFiles.map(async (name) => {
+    const xml = await zip.file(name).async('string');
+    const next = forceChartTypographyXml(xml);
+    if (next !== xml) {
+      zip.file(name, next);
+      changed = true;
+    }
+  }));
   if (!changed) return;
   const output = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
   await fs.promises.writeFile(pptxPath, output);
+}
+
+function forceChartTypographyXml(xml) {
+  return String(xml)
+    .replace(/typeface="[^"]*"/g, 'typeface="' + FONTS.zh + '"')
+    .replace(/(<a:defRPr\b[^>]*?)\ssz="\d+"/g, '$1 sz="' + (TYPOGRAPHY.dense * 100) + '"');
 }
 
 function forceNoAutofitXml(xml) {
@@ -151,12 +167,43 @@ function readableTextOptions(options, text) {
   const next = { ...options };
   if (next.fit === 'shrink' && next.allowAutoFit !== true) delete next.fit;
   if (next.noReadabilityScale) return next;
-  if (typeof next.fontSize === 'number' && next.fontSize < READABILITY.minFontSize && !isSymbolText(next, text)) {
-    next.fontSize = READABILITY.minFontSize;
+  if (!isSymbolText(next, text)) {
+    next.fontFace = typographyFontFace(text);
+    next.fontSize = typographyFontSize(next.fontSize, next.typographyRole);
+    delete next.typographyRole;
     const minBoxH = (READABILITY.minFontSize * 1.28) / 72;
     if (typeof next.h === 'number' && next.h < minBoxH) next.h = minBoxH;
   }
   return next;
+}
+
+function typographyFontFace(text) {
+  return isPureEnglishText(text) ? FONTS.en : FONTS.zh;
+}
+
+function typographyFontSize(size, role) {
+  if (role === 'coverTitle') return TYPOGRAPHY.coverTitle;
+  if (role === 'pageTitle') return TYPOGRAPHY.pageTitle;
+  if (role === 'itemTitle') return TYPOGRAPHY.itemTitle;
+  if (role === 'body') return TYPOGRAPHY.body;
+  if (role === 'dense') return TYPOGRAPHY.dense;
+  const value = Number(size);
+  if (!Number.isFinite(value) || value <= 0) return TYPOGRAPHY.body;
+  if (value >= 40) return TYPOGRAPHY.coverTitle;
+  if (value >= 23) return TYPOGRAPHY.pageTitle;
+  if (value >= 15) return TYPOGRAPHY.itemTitle;
+  if (value >= 13) return TYPOGRAPHY.body;
+  return TYPOGRAPHY.dense;
+}
+
+function isPureEnglishText(text) {
+  const raw = Array.isArray(text)
+    ? text.map((run) => String(run && run.text != null ? run.text : '')).join('')
+    : String(text || '');
+  const cleaned = raw.trim();
+  if (!cleaned) return false;
+  if (/[\u2E80-\u9FFF\uF900-\uFAFF]/.test(cleaned)) return false;
+  return /[A-Za-z0-9]/.test(cleaned);
 }
 
 function isSymbolText(options, text) {
@@ -467,7 +514,7 @@ function cmbCover(slide, ctx, s) {
   const headY = pageHeadY(ctx, 1.08);
   addCmbLogoMark(slide, ctx, { x: 10.62, y: 1.02, w: 1.72, h: 1.72 });
   slide.addText(data.kicker || 'CHINA MERCHANTS BANK', { x: 0.78, y: headY, w: 6.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8.6, bold: true, charSpace: 1.5, color: s.fg, transparency: 18, margin: 0, fit: 'shrink' });
-  slide.addText(data.title || ctx.spec.title, { x: 0.78, y: headY + 0.6, w: 10.2, h: 2.15, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || ctx.spec.title, 47, 31), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
+  slide.addText(data.title || ctx.spec.title, { x: 0.78, y: headY + 0.6, w: 10.2, h: 2.15, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || ctx.spec.title, 47, 31), bold: true, color: s.fg, margin: 0, fit: 'shrink' , typographyRole: 'coverTitle' });
   slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: headY + 3.15, w: 1.55, h: 0.09, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
   slide.addText(data.subtitle || ctx.spec.subtitle || '', { x: 0.78, y: headY + 3.5, w: 6.7, h: 0.72, fontFace: FONTS.sansZh, fontSize: 15.2, color: s.fg, transparency: 10, margin: 0, fit: 'shrink' });
   addFoot(slide, ctx, s.fg, 'swiss');
@@ -603,7 +650,7 @@ function addCmbTextCard(slide, ctx, item, box, index, options = {}) {
   const iconColor = hot ? ctx.theme.accentOn : accent;
   const hasIcon = addInlineIcon(slide, item || {}, contentX, headerY + 0.02, iconSize, iconColor, 'swiss', { fallback: defaultContentIcon(index, 'swiss'), pad: 0.04 });
   const fallbackLabel = options.label || String(index + 1).padStart(2, '0');
-  if (!hasIcon) slide.addText(fallbackLabel, { x: contentX, y: headerY + 0.02, w: 0.34, h: 0.2, fontFace: 'JetBrains Mono', fontSize: 7.2, bold: true, color: iconColor, transparency: hot ? 4 : 18, margin: 0, fit: 'shrink' });
+  if (!hasIcon) slide.addText(fallbackLabel, { x: contentX, y: headerY + 0.02, w: 0.34, h: 0.2, fontFace: FONTS.mono, fontSize: 7.2, bold: true, color: iconColor, transparency: hot ? 4 : 18, margin: 0, fit: 'shrink' });
   const titleX = contentX + 0.38;
   const titleW = Math.max(0.3, contentW - 0.38);
   const titleText = title || fallbackLabel;
@@ -935,7 +982,7 @@ ${gridLines.join('\n')}
 function addChrome(slide, ctx, color, mode) {
   const left = ctx.slideSpec.chromeLeft || ctx.spec.title || 'PPTX Deck';
   const right = ctx.slideSpec.chromeRight || `${String(ctx.index + 1).padStart(2, '0')} / ${String(ctx.total).padStart(2, '0')}`;
-  const font = mode === 'swiss' ? 'JetBrains Mono' : FONTS.mono;
+  const font = mode === 'swiss' ? FONTS.mono : FONTS.mono;
   const hasHeaderLogo = !!(ctx.slideSpec.logoHeader || ctx.slideSpec.brandLogoHeader || ctx.spec.logoHeader || ctx.spec.brandLogoHeader);
   const logoBox = hasHeaderLogo
     ? {
@@ -1033,7 +1080,7 @@ function addFoot(slide, ctx, color, mode, text) {
     y,
     w: 8,
     h: 0.22,
-    fontFace: mode === 'swiss' ? 'JetBrains Mono' : FONTS.mono,
+    fontFace: mode === 'swiss' ? FONTS.mono : FONTS.mono,
     fontSize: mode === 'swiss' ? 7.5 : 7,
     charSpace: 1.2,
     color,
@@ -1066,6 +1113,7 @@ function magazineCover(slide, ctx, s) {
     fontFace: FONTS.serifZh,
     fontSize: fitTitle(data.title || ctx.spec.title, 54, 38),
     bold: true,
+    typographyRole: 'coverTitle',
     color: s.fg,
     margin: 0,
     breakLine: false,
@@ -1126,6 +1174,7 @@ function magazineSection(slide, ctx, s) {
     fontFace: FONTS.serifZh,
     fontSize: fitTitle(data.title, 50, 35),
     bold: true,
+    typographyRole: 'coverTitle',
     color: s.fg,
     margin: 0,
     fit: 'shrink',
@@ -1624,8 +1673,8 @@ function magazineClosing(slide, ctx, s) {
 function swissCover(slide, ctx, s) {
   const data = ctx.slideSpec;
   const headY = pageHeadY(ctx, 1.12);
-  slide.addText(data.kicker || 'Swiss Field Note', { x: 0.72, y: headY, w: 6, h: 0.28, fontFace: 'JetBrains Mono', fontSize: 8.5, charSpace: 1.8, color: s.fg, transparency: 18, margin: 0 });
-  slide.addText(data.title || ctx.spec.title, { x: 0.68, y: headY + 0.5, w: 11.5, h: 2.6, fontFace: FONTS.sans, fontSize: fitTitle(data.title || ctx.spec.title, 62, 40), bold: false, color: s.fg, margin: 0, fit: 'shrink' });
+  slide.addText(data.kicker || 'Swiss Field Note', { x: 0.72, y: headY, w: 6, h: 0.28, fontFace: FONTS.mono, fontSize: 8.5, charSpace: 1.8, color: s.fg, transparency: 18, margin: 0 });
+  slide.addText(data.title || ctx.spec.title, { x: 0.68, y: headY + 0.5, w: 11.5, h: 2.6, fontFace: FONTS.sans, fontSize: fitTitle(data.title || ctx.spec.title, 62, 40), bold: false, color: s.fg, margin: 0, fit: 'shrink' , typographyRole: 'coverTitle' });
   slide.addText(data.subtitle || ctx.spec.subtitle || '', { x: 0.75, y: headY + 4.2, w: 6.2, h: 0.55, fontFace: FONTS.sansZh, fontSize: 17, color: s.fg, transparency: 18, margin: 0, fit: 'shrink' });
   addSwissBars(slide, 10.2, headY + 3.9, 1.55, 1.1, s.fg, 55);
   addFoot(slide, ctx, s.fg, 'swiss');
@@ -1633,7 +1682,7 @@ function swissCover(slide, ctx, s) {
 function swissStatement(slide, ctx, s) {
   const data = ctx.slideSpec;
   const headY = pageHeadY(ctx, 1.12);
-  slide.addText(data.kicker || 'Statement', { x: 0.72, y: headY, w: 5.5, h: 0.25, fontFace: 'JetBrains Mono', fontSize: 8, charSpace: 1.8, color: s.fg, transparency: 35, margin: 0 });
+  slide.addText(data.kicker || 'Statement', { x: 0.72, y: headY, w: 5.5, h: 0.25, fontFace: FONTS.mono, fontSize: 8, charSpace: 1.8, color: s.fg, transparency: 35, margin: 0 });
   slide.addText(data.title, { x: 0.68, y: headY + 0.5, w: 6.35, h: 2.1, fontFace: FONTS.sans, fontSize: fitTitle(data.title, 43, 30), bold: false, color: s.fg, margin: 0, fit: 'shrink' });
   if (data.body || data.subtitle) {
     slide.addText(data.body || data.subtitle, { x: 0.72, y: headY + 3.22, w: 5.9, h: 0.95, fontFace: FONTS.sansZh, fontSize: 15.5, color: s.fg, transparency: 20, margin: 0, fit: 'shrink', valign: 'top' });
@@ -1658,7 +1707,7 @@ function swissKpiTower(slide, ctx, s) {
     const barY = barBottom - barH;
     slide.addText(item.value || '', { x, y: valueY, w: 2.3, h: valueH, fontFace: FONTS.sans, fontSize: 28, bold: true, color: i === items.length - 1 ? ctx.theme.accent : s.fg, margin: 0, fit: 'shrink' });
     slide.addShape(pptx.ShapeType.rect, { x, y: barY, w: 2.3, h: barH, fill: { color: i === items.length - 1 ? ctx.theme.accent : ctx.theme.grey1 }, line: { color: i === items.length - 1 ? ctx.theme.accent : ctx.theme.grey2, transparency: 0, width: 0.4 } });
-    slide.addText(item.label || '', { x, y: 5.85, w: 2.3, h: 0.35, fontFace: 'JetBrains Mono', fontSize: 7.5, charSpace: 1.3, color: s.fg, transparency: 25, margin: 0, fit: 'shrink' });
+    slide.addText(item.label || '', { x, y: 5.85, w: 2.3, h: 0.35, fontFace: FONTS.mono, fontSize: 7.5, charSpace: 1.3, color: s.fg, transparency: 25, margin: 0, fit: 'shrink' });
   });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -1672,7 +1721,7 @@ function swissDuoCompare(slide, ctx, s) {
     const fill = i === 1 ? ctx.theme.accent : ctx.theme.grey1;
     const color = i === 1 ? ctx.theme.accentOn : ctx.theme.ink;
     slide.addShape(pptx.ShapeType.rect, { x, y: 2.55, w: 5.55, h: 3.25, fill: { color: fill }, line: { color: fill, transparency: 100 } });
-    slide.addText(col.label || (i === 0 ? 'Before' : 'After'), { x: x + 0.35, y: 2.88, w: 4.7, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 8, charSpace: 1.3, color, transparency: 30, margin: 0 });
+    slide.addText(col.label || (i === 0 ? 'Before' : 'After'), { x: x + 0.35, y: 2.88, w: 4.7, h: 0.22, fontFace: FONTS.mono, fontSize: 8, charSpace: 1.3, color, transparency: 30, margin: 0 });
     slide.addText(col.title || '', { x: x + 0.35, y: 3.35, w: 4.7, h: 0.55, fontFace: FONTS.sans, fontSize: 23, color, margin: 0, fit: 'shrink' });
     addBullets(slide, compareBulletItems(col.items || []), x + 0.35, 4.22, 4.7, 1.15, color, 14, 'swiss');
   });
@@ -1720,7 +1769,7 @@ function swissTimeline(slide, ctx, s) {
     const axisY = y + 0.3;
     slide.addShape(pptx.ShapeType.line, { x, y: axisY, w: cardW, h: 0, line: { color: hot ? ctx.theme.accent : s.fg, transparency: hot ? 20 : 58, width: hot ? 1.0 : 0.7 } });
     slide.addShape(pptx.ShapeType.rect, { x: x + 0.02, y: axisY - 0.045, w: 0.09, h: 0.09, fill: { color: hot ? ctx.theme.accent : s.fg }, line: { color: hot ? ctx.theme.accent : s.fg, transparency: 100 } });
-    slide.addText(item.label || item.year || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.04, w: Math.max(0.8, cardW - 0.36), h: 0.22, fontFace: 'JetBrains Mono', fontSize: 8, color: hot ? ctx.theme.accent : s.fg, transparency: hot ? 0 : 30, margin: 0, fit: 'shrink' });
+    slide.addText(item.label || item.year || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.04, w: Math.max(0.8, cardW - 0.36), h: 0.22, fontFace: FONTS.mono, fontSize: 8, color: hot ? ctx.theme.accent : s.fg, transparency: hot ? 0 : 30, margin: 0, fit: 'shrink' });
     const titleText = item.title || '';
     const bodyText = item.body || item.desc || item.note || '';
     const titleH = estimateTextHeight(titleText, cardW - 0.34, titleFont, { min: 0.32, max: 0.56, lineHeight: 1.24, padding: 0.02 });
@@ -1751,7 +1800,7 @@ function swissMatrix(slide, ctx, s) {
   });
   if (data.heroStat) {
     slide.addText(data.heroStat.value || '', { x: 0.78, y: 5.75, w: 3.2, h: 0.65, fontFace: FONTS.sans, fontSize: 37, color: ctx.theme.accent, bold: true, margin: 0, fit: 'shrink' });
-    slide.addText(data.heroStat.label || '', { x: 4.1, y: 5.95, w: 5.5, h: 0.28, fontFace: 'JetBrains Mono', fontSize: 8, charSpace: 1.2, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' });
+    slide.addText(data.heroStat.label || '', { x: 4.1, y: 5.95, w: 5.5, h: 0.28, fontFace: FONTS.mono, fontSize: 8, charSpace: 1.2, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' });
   }
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -1805,7 +1854,7 @@ function swissFourCards(slide, ctx, s) {
     const descH = Math.max(0.34, cardH - (descY - y) - 0.24);
     slide.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: cardH, fill: { color: ctx.theme.grey1 }, line: { color: ctx.theme.grey1, transparency: 100 } });
     const hasIcon = addInlineIcon(slide, item, x + 0.2, y + 0.18, iconSize, s.fg, 'swiss', { fallback: item.icon ? null : 'layers', pad: compact ? 0.045 : 0.06 });
-    if (!hasIcon) slide.addText(item.number || `0${i + 1}`, { x: x + 0.2, y: y + 0.22, w: 1.0, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 8, color: s.fg, transparency: 45, margin: 0 });
+    if (!hasIcon) slide.addText(item.number || `0${i + 1}`, { x: x + 0.2, y: y + 0.22, w: 1.0, h: 0.22, fontFace: FONTS.mono, fontSize: 8, color: s.fg, transparency: 45, margin: 0 });
     slide.addText(titleText, { x: x + 0.2, y: titleY, w: cardW - 0.4, h: titleH, fontFace: FONTS.sansZh, fontSize: titleFont, color: s.fg, margin: 0, fit: 'shrink', valign: 'top' });
     slide.addText(bodyText, { x: x + 0.2, y: descY, w: cardW - 0.4, h: descH, fontFace: FONTS.sansZh, fontSize: bodyFont, color: s.fg, transparency: 25, margin: 0.02, fit: 'shrink', valign: 'top' });
   });
@@ -1822,7 +1871,7 @@ function swissImageHero(slide, ctx, s) {
   items.forEach((item, i) => {
     const x = 6.6 + i * 2.1;
     slide.addShape(pptx.ShapeType.line, { x, y: 4.72, w: 1.75, h: 0, line: { color: ctx.theme.ink, transparency: 25, width: 0.7 } });
-    slide.addText(item.label || '', { x, y: 4.9, w: 1.75, h: 0.2, fontFace: 'JetBrains Mono', fontSize: 7, charSpace: 1, color: ctx.theme.ink, transparency: 35, margin: 0, fit: 'shrink' });
+    slide.addText(item.label || '', { x, y: 4.9, w: 1.75, h: 0.2, fontFace: FONTS.mono, fontSize: 7, charSpace: 1, color: ctx.theme.ink, transparency: 35, margin: 0, fit: 'shrink' });
     slide.addText(item.value || '', { x, y: 5.25, w: 1.75, h: 0.45, fontFace: FONTS.sans, fontSize: 25, color: i === items.length - 1 ? ctx.theme.accent : ctx.theme.ink, margin: 0, fit: 'shrink' });
     slide.addText(item.note || '', { x, y: 5.95, w: 1.75, h: 0.35, fontFace: FONTS.sansZh, fontSize: 8.5, color: ctx.theme.ink, transparency: 35, margin: 0, fit: 'shrink' });
   });
@@ -1861,7 +1910,7 @@ function swissTextGrid(slide, ctx, s) {
     slide.addShape(pptx.ShapeType.rect, { x, y, w, h, fill: { color: hot ? ctx.theme.accent : ctx.theme.grey1 }, line: { color: hot ? ctx.theme.accent : ctx.theme.grey1, transparency: 100 } });
     const iconColor = hot ? ctx.theme.accentOn : s.fg;
     const hasIcon = addInlineIcon(slide, item, x + 0.18, y + 0.14, 0.3, iconColor, 'swiss', { fallback: defaultContentIcon(i, 'swiss'), pad: 0.05 });
-    if (!hasIcon) slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.16, w: 0.52, h: 0.2, fontFace: 'JetBrains Mono', fontSize: 7.2, color: hot ? ctx.theme.accentOn : s.fg, transparency: hot ? 0 : 35, margin: 0 });
+    if (!hasIcon) slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.16, w: 0.52, h: 0.2, fontFace: FONTS.mono, fontSize: 7.2, color: hot ? ctx.theme.accentOn : s.fg, transparency: hot ? 0 : 35, margin: 0 });
     const tx = hasIcon ? x + 0.62 : x + 0.78;
     const textW = x + w - 0.27 - tx;
     const titleText = item.title || '';
@@ -1904,7 +1953,7 @@ function swissSectionList(slide, ctx, s) {
     const color = hot ? ctx.theme.accentOn : s.fg;
     slide.addShape(pptx.ShapeType.rect, { x: 0.78, y, w: 11.45, h, fill: { color: fill, transparency: hot ? 0 : isCmb ? 18 : 0 }, line: { color: fill, transparency: 100 } });
     slide.addShape(pptx.ShapeType.rect, { x: 0.78, y, w: 0.1, h, fill: { color: hot ? ctx.theme.accentOn : ctx.theme.accent, transparency: hot ? 0 : 12 }, line: { color: hot ? ctx.theme.accentOn : ctx.theme.accent, transparency: 100 } });
-    slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: 1.04, y: y + 0.18, w: 0.54, h: 0.24, fontFace: 'JetBrains Mono', fontSize: 9.4, bold: hot, color, transparency: hot ? 0 : 28, margin: 0 });
+    slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: 1.04, y: y + 0.18, w: 0.54, h: 0.24, fontFace: FONTS.mono, fontSize: 9.4, bold: hot, color, transparency: hot ? 0 : 28, margin: 0 });
     const title = item.title || item.name || '';
     const body = item.body || item.desc || item.note || item.summary || item.detail || item.text || '';
     const titleH = estimateTextHeight(title, textW, READABILITY.minFontSize, { min: 0.3, max: 0.48, lineHeight: 1.22, padding: 0.02 });
@@ -1983,7 +2032,7 @@ function swissDashboard(slide, ctx, s) {
     const iconColor = i === 0 ? ctx.theme.accentOn : s.fg;
     const hasIcon = addInlineIcon(slide, item, x + 0.16, metricsY + 0.14, 0.24, iconColor, 'swiss', { fallback: item.icon ? null : null, pad: 0.04 });
     const tx = hasIcon ? x + 0.48 : x + 0.16;
-    slide.addText(item.label || '', { x: tx, y: metricsY + 0.18, w: x + 1.88 - tx, h: 0.18, fontFace: 'JetBrains Mono', fontSize: 6.8, color: i === 0 ? ctx.theme.accentOn : s.fg, transparency: i === 0 ? 0 : 35, margin: 0, fit: 'shrink' });
+    slide.addText(item.label || '', { x: tx, y: metricsY + 0.18, w: x + 1.88 - tx, h: 0.18, fontFace: FONTS.mono, fontSize: 6.8, color: i === 0 ? ctx.theme.accentOn : s.fg, transparency: i === 0 ? 0 : 35, margin: 0, fit: 'shrink' });
     slide.addText(item.value || '', { x: x + 0.16, y: metricsY + 0.46, w: 1.72, h: 0.36, fontFace: FONTS.sans, fontSize: 19, bold: true, color: i === 0 ? ctx.theme.accentOn : s.fg, margin: 0, fit: 'shrink' });
   });
   const charts = data.charts || [];
@@ -2011,7 +2060,7 @@ function swissAgenda(slide, ctx, s) {
     const body = item.body || item.desc || item.note || item.summary || item.detail || item.text || '';
     slide.addShape(pptx.ShapeType.rect, { x, y, w: cardW, h: cardH, fill: { color: hot ? ctx.theme.accent : ctx.theme.grey1 }, line: { color: hot ? ctx.theme.accent : ctx.theme.grey1, transparency: 100 } });
     const color = hot ? ctx.theme.accentOn : s.fg;
-    slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.16, w: 0.62, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 9.8, color, transparency: hot ? 0 : 35, margin: 0, fit: 'shrink' });
+    slide.addText(item.label || String(i + 1).padStart(2, '0'), { x: x + 0.18, y: y + 0.16, w: 0.62, h: 0.22, fontFace: FONTS.mono, fontSize: 9.8, color, transparency: hot ? 0 : 35, margin: 0, fit: 'shrink' });
     slide.addText(item.title || item.label || `Item ${i + 1}`, { x: x + 0.18, y: y + 0.48, w: cardW - 0.36, h: 0.3, fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, bold: true, color, margin: 0, fit: 'shrink' });
     if (body) {
       slide.addText(body, { x: x + 0.18, y: y + 0.86, w: cardW - 0.36, h: Math.max(0.28, cardH - 0.98), fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color, transparency: hot ? 8 : 30, margin: 0.02, valign: 'top' });
@@ -2096,7 +2145,7 @@ function swissRoadmap(slide, ctx, s) {
     const textW = steps.length <= 4 ? 2.3 : steps.length === 5 ? 1.96 : 1.78;
     const labelX = clamp(x - 0.48, 0.65, SLIDE.w - 1.6);
     const textX = clamp(x - textW / 2, 0.65, SLIDE.w - textW - 0.35);
-    slide.addText(item.label || item.date || `0${i + 1}`, { x: labelX, y: y - 0.28, w: 0.95, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 9.8, color: hot ? ctx.theme.accent : s.fg, align: 'center', margin: 0, fit: 'shrink' });
+    slide.addText(item.label || item.date || `0${i + 1}`, { x: labelX, y: y - 0.28, w: 0.95, h: 0.22, fontFace: FONTS.mono, fontSize: 9.8, color: hot ? ctx.theme.accent : s.fg, align: 'center', margin: 0, fit: 'shrink' });
     slide.addText(item.title || '', { x: textX, y, w: textW, h: 0.35, fontFace: FONTS.sansZh, fontSize: 11.4, bold: true, color: s.fg, align: 'center', margin: 0, fit: 'shrink' });
     slide.addText(item.body || item.desc || item.note || '', { x: textX, y: y + 0.44, w: textW, h: 0.48, fontFace: FONTS.sansZh, fontSize: 9.2, color: s.fg, transparency: 30, align: 'center', margin: 0, fit: 'shrink' });
   });
@@ -2112,7 +2161,7 @@ function swissSwimlane(slide, ctx, s) {
   const y0 = 2.45;
   const laneH = 0.86;
   const colW = 10.3 / Math.max(stages.length, 1);
-  stages.forEach((stage, i) => slide.addText(String(stage), { x: x0 + i * colW, y: 2.13, w: colW - 0.14, h: 0.22, fontFace: 'JetBrains Mono', fontSize: 9.8, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' }));
+  stages.forEach((stage, i) => slide.addText(String(stage), { x: x0 + i * colW, y: 2.13, w: colW - 0.14, h: 0.22, fontFace: FONTS.mono, fontSize: 9.8, color: s.fg, transparency: 35, margin: 0, fit: 'shrink' }));
   lanes.forEach((lane, r) => {
     const y = y0 + r * 1.02;
     slide.addText(lane.title || lane.label || `Lane ${r + 1}`, { x: 0.78, y: y + 0.22, w: 0.58, h: 0.32, fontFace: FONTS.sansZh, fontSize: 10.6, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
@@ -2226,8 +2275,8 @@ function swissClosing(slide, ctx, s) {
 
 function addPageHead(slide, data, color, mode, y = 1.0) {
   y = Number(data.headY) || y;
-  slide.addText(data.kicker || '', { x: 0.78, y, w: 5.8, h: 0.25, fontFace: mode === 'swiss' ? 'JetBrains Mono' : FONTS.mono, fontSize: mode === 'swiss' ? 8 : 8.3, charSpace: mode === 'swiss' ? 1.6 : 2, color, transparency: 35, margin: 0, fit: 'shrink' });
-  slide.addText(data.title || '', { x: 0.75, y: y + 0.45, w: 10.8, h: 0.9, fontFace: mode === 'swiss' ? FONTS.sans : FONTS.serifZh, fontSize: fitTitle(data.title || '', mode === 'swiss' ? 34 : 36, mode === 'swiss' ? 25 : 27), bold: mode !== 'swiss', color, margin: 0, fit: 'shrink' });
+  slide.addText(data.kicker || '', { x: 0.78, y, w: 5.8, h: 0.25, fontFace: mode === 'swiss' ? FONTS.mono : FONTS.mono, fontSize: mode === 'swiss' ? 8 : 8.3, charSpace: mode === 'swiss' ? 1.6 : 2, color, transparency: 35, margin: 0, fit: 'shrink' });
+  slide.addText(data.title || '', { x: 0.75, y: y + 0.45, w: 10.8, h: 0.9, fontFace: mode === 'swiss' ? FONTS.sans : FONTS.serifZh, fontSize: fitTitle(data.title || '', mode === 'swiss' ? 34 : 36, mode === 'swiss' ? 25 : 27), bold: mode !== 'swiss', color, margin: 0, fit: 'shrink' , typographyRole: 'coverTitle' });
   if (data.subtitle) {
     slide.addText(data.subtitle, { x: 0.78, y: y + 1.38, w: 7.2, h: 0.4, fontFace: mode === 'swiss' ? FONTS.sansZh : FONTS.serifZh, fontSize: mode === 'swiss' ? 13 : 15, color, transparency: 30, margin: 0, fit: 'shrink' });
   }
@@ -2603,7 +2652,7 @@ function addBulletIcon(slide, icon, x, y, size, color, fill, transparency, mode,
   } else if (name === 'star') {
     slide.addShape(pptx.ShapeType.star5, { x, y, w: size, h: size, fill: solid, line: { color, transparency: 100 } });
   } else if (name === 'number') {
-    slide.addText(String(number), { x, y: y - size * 0.07, w: size, h: size, fontFace: mode === 'swiss' ? 'JetBrains Mono' : FONTS.mono, fontSize: size * 38, bold: true, color, transparency: transparency ?? 0, margin: 0, fit: 'shrink', align: 'center', valign: 'mid' });
+    slide.addText(String(number), { x, y: y - size * 0.07, w: size, h: size, fontFace: mode === 'swiss' ? FONTS.mono : FONTS.mono, fontSize: size * 38, bold: true, color, transparency: transparency ?? 0, margin: 0, fit: 'shrink', align: 'center', valign: 'mid' });
   }
 }
 
@@ -2703,7 +2752,7 @@ function resolveImage(specDir, image) {
 
 function addCaption(slide, text, x, y, w, color, mode) {
   if (!text) return;
-  slide.addText(text, { x, y, w, h: 0.25, fontFace: mode === 'swiss' ? 'JetBrains Mono' : FONTS.mono, fontSize: 7.5, charSpace: 1.2, color, transparency: 35, margin: 0, fit: 'shrink' });
+  slide.addText(text, { x, y, w, h: 0.25, fontFace: mode === 'swiss' ? FONTS.mono : FONTS.mono, fontSize: 7.5, charSpace: 1.2, color, transparency: 35, margin: 0, fit: 'shrink' });
 }
 
 function addSwissBars(slide, x, y, w, h, color, transparency = 35) {
@@ -2935,8 +2984,8 @@ function validateMediaSlots(slide, index, errors, warnings, specDir) {
       warnings.push(`Warning: slide ${index + 1} image ${imageIndex + 1} path is missing or unsupported; an image placeholder will be rendered.`);
     }
   });
-  if (isVisualMediaLayout(layout) && !images.length && !charts.length) {
-    warnings.push(`Warning: slide ${index + 1} uses layout "${layout}" with media/image slot(s) but provides no images or charts. Use a text-only layout such as textGrid/article/fourCards/agenda/radial, or provide image/chart data.`);
+  if (isVisualMediaLayout(layout) && !images.length && !charts.length && !slide.allowEmptyMediaSlots) {
+    warnings.push(`Warning: slide ${index + 1} uses layout "${layout}" with media/image slot(s) but provides no images or charts. Use a text-only layout such as textGrid/article/fourCards/agenda/radial, provide image/chart data, or set allowEmptyMediaSlots:true only when a blank placeholder is intentional.`);
   }
 }
 

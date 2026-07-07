@@ -1,6 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+const CAPACITY_SCALE_FOR_UNIFIED_TYPOGRAPHY = 0.82;
+
 const COMMON_GUIDE = {
   cover: slots([['title', 'cover title', 8, 28], ['subtitle', 'cover subtitle', 12, 60]]),
   section: slots([['title', 'section title', 8, 30], ['subtitle', 'section subtitle', 12, 55]]),
@@ -49,7 +51,10 @@ const CMB_GUIDE = {
 };
 
 function slots(items, description = '') {
-  return { description, slots: items.map(([field, label, min, max, note]) => ({ field, label, min, max, note })) };
+  return { description, slots: items.map(([field, label, min, max, note]) => {
+    const adjustedMax = Math.max(min, Math.floor(max * CAPACITY_SCALE_FOR_UNIFIED_TYPOGRAPHY));
+    return { field, label, min: Math.min(min, adjustedMax), max: adjustedMax, note };
+  }) };
 }
 
 function collectionSlots(key, label, minItems, maxItems, titleMin, titleMax, bodyMin, bodyMax) {
@@ -87,7 +92,7 @@ function layoutCapacityGuide(style = 'swiss') {
   return {
     style,
     unit: 'visual characters; CJK counts as 1, Latin letters count as about 0.56',
-    instruction: 'Use these ranges before writing JSON. If generation warns that a field exceeds max, shorten that field in JSON and regenerate the PPTX.',
+    instruction: 'Use these ranges before writing JSON. Ranges are calibrated for unified typography: Microsoft YaHei / Times New Roman with 36, 28, 16, 14, 12 pt tiers. If generation warns that a field exceeds max, shorten that field in JSON and regenerate the PPTX.',
     layouts: guideForStyle(style),
   };
 }

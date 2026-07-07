@@ -56,7 +56,7 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/index.js`: public module export surface for `buildDeck`, `sampleSpec`, JSON parsing, and normalized spec helpers.
 - `scripts/pptxgen/cli.js`: CLI orchestration after arguments are parsed: load spec, normalize spec, write normalized spec, and build the deck.
 - `scripts/pptxgen/engine.js`: PPTX rendering runtime. Layout renderers, media/chart/table insertion, slot checks, and readability logic live here.
-- `scripts/pptxgen/config.js`: style/theme registry, default themes, fonts, slide constants, icon aliases, and readability constants. Add new style/theme configuration here first.
+- `scripts/pptxgen/config.js`: style/theme registry, default themes, unified font tokens, typography size tiers, slide constants, icon aliases, and readability constants. Add new style/theme configuration here first.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose JSON repair, quote/comment/trailing-comma handling, and normalized spec output.
 - `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, media notes, and speaker notes.
 - `scripts/pptxgen/text-capacity.js`: emits per-layout field text ranges before JSON writing and warns when JSON fields exceed those ranges during generation.

@@ -15,17 +15,17 @@ description: 使用 pptxgenjs 原生生成可编辑 .pptx 演示文稿，支持 
 
 ### 风格 A · 电子杂志 × 电子墨水
 
-- 衬线大标题：中文优先用 `Noto Serif SC` / `SimSun` 兜底，英文用 `Playfair Display` / `Georgia`。
-- 正文使用无衬线：`Noto Sans SC` / `Microsoft YaHei UI`。
-- 元数据使用等宽：`IBM Plex Mono` / `Consolas`。
+- Typography: Chinese and mixed Chinese/English text must use `Microsoft YaHei`; pure English text must use `Times New Roman`.
+- Font-size tiers: deck-level title 36pt; content-page top title 28pt; content text uses only 16pt, 14pt, and 12pt.
+- Hierarchy: point title 16pt, normal body 14pt, dense/small-area explanation 12pt.
 - 视觉关键词：纸感底色、墨色文字、杂志页眉页脚、大字号标题、图片网格、数据大字报、克制线条。
 - 主题色只能从生成器内置的 `magazine` 预设中选：`ink`、`indigo`、`forest`、`kraft`、`dune` 或 `cmb`；不要任意混搭 hex。
 
 ### 风格 B · 瑞士国际主义
 
-- 全程无衬线：`Inter` / `Helvetica Neue` / `Noto Sans SC` / `Microsoft YaHei UI`。
+- Typography: Chinese and mixed Chinese/English text must use `Microsoft YaHei`; pure English text must use `Times New Roman`.
 - 只用一个高饱和 accent：`ikb`、`lemon`、`green`、`orange` 或 `cmb`；不要在同页混用多个 accent。
-- 视觉关键词：直角、纯色、无阴影、无渐变、发丝线、12/16 列网格、大标题 200/300 轻字重、小字更粗。
+- Visual keywords: right angles, flat color, no shadow, no gradient, hairline rules, 12/16-column grid, and fixed 36/28/16/14/12pt typography tiers.
 - 页面必须保持左上内容轴，不要把正文页标题居中。
 
 ## ?????
@@ -301,7 +301,7 @@ Layout gating rule: if a slide has no user-provided image fields (`image`, `imag
 
 - `scripts/generate-pptx.js`: thin CLI and compatibility export entry; keeps existing template `require` calls working.
 - `scripts/pptxgen/cli.js`: command-line orchestration.
-- `scripts/pptxgen/config.js`: style/theme registry, default themes, fonts, slide constants, icon aliases, and `READABILITY.minFontSize`; add new style/theme configuration here first.
+- `scripts/pptxgen/config.js`: style/theme registry, default themes, unified font tokens, typography size tiers, slide constants, icon aliases, and `READABILITY.minFontSize`; add new style/theme configuration here first.
 - `scripts/pptxgen/engine.js`: PPTX rendering runtime, layout renderers, media/chart/table insertion, slot validation, and readability logic; add or change layouts here.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose parsing, quote/comment/trailing-comma repair, and normalized spec output.
 - `scripts/pptxgen/spec-md.js`: JSON spec to user-facing Markdown outline renderer.
