@@ -39,7 +39,7 @@ const CMB_GUIDE = {
   ...COMMON_GUIDE,
   article: cmbBriefingSlots('article/briefing'),
   sectionList: cmbBriefingSlots('sectionList/briefing'),
-  agenda: cmbBriefingSlots('agenda/briefing'),
+  agenda: cmbAgendaSlots(),
   briefing: cmbBriefingSlots('briefing'),
   executiveBrief: cmbBriefingSlots('executiveBrief'),
   contentBrief: cmbBriefingSlots('contentBrief'),
@@ -70,6 +70,19 @@ function multiCollectionSlots(keys, label, minItems, maxItems, titleMin, titleMa
   return slots(fields, minItems + '-' + maxItems + ' items; keep every item title + body within range.');
 }
 
+function cmbAgendaSlots() {
+  return slots([
+    ['title', 'page title', 8, 32],
+    ['agendaTitle', 'left rail title', 2, 8],
+    ['agendaSubtitle', 'left rail subtitle', 6, 24],
+    ['items[].title', 'agenda section title', 4, 16],
+    ['items[].body', 'agenda section summary', 14, 44],
+    ['agenda[].title', 'agenda section title alias', 4, 16],
+    ['agenda[].body', 'agenda section summary alias', 14, 44],
+    ['sections[].title', 'agenda section title alias', 4, 16],
+    ['sections[].body', 'agenda section summary alias', 14, 44],
+  ], 'agenda: dedicated CMB table-of-contents page with left rail and 1-8 chapter rows. Use concise section summaries; do not use it as a dense article page.');
+}
 function cmbBriefingSlots(name) {
   return slots([
     ['title', 'page title', 8, 32], ['summary', 'top summary body', 35, 90, 'Use body/lead if summary is omitted.'], ['body', 'top summary body alias', 35, 90], ['lead', 'top summary body alias', 35, 90],
@@ -128,6 +141,10 @@ function warnSpecTextCapacity(spec) {
       warnCmbTextWeaveCapacity(slide, index, layout);
       return;
     }
+    if (style === 'cmb' && isCmbBriefingLayout(layout)) {
+      warnCmbBriefingTextCapacity(slide, index, layout);
+      return;
+    }
     const layoutGuide = guide[layout] || COMMON_GUIDE[layout];
     if (!layoutGuide || !Array.isArray(layoutGuide.slots)) return;
     layoutGuide.slots.forEach((slot) => warnSlot(slide, index, layout, slot));
@@ -147,6 +164,71 @@ function warnSlot(slide, index, layout, slot) {
 }
 
 
+function isCmbBriefingLayout(layout) {
+  return ['article', 'sectionList', 'briefing', 'executiveBrief', 'contentBrief'].includes(layout);
+}
+
+function warnCmbBriefingTextCapacity(slide, index, layout) {
+  const sourceKey = firstCollectionKey(slide, ['sections', 'items', 'columns', 'points', 'agenda']);
+  const items = sourceKey ? normalizeItems(slide[sourceKey]).slice(0, 6) : [];
+  const hasLead = !!(slide.summary || slide.body || slide.lead);
+  const entries = cmbBriefingCardEntries(slide, items.length);
+  const leadEntry = entries.find((entry) => entry.kind === 'lead');
+  if (leadEntry) {
+    const leadTitle = slide.summaryTitle || slide.leadTitle || slide.focusTitle || slide.kicker || itemTitle(items[0]) || '摘要';
+    const leadText = hasLead ? (slide.summary || slide.body || slide.lead) : itemBody(items[0]);
+    warnCmbCardText(index, layout, hasLead ? 'summary/body/lead' : `${sourceKey || 'items'}[0].body`, leadText, leadEntry.box, leadTitle, leadEntry.options);
+  }
+  const rest = hasLead ? items : items.slice(1);
+  entries.filter((entry) => entry.kind === 'rest').forEach((entry, i) => {
+    const item = rest[i];
+    if (!item) return;
+    const sourceIndex = hasLead ? i : i + 1;
+    warnCmbCardText(index, layout, `${sourceKey || 'items'}[${sourceIndex}].body`, itemBody(item), entry.box, itemTitle(item) || `分析${i + 1}`, entry.options);
+  });
+  const conclusionEntry = entries.find((entry) => entry.kind === 'conclusion');
+  if (conclusionEntry) {
+    const title = slide.conclusionTitle || slide.takeawayTitle || slide.footerSummaryTitle || slide.nextStepTitle || '结论';
+    warnCmbCardText(index, layout, 'conclusion/takeaway', slide.conclusion || slide.takeaway || slide.footerSummary || slide.nextStep, conclusionEntry.box, title, conclusionEntry.options);
+  }
+}
+
+function cmbBriefingCardEntries(slide, itemCount) {
+  const y0 = slide.subtitle ? 2.78 : 2.45;
+  const hasLead = !!(slide.summary || slide.body || slide.lead);
+  const conclusionText = slide.conclusion || slide.takeaway || slide.footerSummary || slide.nextStep;
+  const entries = [{ kind: 'lead', box: { x: 0.78, y: y0, w: 11.45, h: 1.12 }, options: { lead: true, accent: true, titleFontSize: 13.2 } }];
+  const restCount = hasLead ? itemCount : Math.max(0, itemCount - 1);
+  const midY = y0 + 1.34;
+  const conclusionBox = { x: 0.78, y: 5.62, w: 11.45, h: 0.86 };
+  const midBottom = conclusionText ? conclusionBox.y - 0.2 : 6.48;
+  if (restCount <= 4) {
+    const gap = 0.28;
+    const w = (11.45 - gap * Math.max(0, restCount - 1)) / Math.max(1, restCount);
+    const h = Math.max(1.15, midBottom - midY);
+    for (let i = 0; i < restCount; i += 1) entries.push({ kind: 'rest', box: { x: 0.78 + i * (w + gap), y: midY, w, h }, options: {} });
+  } else {
+    const gapX = 0.28;
+    const gapY = 0.18;
+    const cols = 3;
+    const rows = Math.ceil(restCount / cols);
+    const w = (11.45 - gapX * (cols - 1)) / cols;
+    const h = Math.max(0.95, (midBottom - midY - gapY * (rows - 1)) / rows);
+    for (let i = 0; i < restCount; i += 1) entries.push({ kind: 'rest', box: { x: 0.78 + (i % cols) * (w + gapX), y: midY + Math.floor(i / cols) * (h + gapY), w, h }, options: {} });
+  }
+  if (conclusionText) entries.push({ kind: 'conclusion', box: conclusionBox, options: { compact: true, accent: true, titleFontSize: 13.2 } });
+  return entries;
+}
+
+function warnCmbCardText(index, layout, field, text, box, title, options = {}) {
+  if (!text) return;
+  const cap = cmbCardBodyCapacity(box, title, options);
+  const actual = Math.ceil(textVisualLength(text));
+  if (actual > cap.max) {
+    const preview = String(text).replace(/\s+/g, ' ').slice(0, 54);
+    console.warn('Warning: slide ' + (index + 1) + ' layout "' + layout + '" field ' + field + ' has ' + actual + ' visual chars; estimated card capacity ' + cap.max + ' at 12pt Microsoft YaHei. Shorten this field in JSON, split it, or use fewer cards: ' + preview);
+  }
+}
 function isCmbTextWeaveLayout(layout) {
   return ['textGrid', 'fourCards', 'textWeave', 'contentSynthesis', 'denseText'].includes(layout);
 }

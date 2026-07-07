@@ -455,7 +455,7 @@ function renderCmb(slide, ctx) {
     contentBrief: cmbBriefing,
     fourCards: cmbTextWeave,
     matrix: swissMatrix,
-    agenda: cmbBriefing,
+    agenda: cmbAgenda,
     caseStudy: swissCaseStudy,
     pyramid: swissPyramid,
     radial: swissRadial,
@@ -593,6 +593,54 @@ function cmbBriefing(slide, ctx, s) {
   if (conclusionText) {
     addCmbTextCard(slide, ctx, { title: data.conclusionTitle || data.takeawayTitle || data.footerSummaryTitle || data.nextStepTitle || '结论', body: conclusionText }, conclusionBox, 6, { compact: true, label: '结论', accent: true, maxPoints: 2, titleFontSize: 13.2 });
   }
+  addFoot(slide, ctx, s.fg, 'swiss');
+}
+
+function cmbAgenda(slide, ctx, s) {
+  const data = ctx.slideSpec;
+  addPageHead(slide, data, s.fg, 'swiss', 0.82);
+  const items = normalizeSections(data.items || data.agenda || data.sections || []).slice(0, 8)
+    .map((item) => (item && typeof item === 'object') ? item : { title: String(item || '') })
+    .filter((item) => cmbItemTitle(item) || cmbItemBody(item));
+  const y0 = data.subtitle ? 2.78 : 2.42;
+  const bottom = 6.48;
+  const leftW = 2.15;
+  const gap = 0.28;
+  const listX = 0.78 + leftW + gap;
+  const listW = 11.45 - leftW - gap;
+  const count = Math.max(1, items.length);
+  const cols = count > 4 ? 2 : 1;
+  const rows = Math.ceil(count / cols);
+  const colGap = cols > 1 ? 0.24 : 0;
+  const rowGap = cols > 1 ? 0.16 : 0.16;
+  const colW = (listW - colGap * (cols - 1)) / cols;
+  const rowH = (bottom - y0 - rowGap * Math.max(0, rows - 1)) / rows;
+
+  slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: y0, w: leftW, h: bottom - y0, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
+  slide.addText(data.agendaTitle || data.indexTitle || '目录', { x: 1.05, y: y0 + 0.28, w: leftW - 0.54, h: 0.5, fontFace: FONTS.sansZh, fontSize: 21, bold: true, color: ctx.theme.accentOn, margin: 0, fit: 'shrink' });
+  slide.addText(data.agendaSubtitle || data.indexSubtitle || data.kicker || '', { x: 1.05, y: y0 + 0.98, w: leftW - 0.54, h: 1.28, fontFace: FONTS.sansZh, fontSize: 12, color: ctx.theme.accentOn, transparency: 12, margin: 0.02, fit: 'shrink', valign: 'top' });
+
+  items.forEach((item, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = listX + col * (colW + colGap);
+    const y = y0 + row * (rowH + rowGap);
+    const title = cmbItemTitle(item) || `章节${i + 1}`;
+    const body = cmbItemBody(item);
+    const hot = i === Number(data.highlightIndex || -1);
+    slide.addShape(pptx.ShapeType.roundRect, { x, y, w: colW, h: rowH, rectRadius: 0.06, fill: { color: hot ? ctx.theme.accent : ctx.theme.paper, transparency: hot ? 0 : 2 }, line: { color: hot ? ctx.theme.accent : ctx.theme.grey2, transparency: hot ? 100 : 18, width: 0.7 } });
+    slide.addText(String(i + 1).padStart(2, '0'), { x: x + 0.22, y: y + 0.13, w: 0.52, h: 0.28, fontFace: FONTS.sans, fontSize: 14.8, bold: true, color: hot ? ctx.theme.accentOn : ctx.theme.accent, margin: 0, fit: 'shrink' });
+    if (cols > 1) {
+      slide.addText(title, { x: x + 0.86, y: y + 0.12, w: colW - 1.08, h: 0.28, fontFace: FONTS.sansZh, fontSize: 15.0, bold: true, color: hot ? ctx.theme.accentOn : ctx.theme.ink, margin: 0, fit: 'shrink', valign: 'mid' });
+      if (body) slide.addText(body, { x: x + 0.86, y: y + 0.42, w: colW - 1.08, h: Math.max(0.24, rowH - 0.5), fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color: hot ? ctx.theme.accentOn : ctx.theme.ink, transparency: hot ? 8 : 24, margin: 0.02, fit: 'shrink', valign: 'top' });
+    } else {
+      slide.addText(title, { x: x + 1.0, y: y + 0.13, w: body ? 3.1 : colW - 1.28, h: Math.min(0.38, rowH - 0.16), fontFace: FONTS.sansZh, fontSize: 15.5, bold: true, color: hot ? ctx.theme.accentOn : ctx.theme.ink, margin: 0, fit: 'shrink', valign: 'mid' });
+      if (body) {
+        slide.addShape(pptx.ShapeType.line, { x: x + 4.3, y: y + 0.18, w: 0, h: Math.max(0.18, rowH - 0.36), line: { color: hot ? ctx.theme.accentOn : ctx.theme.grey2, transparency: hot ? 55 : 20, width: 0.6 } });
+        slide.addText(body, { x: x + 4.55, y: y + 0.12, w: colW - 4.84, h: Math.max(0.26, rowH - 0.2), fontFace: FONTS.sansZh, fontSize: READABILITY.minFontSize, color: hot ? ctx.theme.accentOn : ctx.theme.ink, transparency: hot ? 8 : 24, margin: 0.02, fit: 'shrink', valign: 'mid' });
+      }
+    }
+  });
   addFoot(slide, ctx, s.fg, 'swiss');
 }
 
@@ -3099,7 +3147,7 @@ function validateSlotCollection(source, index, rule, errors, warnings) {
 
 function validateCmbBriefingCapacity(slide, index, style, layout, errors) {
   if (style !== 'cmb') return;
-  if (!['article', 'sectionList', 'agenda', 'briefing', 'executiveBrief', 'contentBrief'].includes(layout)) return;
+  if (!['article', 'sectionList', 'briefing', 'executiveBrief', 'contentBrief'].includes(layout)) return;
   const items = normalizeSections(slide.sections || slide.items || slide.columns || slide.points || slide.agenda || []);
   const hasLead = !!(slide.summary || slide.body || slide.lead);
   const conclusionText = slide.conclusion || slide.takeaway || slide.footerSummary || slide.nextStep;
