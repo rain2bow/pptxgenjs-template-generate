@@ -28,25 +28,25 @@ description: 使用 pptxgenjs 原生生成可编辑 .pptx 演示文稿，支持 
 - 视觉关键词：直角、纯色、无阴影、无渐变、发丝线、12/16 列网格、大标题 200/300 轻字重、小字更粗。
 - 页面必须保持左上内容轴，不要把正文页标题居中。
 
-## 核心工作流
+## ?????
 
-1. 先确认风格 A 或 B。用户未指定时：人文、观点、故事默认 A；科技、数据、方法论、产品默认 B。
-2. 确认受众、场景、页数、素材、图片需求、主题色和硬约束。信息足够时可以合理假设并在交付说明里写明。
-3. 把内容整理成结构化 JSON 规格，优先使用 `scripts/generate-pptx.js` 已支持的版式。
-4. 调用脚本生成 `.pptx`：
+1. ????? A ? B?????????????????? A??????????????? B?
+2. ????????????????????????????????????????????????
+3. ?? JSON ?????? style ???????????????? layout/??????????????
+4. ????????? JSON ??????? `scripts/generate-pptx.js` ???????
+5. ?????? `.pptx`?
 
 ```bash
 node scripts/generate-pptx.js --spec path/to/deck.json --out path/to/deck.pptx
 ```
 
-生成 PPTX 前，先把 JSON spec 转成用户友好的 Markdown 大纲给用户审阅。该 Markdown 应展示总页数、每页页面类型、标题、正文、要点、图表、表格、图片说明和演讲者备注，不要求用户阅读 JSON 字段名：
+?? PPTX ???? JSON spec ??????? Markdown ????????? Markdown ??????????????????????????????????????????????? JSON ????
 
 ```bash
 node scripts/spec-to-md.js --spec path/to/deck.json --out path/to/deck-outline.md
 ```
 
-
-如果没有 spec，可以生成内置样例验证环境：
+???? spec??????????????
 
 ```bash
 node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx
@@ -54,7 +54,8 @@ node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sam
 node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-cmb.pptx
 ```
 
-5. 生成后检查文件存在、可打开、页数正确。复杂项目应打开 PPTX 做视觉检查，重点看标题是否溢出、图片是否裁切错误、底部页脚是否挡内容。
+6. ???????????????????????? layout ????? warning???? JSON???????? layout ????????????????
+7. ?????????????????????????? PPTX ???????????????????????????????????
 
 ## 脚本操作指南
 
@@ -97,6 +98,24 @@ node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-c
 ```
 
 `--sample-style` 只能取 `swiss`、`magazine` 或 `cmb`。输出路径建议放到项目 `outputs/` 下，避免覆盖技能自带模板或用户源文件。
+
+### 生成 JSON 前的字数容量指南
+
+在编写 JSON spec 之前，先按目标风格输出 layout 字数容量指南，并把它作为模型生成每页文案的硬参考：
+
+```bash
+node scripts/generate-pptx.js --capacity-guide cmb --out outputs/cmb-capacity-guide.md
+node scripts/generate-pptx.js --capacity-guide swiss --out outputs/swiss-capacity-guide.md
+node scripts/generate-pptx.js --capacity-guide magazine --out outputs/magazine-capacity-guide.md
+```
+
+如果需要程序读取，输出路径使用 `.json` 后缀即可：
+
+```bash
+node scripts/generate-pptx.js --capacity-guide cmb --out outputs/cmb-capacity-guide.json
+```
+
+容量单位是 visual characters：中文约等于 1 个字，英文字符约 0.56。生成器在读取 JSON 生成 PPTX 时会按同一份容量规则预检字段；如果看到 `recommended A-B` 或 `Shorten this field in JSON and regenerate the PPTX` warning，必须先缩减对应 JSON 字段、拆页或换 layout，再重新生成。不要忽略 warning 直接交付。
 
 ### 演讲者备注
 
@@ -194,7 +213,7 @@ Read `SKILL.md`, user materials, the deck JSON spec, and only the needed `assets
 - `theme`: 风格 A 可用 `ink`、`indigo`、`forest`、`kraft`、`dune`、`cmb`；风格 B 可用 `ikb`、`lemon`、`green`、`orange`、`cmb`；招商银行独立风格可用 `classic`、`pearl`、`graphite`。
 - `slides[].layout`: 使用下方支持的版式名。
 - 图片/logo 路径解析顺序：绝对路径、相对 spec 文件、相对当前工作目录、相对技能 `assets/`、相对技能根目录。内置素材可直接写 `logos/cmb-logo-lockup.png`、`logos/cmb-logo-mark.svg` 或对应的 `assets/logos/...` 路径，不需要复制到用户项目目录；脚本会按实际文件插入。所有 logo 必须保持素材原始比例，不能为了填满指定 `w/h` 而横向或纵向压扁；生成器会在给定框内等比居中放置。
-- 文本太长时先改写或拆页，不要压到很小字号。生成器会按最终文本框 `w/h/fontSize/margin` 估算可容纳字数，超出时只打印 `Warning: text may overflow box`，不会截断或改写原文；看到 warning 后应降低该段字数、放大卡片或拆页。
+- 文本太长时先改写或拆页，不要压到很小字号。生成 JSON 前先运行 `--capacity-guide` 查看每个 layout/字段的建议字数范围；生成 PPTX 时还会按 JSON 字段和最终文本框双重估算容量。超出时只打印 warning，不会截断或改写原文；看到 warning 后应降低该段字数、放大卡片、拆页或换 layout，并重新生成。 
 JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 时优先由程序对象调用 `JSON.stringify(data, null, 2)` 写出，不要手写拼接字符串。普通中文内容里的引号优先使用 `「」` 或中文弯引号；如果必须在 JSON 字符串中使用英文直引号 `"`，必须写成 `\"`。生成器读取 `--spec` 时会自动尝试修复常见问题：Markdown fenced code block、UTF-8 BOM、`//`/`/* */` 注释、尾逗号、用作 JSON 结构分隔符的中英文弯引号。若自动修复成功，会打印 warning；需要落盘为严格 JSON 时，继续使用 `--write-normalized-spec path/to/normalized.json`。无法可靠判断的未转义英文直引号仍会报错，此时必须人工改成 `\"` 或改用 `「」`。
 
 ## 支持版式
@@ -251,7 +270,7 @@ JSON 引号与编码规则：所有 spec 文件统一使用 UTF-8。生成 JSON 
 跨模板兼容：`magazine`、`swiss` 与 `cmb` 都必须接受上述两套 layout 名称。切换模板时优先只改顶层 `style` / `theme`，不要批量改每页 `layout`；生成器会把另一套模板的 layout 映射为当前风格中语义最接近的页面：`bigNumbers` ↔ `kpiTower`、`compare` ↔ `duoCompare`、`pipeline` ↔ `timeline`、`article` ↔ `textGrid`、`quoteImage`/`textImage` ↔ `imageHero`、`bigQuote`/`section` ↔ `statement`/`cover`。如果某页切换后信息密度明显不合适，再人工换成同风格推荐版式。
 媒体区规则：两个模板都使用同名 `media` / `mediaGrid` / `gallery` layout 留出统一放图区域。用户提供 `image` / `images` / `gallery` 时优先插入用户图片；`mediaGrid` / `gallery` / `imageGrid` 未显式设置 `mediaCount` 时，槽位数自动等于图片数、显式图表数或 caption 数，不再用默认 4 格。若显式设置 `mediaCount`，必须与用户图片数一致；例如 3 张图就用 3 个槽位，不要生成 4 个槽位。没有用户图片且显式提供 `chart` / `charts` 时才用 PowerPoint 原生图表填充；没有图片和显式图表时显示 `IMAGE SLOT` 占位符，表示这里可以放图。
 
-Media selection rule: without user-provided images, do not select image/media-slot layouts unless the slide has explicit chart data that will fill the media region. If there are no images and no charts, use text-only layouts and do not create empty image placeholders unless the user explicitly asks for placeholders.
+Media selection rule: without user-provided images, do not select image/media-slot layouts, including `statement`, unless the slide has explicit chart data that will fill the media region. If there are no images and no charts, use text-only layouts such as `briefing`, `textWeave`, `article`, `sectionList`, `textGrid`, `fourCards`, `agenda` or `radial`; do not create empty image placeholders unless the user explicitly asks for placeholders.
 槽位校验：生成器会在生成前检查每页图片槽位、文本槽位和字段格式。超过布局最大数量的 `items` / `sections` / `steps` / `charts` 会直接报错，避免内容被静默截断；同一组同义字段（如 `sections`、`items`、`columns`）不要同时填写，否则只有第一个字段会被使用并打印警告；分点对象必须至少包含 `text` / `title` / `label` / `body` / `desc` / `note` / `summary` / `value` 之一，避免格式不匹配导致内容不显示。
 内容完整性：每个分点、卡片、栏目不能只写标题，至少补 `body` / `desc` / `note` / `summary` 之一。生成器会对大多数分点只有标题的页面打印警告；生成大纲和 spec 时必须把“标题 + 一句解释/证据/结论”作为最小单元。
 CMB 长文本规则：CMB 的 `article` / `sectionList` / `agenda` 会使用 `briefing`，`textGrid` / `fourCards` 会使用 `textWeave`；卡片正文较长或包含中英文句号、分号、问号、换行时，会在空间允许时于卡片内部自动拆成 01/02/03 编号分点，以提升可读性。该逻辑不截断文本；如果估算仍超出文本框，生成器只输出 warning，要求减少该段字数或拆页。
@@ -286,6 +305,7 @@ Layout gating rule: if a slide has no user-provided image fields (`image`, `imag
 - `scripts/pptxgen/engine.js`: PPTX rendering runtime, layout renderers, media/chart/table insertion, slot validation, and readability logic; add or change layouts here.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose parsing, quote/comment/trailing-comma repair, and normalized spec output.
 - `scripts/pptxgen/spec-md.js`: JSON spec to user-facing Markdown outline renderer.
+- `scripts/pptxgen/text-capacity.js`: layout/field text capacity guide and preflight warnings; update it whenever a layout text box size or supported field changes.
 - `scripts/pptxgen/speaker-notes.js`: speaker notes normalization and auto-generation helpers used by both PPTX output and Markdown outline.
 - `scripts/spec-to-md.js`: CLI for generating the Markdown outline after JSON spec creation and before PPTX generation.
 - `scripts/check-media-slot-warnings.js`: regression check for media-slot layout warnings when images/charts are missing.

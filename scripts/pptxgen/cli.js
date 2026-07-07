@@ -4,11 +4,19 @@ const { buildDeck, normalizeSpec } = require('./engine');
 const { sampleSpec } = require('./samples');
 const { parseArgs, loadSpecFile, writeNormalizedSpec } = require('./spec-io');
 const { fail } = require('./errors');
+const { layoutCapacityMarkdown, writeLayoutCapacityGuide } = require('./text-capacity');
 
 async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
+  if (args.capacityGuide) {
+    const style = typeof args.capacityGuide === 'string' ? args.capacityGuide : (args.sampleStyle || 'swiss');
+    if (args.out) writeLayoutCapacityGuide(style, args.out);
+    else process.stdout.write(layoutCapacityMarkdown(style));
+    return;
+  }
+
   if (!args.sample && !args.spec) {
-    fail('Usage: node scripts/generate-pptx.js --spec deck.json --out deck.pptx\n       node scripts/generate-pptx.js --spec deck.json --out deck.pptx --diversify-layouts --write-normalized-spec deck.normalized.json\n       node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx');
+    fail('Usage: node scripts/generate-pptx.js --spec deck.json --out deck.pptx\n       node scripts/generate-pptx.js --spec deck.json --out deck.pptx --diversify-layouts --write-normalized-spec deck.normalized.json\n       node scripts/generate-pptx.js --capacity-guide cmb --out outputs/cmb-capacity.md\n       node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx');
   }
 
   const specPath = args.spec ? path.resolve(args.spec) : null;

@@ -10,6 +10,10 @@ function parseArgs(argv) {
     else if (a === '--sample-style') result.sampleStyle = argv[++i];
     else if (a === '--spec') result.spec = argv[++i];
     else if (a === '--out') result.out = argv[++i];
+    else if (a === '--capacity-guide') {
+      const next = argv[i + 1];
+      result.capacityGuide = next && !next.startsWith('--') ? argv[++i] : true;
+    }
     else if (a === '--diversify-layouts') result.diversifyLayouts = true;
     else if (a === '--write-normalized-spec') result.writeNormalizedSpec = argv[++i];
     else if (a === '--help' || a === '-h') result.help = true;

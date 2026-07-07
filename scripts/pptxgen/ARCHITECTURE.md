@@ -49,6 +49,7 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 
 - 导出 `buildDeck`、`normalizeSpec`、`sampleSpec`。
 - 展开导出 `spec-io.js` 中的 JSON 解析和写出工具。
+- 展开导出 `text-capacity.js` 中的字数容量指南工具。
 - 保持外部模板脚本只依赖一个稳定入口。
 
 ### `cli.js`
@@ -58,12 +59,13 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 核心逻辑：
 
 1. `parseArgs(argv)` 读取命令参数。
-2. 判断是 `--sample` 还是 `--spec`。
-3. 解析 `specDir` 和 `outPath`。
-4. 从 `samples.sampleSpec()` 或 `spec-io.loadSpecFile()` 得到 spec 对象。
-5. 调用 `engine.normalizeSpec()` 做 style/theme、槽位、布局多样性校验。
-6. 如果传入 `--write-normalized-spec`，调用 `writeNormalizedSpec()`。
-7. 调用 `buildDeck()` 输出 PPTX。
+2. 如果传入 `--capacity-guide <style>`，直接输出对应 style 的 layout 字数容量指南并结束。
+3. 判断是 `--sample` 还是 `--spec`。
+4. 解析 `specDir` 和 `outPath`。
+5. 从 `samples.sampleSpec()` 或 `spec-io.loadSpecFile()` 得到 spec 对象。
+6. 调用 `engine.normalizeSpec()` 做 style/theme、槽位、文本容量、布局多样性校验。
+7. 如果传入 `--write-normalized-spec`，调用 `writeNormalizedSpec()`。
+8. 调用 `buildDeck()` 输出 PPTX。
 
 这里不直接碰 PowerPoint 渲染细节。
 
@@ -114,6 +116,19 @@ JSON spec 输入输出。
 
 - 该模块不支持未加引号的 JSON key，例如 `{slides: []}` 仍应报错。
 - 宽松修复只处理常见生成器/LLM 输出问题，不替代严格 JSON 生成。
+
+### `text-capacity.js`
+
+Layout 字数容量指南和 JSON 预检 warning。
+
+核心能力：
+
+- `layoutCapacityGuide(style)`：返回机器可读的 style/layout/field 建议字数范围。
+- `layoutCapacityMarkdown(style)`：返回用户/模型可读的 Markdown 表格，用于生成 JSON 前参考。
+- `writeLayoutCapacityGuide(style, outPath)`：根据后缀写出 `.md` 或 `.json`。
+- `warnSpecTextCapacity(spec)`：在 `normalizeSpec()` 阶段检查 JSON 字段是否超过建议范围；超出时 warning，要求修改 JSON 后重新生成。
+
+修改 layout 文本框尺寸、字段名或数量时，应同步更新这里的范围，否则模型生成 JSON 前拿到的容量提示会失真。
 
 ### `samples.js`
 
@@ -169,7 +184,7 @@ JSON spec 输入输出。
 - 校验是否允许自动改 layout。
 - 调用 `diversifyRepeatedLayouts()`。
 - 调用 `validateSpecSlots()`。
-- 调用 `warnThinContent()` 和 `warnLayoutVariety()`。
+- 调用 `warnThinContent()`、`warnSpecTextCapacity()` 和 `warnLayoutVariety()`。
 - 标记 `spec.__normalized = true`。
 
 `buildDeck()` 做这些事：
@@ -177,7 +192,7 @@ JSON spec 输入输出。
 - 如 spec 尚未归一化，先调用 `normalizeSpec()`。
 - 设置 pptx 元数据和自定义宽屏尺寸。
 - 为每页创建 slide。
-- 给 slide 打 `enforceReadableSlideText()` 补丁，抬高过小字号，并在最终 `addText()` 前按文本框尺寸估算最大可容纳字数；超出时只输出 warning，不截断、不改写原文。
+- 给 slide 打 `enforceReadableSlideText()` 补丁，抬高过小字号，并在最终 `addText()` 前按文本框尺寸估算最大可容纳字数；超出时只输出 warning，不截断、不改写原文，提示修改 JSON 后重新生成。
 - 构造 `ctx = { spec, slideSpec, theme, specDir, index, total }`。
 - 调用 `renderByStyle(spec.style, slide, ctx)`。
 - 写出 PPTX。

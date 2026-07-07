@@ -16,6 +16,7 @@ const {
 } = require('./config');
 const { fail } = require('./errors');
 const { speakerNotesText } = require('./speaker-notes');
+const { warnSpecTextCapacity } = require('./text-capacity');
 
 const pptx = new pptxgen();
 const CHART_TYPES = {
@@ -52,6 +53,7 @@ function normalizeSpec(spec, options = {}) {
   if (layoutChanges.length && shouldDiversify) spec.__layoutDiversified = true;
   validateSpecSlots(spec, { specDir: options.specDir || process.cwd() });
   warnThinContent(spec);
+  warnSpecTextCapacity(spec);
   warnLayoutVariety(spec);
   spec.__normalized = true;
 }
@@ -221,7 +223,7 @@ function warnTextOverCapacity(original, actualVisual, maxVisual, options = {}) {
   if (options.silentTextLimit || options.silentTextLimitWarning || TEXT_CAPACITY_WARNING_COUNT >= 30) return;
   TEXT_CAPACITY_WARNING_COUNT += 1;
   const preview = String(original || '').replace(/\s+/g, ' ').slice(0, 56);
-  console.warn('Warning: text may overflow box (' + Number(options.w || 0).toFixed(2) + 'x' + Number(options.h || 0).toFixed(2) + '); estimated capacity ' + Math.floor(maxVisual) + ', got ' + Math.ceil(actualVisual) + '. Reduce text length or enlarge/split the card: ' + preview);
+  console.warn('Warning: text may overflow box (' + Number(options.w || 0).toFixed(2) + 'x' + Number(options.h || 0).toFixed(2) + '); estimated capacity ' + Math.floor(maxVisual) + ', got ' + Math.ceil(actualVisual) + '. Shorten this text in JSON and regenerate the PPTX, or split/enlarge the card: ' + preview);
 }
 function renderByStyle(style, slide, ctx) {
   const renderers = {
@@ -498,30 +500,34 @@ function cmbBriefing(slide, ctx, s) {
   const lead = hasLead
     ? { title: data.summaryTitle || data.leadTitle || data.kicker || 'Executive focus', body: data.summary || data.body || data.lead }
     : (items[0] || { title: data.title || '', body: data.subtitle || '' });
-  const rest = (hasLead ? items : items.slice(1)).slice(0, 4);
   const conclusionText = data.conclusion || data.takeaway || data.footerSummary || data.nextStep || '';
+  const restLimit = conclusionText ? 4 : 5;
+  const rest = (hasLead ? items : items.slice(1)).slice(0, restLimit);
   const y0 = data.subtitle ? 2.78 : 2.45;
   addCmbTextCard(slide, ctx, lead, { x: 0.78, y: y0, w: 11.45, h: 1.12 }, 0, { lead: true, accent: true, label: 'SUMMARY', maxPoints: 3 });
 
   const midY = y0 + 1.34;
-  const bottomReserved = conclusionText ? 0.82 : 0;
-  const midBottom = 6.48 - bottomReserved;
+  const conclusionBox = { x: 0.78, y: 5.62, w: 11.45, h: 0.86 };
+  const midBottom = conclusionText ? conclusionBox.y - 0.2 : 6.48;
   if (rest.length) {
     if (rest.length <= 4) {
       const gap = 0.28;
       const w = (11.45 - gap * (rest.length - 1)) / rest.length;
-      rest.forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + i * (w + gap), y: midY, w, h: Math.max(1.85, midBottom - midY) }, i + 1, { maxPoints: 3 }));
+      const h = Math.max(1.15, midBottom - midY);
+      rest.forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + i * (w + gap), y: midY, w, h }, i + 1, { maxPoints: 3 }));
     } else {
       const gapX = 0.28;
       const gapY = 0.18;
-      const w = (11.45 - gapX) / 2;
-      const h = Math.max(1.0, (midBottom - midY - gapY) / 2);
-      rest.forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + (i % 2) * (w + gapX), y: midY + Math.floor(i / 2) * (h + gapY), w, h }, i + 1, { maxPoints: 3 }));
+      const cols = 3;
+      const rows = Math.ceil(rest.length / cols);
+      const w = (11.45 - gapX * (cols - 1)) / cols;
+      const h = Math.max(0.95, (midBottom - midY - gapY * (rows - 1)) / rows);
+      rest.forEach((item, i) => addCmbTextCard(slide, ctx, item, { x: 0.78 + (i % cols) * (w + gapX), y: midY + Math.floor(i / cols) * (h + gapY), w, h }, i + 1, { maxPoints: 3 }));
     }
   }
 
   if (conclusionText) {
-    addCmbTextCard(slide, ctx, { title: data.conclusionTitle || 'Conclusion', body: conclusionText }, { x: 0.78, y: 5.88, w: 11.45, h: 0.62 }, 6, { compact: true, label: 'TAKEAWAY', accent: true, maxPoints: 2 });
+    addCmbTextCard(slide, ctx, { title: data.conclusionTitle || 'Conclusion', body: conclusionText }, conclusionBox, 6, { compact: true, label: 'TAKEAWAY', accent: true, maxPoints: 2 });
   }
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -583,26 +589,30 @@ function addCmbTextCard(slide, ctx, item, box, index, options = {}) {
   const fill = hot ? accent : ctx.theme.paper;
   const line = hot ? accent : ctx.theme.grey2;
   const color = hot ? ctx.theme.accentOn : ink;
-  const shadow = hot ? 0 : 22;
-  slide.addShape(pptx.ShapeType.rect, { x: box.x, y: box.y, w: box.w, h: box.h, fill: { color: fill, transparency: hot ? 0 : 4 }, line: { color: line, transparency: hot ? 100 : 16, width: 0.7 }, shadow: { type: 'outer', color: '000000', opacity: shadow, blur: 1, angle: 45, distance: 1 } });
+  slide.addShape(pptx.ShapeType.rect, { x: box.x, y: box.y, w: box.w, h: box.h, fill: { color: fill, transparency: hot ? 0 : 4 }, line: { color: line, transparency: hot ? 100 : 18, width: 0.7 } });
   if (!hot) slide.addShape(pptx.ShapeType.rect, { x: box.x, y: box.y, w: 0.08, h: box.h, fill: { color: accent, transparency: 8 }, line: { color: accent, transparency: 100 } });
 
   const padX = options.compact ? 0.2 : 0.26;
   const padTop = options.compact ? 0.12 : 0.18;
-  const label = options.label || String(index + 1).padStart(2, '0');
-  slide.addText(label, { x: box.x + padX, y: box.y + padTop, w: Math.min(1.25, box.w - padX * 2), h: 0.2, fontFace: 'JetBrains Mono', fontSize: 7.4, bold: true, charSpace: 0.8, color, transparency: hot ? 4 : 30, margin: 0, fit: 'shrink' });
-
   const title = cmbItemTitle(item);
   const body = cmbItemBody(item) || (!title ? String(item?.value || '') : '');
   const contentX = box.x + padX;
   const contentW = box.w - padX * 2;
-  const titleY = box.y + (options.compact ? 0.36 : 0.48);
-  const titleFont = options.lead ? 15.2 : 13.2;
-  const titleH = title ? estimateTextHeight(title, contentW, titleFont, { min: 0.28, max: options.compact ? 0.34 : 0.54, lineHeight: 1.16, padding: 0.02 }) : 0;
-  if (title) slide.addText(title, { x: contentX, y: titleY, w: contentW, h: titleH, fontFace: FONTS.sansZh, fontSize: titleFont, bold: true, color, margin: 0, valign: 'top' });
+  const headerY = box.y + padTop;
+  const iconSize = options.compact ? 0.2 : 0.24;
+  const iconColor = hot ? ctx.theme.accentOn : accent;
+  const hasIcon = addInlineIcon(slide, item || {}, contentX, headerY + 0.02, iconSize, iconColor, 'swiss', { fallback: defaultContentIcon(index, 'swiss'), pad: 0.04 });
+  const fallbackLabel = options.label || String(index + 1).padStart(2, '0');
+  if (!hasIcon) slide.addText(fallbackLabel, { x: contentX, y: headerY + 0.02, w: 0.34, h: 0.2, fontFace: 'JetBrains Mono', fontSize: 7.2, bold: true, color: iconColor, transparency: hot ? 4 : 18, margin: 0, fit: 'shrink' });
+  const titleX = contentX + 0.38;
+  const titleW = Math.max(0.3, contentW - 0.38);
+  const titleText = title || fallbackLabel;
+  const titleFont = options.lead ? 15.2 : options.compact ? 12.2 : 13.2;
+  const titleH = estimateTextHeight(titleText, titleW, titleFont, { min: 0.26, max: options.compact ? 0.34 : 0.5, lineHeight: 1.14, padding: 0.02 });
+  slide.addText(titleText, { x: titleX, y: headerY, w: titleW, h: titleH, fontFace: FONTS.sansZh, fontSize: titleFont, bold: true, color, margin: 0, valign: 'top' });
 
   if (!body) return;
-  const bodyY = titleY + titleH + (title ? 0.13 : 0);
+  const bodyY = headerY + titleH + 0.13;
   const bodyH = Math.max(0.24, box.y + box.h - bodyY - (options.compact ? 0.12 : 0.18));
   const fontSize = READABILITY.minFontSize;
   const maxPoints = options.maxPoints || 3;
@@ -633,19 +643,20 @@ function canUseNumberedCardBody(text, boxW, boxH, fontSize, maxPoints) {
 function addNumberedCardBody(slide, text, box, options = {}) {
   const points = splitBodyIntoPoints(text, options.maxPoints || 3);
   if (!points.length) return;
-  const gapY = 0.05;
-  const numW = 0.34;
-  const textX = box.x + numW + 0.12;
-  const textW = Math.max(0.2, box.w - numW - 0.12);
   const fontSize = options.fontSize || READABILITY.minFontSize;
-  const demands = points.map((point) => estimateTextHeight(point, textW, fontSize, { min: 0.24, max: Math.max(0.24, box.h), lineHeight: 1.28, padding: 0.02 }));
-  const rowHeights = distributeRowHeights(demands, points.length, 1, 0.28, box.h, gapY);
-  let y = box.y;
-  points.forEach((point, i) => {
-    const h = rowHeights[i] || 0.3;
-    slide.addText(String(i + 1).padStart(2, '0'), { x: box.x, y: y + 0.02, w: numW, h: Math.min(0.24, h), fontFace: 'JetBrains Mono', fontSize: 7.2, bold: true, color: options.accent || options.color, transparency: 10, margin: 0, fit: 'shrink' });
-    slide.addText(point, { x: textX, y, w: textW, h, fontFace: FONTS.sansZh, fontSize, color: options.color || '111111', transparency: options.transparency ?? 24, margin: 0.01, valign: 'top' });
-    y += h + gapY;
+  const numberedText = points.map((point, i) => String(i + 1).padStart(2, '0') + '  ' + point).join('\n');
+  slide.addText(numberedText, {
+    x: box.x,
+    y: box.y,
+    w: box.w,
+    h: box.h,
+    fontFace: FONTS.sansZh,
+    fontSize,
+    color: options.color || '111111',
+    transparency: options.transparency ?? 24,
+    margin: 0.01,
+    breakLine: false,
+    valign: 'top',
   });
 }
 
@@ -2993,6 +3004,7 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     validateSlotCollection(slide.before || {}, index, { keys: ['items'], max: 6, min: 1, label: 'before items', prefix: 'before.' }, errors, warnings);
     validateSlotCollection(slide.after || {}, index, { keys: ['items'], max: 6, min: 1, label: 'after items', prefix: 'after.' }, errors, warnings);
   }
+  validateCmbBriefingCapacity(slide, index, style, layout, errors);
   if (layout === 'dashboard') validateChartSlots(slide, index, 2, errors, warnings);
   if (layout === 'chart') validateChartDataSlot(slide, index, errors, warnings);
   if (layout === 'dataSheet') validateTableSlot(slide, index, errors, warnings);
@@ -3027,6 +3039,20 @@ function validateSlotCollection(source, index, rule, errors, warnings) {
     validateUnusedSlotItemFields(item, index, rule, key, itemIndex, errors);
   });
   return items;
+}
+
+function validateCmbBriefingCapacity(slide, index, style, layout, errors) {
+  if (style !== 'cmb') return;
+  if (!['article', 'sectionList', 'agenda', 'briefing', 'executiveBrief', 'contentBrief'].includes(layout)) return;
+  const items = normalizeSections(slide.sections || slide.items || slide.columns || slide.points || slide.agenda || []);
+  const hasLead = !!(slide.summary || slide.body || slide.lead);
+  const conclusionText = slide.conclusion || slide.takeaway || slide.footerSummary || slide.nextStep;
+  const restCount = hasLead ? items.length : Math.max(0, items.length - 1);
+  const maxRest = conclusionText ? 4 : 5;
+  if (restCount > maxRest) {
+    const conclusionNote = conclusionText ? ' when conclusion/takeaway is present' : '';
+    errors.push(`slide ${index + 1} layout "${layout}" renders at most ${maxRest} middle briefing text block(s)${conclusionNote}; got ${restCount}. Split content, reduce sections/items, remove conclusion, or use textWeave/textGrid.`);
+  }
 }
 
 function validateIgnoredSlotFields(slide, index, layout, layoutRules, errors, isKnownLayout = false) {
