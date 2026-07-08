@@ -18,7 +18,7 @@ function item(n, title = pointTitles[(n - 1) % pointTitles.length]) {
 function pointItem(n, title = pointTitles[(n - 1) % pointTitles.length]) {
   return {
     ...item(n, title),
-    points: ['明确本项工作的关键判断。', '拆解可执行动作与责任边界。'],
+    body: '明确本项工作的关键判断，并拆解可执行动作与责任边界。',
   };
 }
 

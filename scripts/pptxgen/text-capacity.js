@@ -86,15 +86,15 @@ function cmbAgendaSlots() {
 function cmbBriefingSlots(name) {
   return slots([
     ['title', 'page title', 8, 32], ['summary', 'top summary body', 35, 90, 'Use body/lead if summary is omitted.'], ['body', 'top summary body alias', 35, 90], ['lead', 'top summary body alias', 35, 90],
-    ['sections[].title', 'analysis card title', 4, 14], ['sections[].body', 'analysis card body', 18, 58], ['sections[].points[]', 'analysis card explicit numbered point', 8, 24], ['items[].title', 'analysis card title', 4, 14], ['items[].body', 'analysis card body', 18, 58], ['items[].points[]', 'analysis card explicit numbered point', 8, 24], ['agenda[].title', 'analysis card title', 4, 14], ['agenda[].body', 'analysis card body', 18, 58], ['agenda[].points[]', 'analysis card explicit numbered point', 8, 24],
+    ['sections[].title', 'analysis card title', 4, 14], ['sections[].body', 'analysis card body', 18, 58], ['sections[].points[]', 'analysis card explicit bullet point', 8, 24], ['items[].title', 'analysis card title', 4, 14], ['items[].body', 'analysis card body', 18, 58], ['items[].points[]', 'analysis card explicit bullet point', 8, 24], ['agenda[].title', 'analysis card title', 4, 14], ['agenda[].body', 'analysis card body', 18, 58], ['agenda[].points[]', 'analysis card explicit bullet point', 8, 24],
     ['conclusion', 'bottom conclusion body', 12, 48], ['takeaway', 'bottom conclusion body alias', 12, 48],
-  ], name + ': CMB top summary + middle analysis cards + bottom takeaway.');
+  ], name + ': CMB top summary + middle analysis cards + bottom takeaway. For points[] arrays, line count is estimated per point; each point occupies at least one line.');
 }
 
 function cmbTextWeaveSlots(name) {
   return slots([
-    ['title', 'page title', 8, 32], ['sections[].title', 'text card title', 4, 14], ['sections[].body', 'text card body', 15, 52], ['sections[].points[]', 'text card explicit numbered point', 8, 24], ['items[].title', 'text card title', 4, 14], ['items[].body', 'text card body', 15, 52], ['items[].points[]', 'text card explicit numbered point', 8, 24], ['columns[].title', 'text card title', 4, 14], ['columns[].body', 'text card body', 15, 52], ['columns[].points[]', 'text card explicit numbered point', 8, 24],
-  ], name + ': CMB asymmetric 1-6 text cards; 5-6 cards need shorter bodies.');
+    ['title', 'page title', 8, 32], ['sections[].title', 'text card title', 4, 14], ['sections[].body', 'text card body', 15, 52], ['sections[].points[]', 'text card explicit bullet point', 8, 24], ['items[].title', 'text card title', 4, 14], ['items[].body', 'text card body', 15, 52], ['items[].points[]', 'text card explicit bullet point', 8, 24], ['columns[].title', 'text card title', 4, 14], ['columns[].body', 'text card body', 15, 52], ['columns[].points[]', 'text card explicit bullet point', 8, 24],
+  ], name + ': CMB asymmetric 1-6 text cards; 5-6 cards need shorter bodies. For points[] arrays, line count is estimated per point; each point occupies at least one line.');
 }
 
 function guideForStyle(style = 'swiss') {
@@ -105,7 +105,7 @@ function layoutCapacityGuide(style = 'swiss') {
   return {
     style,
     unit: 'visual characters; CJK counts as 1, Latin letters count as about 0.56',
-    instruction: 'Use these ranges before writing JSON. Ranges are calibrated for unified typography: Microsoft YaHei / Times New Roman with 36, 28, 16, 14, 12 pt tiers. If generation warns that a field exceeds max, shorten that field in JSON and regenerate the PPTX.',
+    instruction: 'Use these ranges before writing JSON. Ranges are calibrated for unified typography: Microsoft YaHei / Times New Roman with 36, 28, 16, 14, 12 pt tiers. For CMB points[] arrays, capacity is also checked by estimated rendered line count: every point occupies at least one line and wraps by card width. If generation warns that a field exceeds max, shorten that field in JSON and regenerate the PPTX.',
     layouts: guideForStyle(style),
   };
 }
@@ -176,15 +176,17 @@ function warnCmbBriefingTextCapacity(slide, index, layout) {
   const leadEntry = entries.find((entry) => entry.kind === 'lead');
   if (leadEntry) {
     const leadTitle = slide.summaryTitle || slide.leadTitle || slide.focusTitle || slide.kicker || itemTitle(items[0]) || '摘要';
+    const leadPoints = hasLead ? [] : itemPoints(items[0]);
     const leadText = hasLead ? (slide.summary || slide.body || slide.lead) : itemBody(items[0]);
-    warnCmbCardText(index, layout, hasLead ? 'summary/body/lead' : `${sourceKey || 'items'}[0].body`, leadText, leadEntry.box, leadTitle, leadEntry.options);
+    warnCmbCardText(index, layout, hasLead ? 'summary/body/lead' : `${sourceKey || 'items'}[0].${leadPoints.length ? 'points' : 'body'}`, leadPoints.length ? leadPoints : leadText, leadEntry.box, leadTitle, leadEntry.options);
   }
   const rest = hasLead ? items : items.slice(1);
   entries.filter((entry) => entry.kind === 'rest').forEach((entry, i) => {
     const item = rest[i];
     if (!item) return;
     const sourceIndex = hasLead ? i : i + 1;
-    warnCmbCardText(index, layout, `${sourceKey || 'items'}[${sourceIndex}].body`, itemBody(item), entry.box, itemTitle(item) || `分析${i + 1}`, entry.options);
+    const points = itemPoints(item);
+    warnCmbCardText(index, layout, `${sourceKey || 'items'}[${sourceIndex}].${points.length ? 'points' : 'body'}`, points.length ? points : itemBody(item), entry.box, itemTitle(item) || `分析${i + 1}`, entry.options);
   });
   const conclusionEntry = entries.find((entry) => entry.kind === 'conclusion');
   if (conclusionEntry) {
@@ -220,15 +222,18 @@ function cmbBriefingCardEntries(slide, itemCount) {
   return entries;
 }
 
-function warnCmbCardText(index, layout, field, text, box, title, options = {}) {
+function warnCmbCardText(index, layout, field, textOrPoints, box, title, options = {}) {
+  const points = Array.isArray(textOrPoints) ? textOrPoints.filter(Boolean) : [];
+  const text = points.length ? points.join('\n') : String(textOrPoints || '');
   if (!text) return;
   const cap = cmbCardBodyCapacity(box, title, options);
-  const actual = Math.ceil(textVisualLength(text));
-  if (actual > cap.max) {
-    const preview = String(text).replace(/\s+/g, ' ').slice(0, 54);
-    console.warn('Warning: slide ' + (index + 1) + ' layout "' + layout + '" field ' + field + ' has ' + actual + ' visual chars; estimated card capacity ' + cap.max + ' at 12pt Microsoft YaHei. Shorten this field in JSON, split it, or use fewer cards: ' + preview);
+  const lineInfo = estimateCmbBodyLines(points.length ? points : text, cap.contentW, cap.fontSize, { bullet: points.length > 1 });
+  if (lineInfo.lines > cap.maxLines) {
+    const preview = text.replace(/\s+/g, ' ').slice(0, 54);
+    console.warn('Warning: slide ' + (index + 1) + ' layout "' + layout + '" field ' + field + ' may overflow card body; estimated ' + lineInfo.lines + ' line(s), available ' + cap.maxLines + ' at 12pt Microsoft YaHei. Shorten points/body in JSON, split the card, or use fewer cards: ' + preview);
   }
 }
+
 function isCmbTextWeaveLayout(layout) {
   return ['textGrid', 'fourCards', 'textWeave', 'contentSynthesis', 'denseText'].includes(layout);
 }
@@ -247,11 +252,11 @@ function warnCmbTextWeaveCapacity(slide, index, layout) {
     const text = points.length ? points.join('\n') : body;
     if (!text) return;
     const cap = cmbCardBodyCapacity(box, title, options);
-    const actual = Math.ceil(textVisualLength(text));
-    if (actual > cap.max) {
+    const lineInfo = estimateCmbBodyLines(points.length ? points : text, cap.contentW, cap.fontSize, { bullet: points.length > 1 });
+    if (lineInfo.lines > cap.maxLines) {
       const field = sourceKey + '[' + itemIndex + '].' + (points.length ? 'points' : 'body');
       const preview = text.replace(/\s+/g, ' ').slice(0, 54);
-      console.warn('Warning: slide ' + (index + 1) + ' layout "' + layout + '" field ' + field + ' has ' + actual + ' visual chars; estimated card capacity ' + cap.max + ' at 12pt Microsoft YaHei. Shorten this field in JSON, split it, or use fewer cards: ' + preview);
+      console.warn('Warning: slide ' + (index + 1) + ' layout "' + layout + '" field ' + field + ' may overflow card body; estimated ' + lineInfo.lines + ' line(s), available ' + cap.maxLines + ' at 12pt Microsoft YaHei. Shorten points/body in JSON, split it, or use fewer cards: ' + preview);
     }
   });
 }
@@ -320,15 +325,28 @@ function cmbCardBodyCapacity(box, title, options = {}) {
   const titleH = estimateTextHeight(title, titleW, titleFont, { min: 0.26, max: options.compact ? 0.34 : 0.5, lineHeight: 1.14, padding: 0.02 });
   const bodyY = box.y + padTop + titleH + 0.13;
   const bodyH = roundCapacityDimension(Math.max(0.24, box.y + box.h - bodyY - (options.compact ? 0.12 : 0.18)));
-  return { max: estimatedChineseCapacity(contentW, bodyH, 12, 0.02) };
+  return estimatedChineseCapacity(contentW, bodyH, 12, 0.02);
 }
 
 function estimatedChineseCapacity(w, h, fontSize, margin = 0) {
   const boxW = roundCapacityDimension(Math.max(0.05, w - margin * 2));
   const boxH = roundCapacityDimension(Math.max(0.05, h - margin * 2));
   const charsPerLine = Math.max(1, (boxW * 72) / fontSize);
-  const lines = Math.max(1, Math.floor((boxH * 72) / (fontSize * 1.12)));
-  return Math.max(1, Math.floor(charsPerLine * lines * 0.99));
+  const maxLines = Math.max(1, Math.floor((boxH * 72) / (fontSize * 1.12)));
+  return { max: Math.max(1, Math.floor(charsPerLine * maxLines * 0.99)), maxLines, charsPerLine, contentW: boxW, bodyH: boxH, fontSize };
+}
+
+function estimateCmbBodyLines(textOrPoints, w, fontSize, options = {}) {
+  const items = Array.isArray(textOrPoints) ? textOrPoints : String(textOrPoints || '').split(/\r?\n/);
+  const bulletIndent = options.bullet ? 0.38 : 0;
+  const effectiveW = Math.max(0.05, Number(w || 0) - bulletIndent);
+  const charsPerLine = Math.max(1, (effectiveW * 72) / Math.max(1, fontSize));
+  const lines = items.reduce((sum, item) => {
+    const raw = String(item || '').trim();
+    if (!raw) return sum;
+    return sum + raw.split(/\r?\n/).reduce((partSum, line) => partSum + Math.max(1, Math.ceil(textVisualLength(line) / charsPerLine)), 0);
+  }, 0);
+  return { lines: Math.max(0, lines), charsPerLine };
 }
 
 function roundCapacityDimension(value) {

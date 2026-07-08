@@ -325,12 +325,15 @@ Swiss 的视觉特征：
 - `cmbClosing()`
 - `cmbBriefing()`: CMB 高密度纯文本总分总页面，顶部 summary，中部 2-4 个分析卡片，底部 takeaway。
 - `cmbTextWeave()`: CMB 非均匀纯文本卡片页面，支持 1-6 个文本块，避免普通三栏网格在长文本下显得杂乱。
-- `addCmbTextCard()` / `addNumberedCardBody()`: CMB 卡片文本渲染；只有 JSON 中显式提供 `points` / `bullets` / `list` 数组时才按编号分点渲染，不再自动把长正文拆句。
+- `addCmbTextCard()` / `addBulletedCardBody()`: CMB 卡片文本渲染；只有 JSON 中显式提供 `points` / `bullets` / `list` 数组时才按项目符号分点渲染，不再自动把长正文拆句。
 
 CMB 专用映射：
 
-- `article`、`sectionList`、`agenda`、`briefing`、`executiveBrief`、`contentBrief` -> `cmbBriefing()`
+- `article`、`sectionList`、`briefing`、`executiveBrief`、`contentBrief` -> `cmbBriefing()`
+- `agenda` -> `cmbAgenda()`
 - `textGrid`、`fourCards`、`textWeave`、`contentSynthesis`、`denseText` -> `cmbTextWeave()`
+
+其中 `fourCards` 是兼容旧 JSON 的历史名称。在 CMB 下它不会固定渲染 4 张卡片，而是复用 `cmbTextWeave()`，按输入条目数自适应为 1-6 张文本卡片。
 
 CMB 继续复用 Swiss renderer 的 layout：
 

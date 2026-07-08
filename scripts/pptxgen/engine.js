@@ -198,7 +198,7 @@ function typographyFontSize(size, role) {
 
 function isPureEnglishText(text) {
   const raw = Array.isArray(text)
-    ? text.map((run) => String(run && run.text != null ? run.text : '')).join('')
+    ? richTextPlainText(text)
     : String(text || '');
   const cleaned = raw.trim();
   if (!cleaned) return false;
@@ -214,7 +214,7 @@ function isSymbolText(options, text) {
 function warnTextExceedsBox(text, options = {}) {
   if (!options || options.noTextLimitWarning || options.noTextLimit || options.allowOverflowText) return text;
   const raw = Array.isArray(text)
-    ? text.map((run) => String(run && run.text != null ? run.text : '')).join('')
+    ? richTextPlainText(text)
     : String(text || '');
   if (!raw.trim() || isSymbolText(options, raw)) return text;
   const maxVisual = estimatedBoxTextCapacity(options, Array.isArray(text) ? richTextMaxFontSize(text, options) : undefined, raw);
@@ -222,6 +222,10 @@ function warnTextExceedsBox(text, options = {}) {
   const actualVisual = textVisualLength(raw);
   if (actualVisual > maxVisual) warnTextOverCapacity(raw, actualVisual, maxVisual, options);
   return text;
+}
+
+function richTextPlainText(runs) {
+  return (runs || []).map((run) => String(run && run.text != null ? run.text : '') + (run && run.options && run.options.breakLine ? '\n' : '')).join('');
 }
 
 function richTextMaxFontSize(runs, options) {
@@ -761,26 +765,27 @@ function addCmbTextCard(slide, ctx, item, box, index, options = {}) {
   const bodyH = Math.max(0.24, box.y + box.h - bodyY - (options.compact ? 0.12 : 0.18));
   const fontSize = READABILITY.minFontSize;
   if (points.length > 1) {
-    addNumberedCardBody(slide, points, { x: contentX, y: bodyY, w: contentW, h: bodyH }, { color, transparency: hot ? 4 : 22, fontSize });
+    addBulletedCardBody(slide, points, { x: contentX, y: bodyY, w: contentW, h: bodyH }, { color, transparency: hot ? 4 : 22, fontSize });
   } else {
     slide.addText(points[0] || body, { x: contentX, y: bodyY, w: contentW, h: bodyH, fontFace: FONTS.sansZh, fontSize, color, transparency: hot ? 6 : 24, margin: 0.02, valign: 'top' });
   }
 }
 
-function addNumberedCardBody(slide, points, box, options = {}) {
+function addBulletedCardBody(slide, points, box, options = {}) {
   if (!Array.isArray(points) || points.length <= 1) return;
   const fontSize = options.fontSize || READABILITY.minFontSize;
   const runs = points.map((point, i) => ({
-    text: String(point || ''),
+    text: String(point || '').trim(),
     options: {
-      bullet: { type: 'number', style: 'arabicPeriod', startAt: i + 1 },
+      bullet: true,
       breakLine: i < points.length - 1,
       fontFace: FONTS.sansZh,
       fontSize,
       color: options.color || '111111',
       transparency: options.transparency ?? 24,
     },
-  }));
+  })).filter((run) => run.text);
+  if (!runs.length) return;
   slide.addText(runs, {
     x: box.x,
     y: box.y,
@@ -794,7 +799,11 @@ function addNumberedCardBody(slide, points, box, options = {}) {
     valign: 'top',
   });
 }
-
+function estimateBulletedLineCount(text, w, fontSize) {
+  const effectiveW = Math.max(0.05, Number(w || 0) - 0.38);
+  const charsPerLine = Math.max(1, (effectiveW * 72) / Math.max(1, fontSize));
+  return String(text || '').split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(textVisualLength(line) / charsPerLine)), 0);
+}
 function addCmbLogoMark(slide, ctx, box) {
   const logoPath = resolveCmbLogoMark(ctx);
   if (logoPath) addImageAsset(slide, logoPath, box);
@@ -3557,4 +3566,3 @@ module.exports = {
   buildDeck,
   normalizeSpec,
 };
-
