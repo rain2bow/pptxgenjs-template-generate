@@ -478,8 +478,8 @@ function addCmbBackground(slide, ctx, emphasized = false) {
   const svg = cmbBackgroundSvg(ctx, emphasized);
   slide.background = { path: 'background-cmb.svg', data: svgDataUri(svg) };
   const headerH = Number(ctx.slideSpec.logoHeaderBandH || ctx.spec.logoHeaderBandH) || 0.82;
-  slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SLIDE.w, h: headerH, fill: { color: 'FFFFFF', transparency: 0 }, line: { color: 'FFFFFF', transparency: 100 } });
-  slide.addShape(pptx.ShapeType.line, { x: 0, y: headerH, w: SLIDE.w, h: 0, line: { color: theme.accent, transparency: 7, width: 1.2 } });
+  slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: SLIDE.w, h: headerH, fill: { color: theme.headerBg || 'FFFFFF', transparency: 0 }, line: { color: theme.headerBg || 'FFFFFF', transparency: 100 } });
+  slide.addShape(pptx.ShapeType.line, { x: 0, y: headerH, w: SLIDE.w, h: 0, line: { color: theme.headerLine || theme.accent, transparency: 7, width: 1.2 } });
   if (!emphasized) addCmbLogoWatermark(slide, ctx);
 }
 
@@ -495,6 +495,12 @@ function cmbBackgroundSvg(ctx, emphasized = false) {
   const accent2 = normalizeHex(theme.accent2 || '8A1538');
   const grid = emphasized ? 'FFFFFF' : normalizeHex(theme.grey2 || 'DED8D6');
   const gridOpacity = emphasized ? 0.08 : 0.18;
+  if (emphasized && theme.emphasisSolid) {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+<rect x="0" y="0" width="${w}" height="${h}" fill="#${svgEsc(base)}"/>
+<rect x="0" y="0" width="${w}" height="${headerH}" fill="#${svgEsc(normalizeHex(theme.headerBg || 'FFFFFF'))}"/>
+</svg>`;
+  }
   const lines = [];
   const gridLeft = Math.round(0.78 * scale);
   const gridRight = Math.round((SLIDE.w - 0.78) * scale);
@@ -509,7 +515,7 @@ function cmbBackgroundSvg(ctx, emphasized = false) {
   </linearGradient>
 </defs>
 <rect x="0" y="0" width="${w}" height="${h}" fill="#${svgEsc(base)}"/>
-<rect x="0" y="0" width="${w}" height="${headerH}" fill="#FFFFFF"/>
+<rect x="0" y="0" width="${w}" height="${headerH}" fill="#${svgEsc(normalizeHex(theme.headerBg || 'FFFFFF'))}"/>
 <rect x="0" y="${headerH}" width="${w}" height="${h - headerH}" fill="url(#body)"/>
 <rect x="0" y="${h - Math.round(0.18 * scale)}" width="${w}" height="${Math.round(0.18 * scale)}" fill="#${svgEsc(accent2)}" opacity="${emphasized ? 0.42 : 0.18}"/>
 <rect x="0" y="${headerH}" width="${Math.round(0.16 * scale)}" height="${h - headerH}" fill="#${svgEsc(accent)}" opacity="${emphasized ? 0.9 : 0.78}"/>
@@ -525,7 +531,7 @@ function addCmbChrome(slide, ctx, color) {
   if (logoPath) addImageAsset(slide, logoPath, { x: SLIDE.marginX, y: 0.16, w: logoW, h: logoH });
   const left = ctx.slideSpec.chromeLeft || ctx.spec.chromeLeft || ctx.spec.title || 'China Merchants Bank';
   const right = ctx.slideSpec.chromeRight || `${String(ctx.index + 1).padStart(2, '0')} / ${String(ctx.total).padStart(2, '0')}`;
-  slide.addText(left, { x: SLIDE.marginX + logoW + 0.28, y: 0.34, w: 5.5, h: 0.2, fontFace: FONTS.sans, fontSize: 7.6, bold: true, charSpace: 0.8, color: ctx.theme.ink, transparency: 8, margin: 0, fit: 'shrink' });
+  slide.addText(left, { x: SLIDE.marginX + logoW + 0.28, y: 0.34, w: 5.5, h: 0.2, fontFace: FONTS.sans, fontSize: 7.6, bold: true, charSpace: 0.8, color: ctx.theme.headerInk || ctx.theme.ink, transparency: 8, margin: 0, fit: 'shrink' });
   slide.addText(right, { x: SLIDE.w - SLIDE.marginX - 2.2, y: 0.34, w: 2.2, h: 0.2, fontFace: FONTS.sans, fontSize: 7.4, bold: true, charSpace: 0.8, color: ctx.theme.accent, align: 'right', margin: 0, fit: 'shrink' });
   slide.addShape(pptx.ShapeType.rect, { x: 0, y: headerH - 0.035, w: 1.85, h: 0.035, fill: { color: ctx.theme.accent, transparency: 0 }, line: { color: ctx.theme.accent, transparency: 100 } });
 }
@@ -3459,6 +3465,7 @@ function normalizeSections(items) {
 }
 
 function chartPalette(ctx, mode) {
+  if (Array.isArray(ctx.theme.chartColors) && ctx.theme.chartColors.length) return ctx.theme.chartColors;
   if (mode === 'swiss') return [ctx.theme.accent, ctx.theme.ink, ctx.theme.grey3, ctx.theme.grey2, ctx.theme.grey1];
   return [ctx.theme.ink, ctx.theme.inkTint, '6B6258', 'A39A8F', ctx.theme.paperTint];
 }
