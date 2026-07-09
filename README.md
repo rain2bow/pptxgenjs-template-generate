@@ -59,7 +59,7 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/config.js`: style/theme registry, default themes, unified font tokens, typography size tiers, slide constants, icon aliases, and readability constants. Add new style/theme configuration here first.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose JSON repair, quote/comment/trailing-comma handling, and normalized spec output.
 - `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, media notes, and speaker notes.
-- `scripts/pptxgen/text-capacity.js`: emits per-layout field text ranges before JSON writing and warns when JSON fields exceed those ranges during generation.
+- `scripts/pptxgen/text-capacity.js`: emits plan-specific text capacity guides from title-only JSON plans, keeps legacy per-style guides, and warns when generated JSON fields exceed recommended ranges.
 - `scripts/pptxgen/speaker-notes.js`: normalizes explicit `speakerNotes` fields and can derive basic speaker notes from slide content when `generateSpeakerNotes` is enabled.
 - `scripts/spec-to-md.js`: CLI entry for writing that Markdown outline from a JSON spec.
 - `scripts/pptxgen/samples.js`: built-in sample specs used by `--sample`. Add a sample here when adding a new style.
@@ -244,7 +244,7 @@ JSON 引号与编码规则：
 - 图文页：`media`、`mediaGrid`、`gallery`、`imageGrid`、`imageHero`、`quoteImage`、`textImage`
 - 结构页：`compare`、`duoCompare`、`timeline`、`pipeline`、`roadmap`、`textGrid`、`article`、`briefing`、`textWeave`、`fourCards`、`matrix`、`agenda`、`caseStudy`、`pyramid`、`radial`、`swimlane`
 
-Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/engine.js`; style/theme design configuration is centralized in `scripts/pptxgen/config.js`; text capacity ranges are maintained in `scripts/pptxgen/text-capacity.js`. The generator checks text, image, chart, and table slots before output to avoid missing or mismatched content.
+Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/engine.js`; style/theme design configuration is centralized in `scripts/pptxgen/config.js`; text capacity ranges and title-only plan capacity generation are maintained in `scripts/pptxgen/text-capacity.js`. The generator checks text, image, chart, and table slots before output to avoid missing or mismatched content.
 
 ## 图片、图表和占位符
 
@@ -302,7 +302,3 @@ node scripts/validate-pptx-layout.js assets/outputs/deck-cmb-all-layouts.pptx
 - PowerPoint 与 WPS 的字体渲染可能不同，长文本仍建议拆页或减少分点。
 - 后置插入的 `blocks`、`charts`、`tables` 若缺少显式 `x/y/w/h` 会被跳过并打印 warning，避免与正文重叠。
 - 自动 layout 多样化会改变页面类型，必须配合 `--write-normalized-spec` 使用。
-
-
-
-

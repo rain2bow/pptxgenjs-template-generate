@@ -59,7 +59,7 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 核心逻辑：
 
 1. `parseArgs(argv)` 读取命令参数。
-2. 如果传入 `--capacity-guide <style>`，直接输出对应 style 的 layout 字数容量指南并结束。
+2. 如果传入 `--capacity-guide --spec deck.plan.json`，读取标题级 plan 并输出仅包含已规划页面的真实容量指南；如果传入 `--capacity-guide <style>`，保留旧行为，输出对应 style 的全量 layout 字数容量指南。
 3. 判断是 `--sample` 还是 `--spec`。
 4. 解析 `specDir` 和 `outPath`。
 5. 从 `samples.sampleSpec()` 或 `spec-io.loadSpecFile()` 得到 spec 对象。

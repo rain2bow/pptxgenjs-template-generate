@@ -50,8 +50,8 @@ const CMB_GUIDE = {
   denseText: cmbTextWeaveSlots('denseText'),
 };
 
-function slots(items, description = '') {
-  return { description, slots: items.map(([field, label, min, max, note]) => {
+function slots(items, description = '', extra = {}) {
+  return { description, ...extra, slots: items.map(([field, label, min, max, note]) => {
     const adjustedMax = Math.max(min, Math.floor(max * CAPACITY_SCALE_FOR_UNIFIED_TYPOGRAPHY));
     return { field, label, min: Math.min(min, adjustedMax), max: adjustedMax, note };
   }) };
@@ -67,7 +67,7 @@ function multiCollectionSlots(keys, label, minItems, maxItems, titleMin, titleMa
     fields.push([key + '[].title', label + ' title', titleMin, titleMax]);
     fields.push([key + '[].body', label + ' body', bodyMin, bodyMax]);
   });
-  return slots(fields, minItems + '-' + maxItems + ' items; keep every item title + body within range.');
+  return slots(fields, minItems + '-' + maxItems + ' items; keep every item title + body within range.', { collection: { keys, label, minItems, maxItems, titleMin, titleMax, bodyMin, bodyMax } });
 }
 
 function cmbAgendaSlots() {
@@ -132,6 +132,171 @@ function writeLayoutCapacityGuide(style, outPath) {
   console.log('Wrote layout capacity guide ' + target);
 }
 
+function layoutCapacityGuideForSpec(spec = {}) {
+  const style = spec.style || 'swiss';
+  const slides = Array.isArray(spec.slides) ? spec.slides : [];
+  return {
+    style,
+    unit: 'visual characters; CJK counts as 1, Latin letters count as about 0.56',
+    instruction: 'This guide is calculated from the title-only deck plan. Fill only the listed fields. If a layout, media choice, or item count changes, regenerate this guide before writing full content.',
+    slides: slides.map((slide, index) => plannedSlideCapacity(style, slide || {}, index)),
+  };
+}
+
+function layoutCapacityMarkdownForSpec(spec = {}) {
+  const guide = layoutCapacityGuideForSpec(spec);
+  const lines = ['# Planned deck text capacity guide: ' + guide.style, '', 'Unit: ' + guide.unit, '', guide.instruction, ''];
+  guide.slides.forEach((slide) => {
+    lines.push('## Slide ' + slide.slide + ': ' + slide.layout);
+    if (slide.title) lines.push('', 'Planned title: ' + slide.title);
+    if (slide.notes?.length) slide.notes.forEach((note) => lines.push('', '> ' + note));
+    lines.push('', '| Field to fill | Suitable range | Planned label/title | Note |', '| --- | ---: | --- | --- |');
+    if (slide.slots.length) {
+      slide.slots.forEach((slot) => lines.push('| ' + slot.field + ' | ' + slot.min + '-' + slot.max + ' | ' + (slot.title || slot.label || '') + ' | ' + (slot.note || '') + ' |'));
+    } else {
+      lines.push('| - | - | - | This planned slide has no fillable body slots. |');
+    }
+    lines.push('');
+  });
+  return lines.join('\n').trim() + '\n';
+}
+
+function writePlannedCapacityGuide(spec, outPath) {
+  const target = path.resolve(outPath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const content = target.toLowerCase().endsWith('.json')
+    ? JSON.stringify(layoutCapacityGuideForSpec(spec), null, 2) + '\n'
+    : layoutCapacityMarkdownForSpec(spec);
+  fs.writeFileSync(target, content, 'utf8');
+  console.log('Wrote planned layout capacity guide ' + target);
+}
+
+function plannedSlideCapacity(style, slide, index) {
+  const layout = slide.layout || 'statement';
+  if (style === 'cmb' && isCmbTextWeaveLayout(layout)) return plannedCmbTextWeaveCapacity(slide, index, layout);
+  if (style === 'cmb' && isCmbBriefingLayout(layout)) return plannedCmbBriefingCapacity(slide, index, layout);
+  return plannedGenericCapacity(style, slide, index, layout);
+}
+
+function plannedGenericCapacity(style, slide, index, layout) {
+  const guide = guideForStyle(style);
+  const layoutGuide = guide[layout] || COMMON_GUIDE[layout];
+  const result = { slide: index + 1, layout, title: slide.title || '', slots: [], notes: [] };
+  if (!layoutGuide || !Array.isArray(layoutGuide.slots)) {
+    result.notes.push('No text capacity metadata exists for this layout. Keep text short and validate after generation.');
+    return result;
+  }
+  const collection = layoutGuide.collection;
+  const collectionKey = collection ? firstCollectionKey(slide, collection.keys) : null;
+  const collectionItems = collectionKey ? normalizeItems(slide[collectionKey]) : [];
+  layoutGuide.slots.forEach((slot) => {
+    const match = slot.field.match(/^([^.[\]]+)\[\]\.(.+)$/);
+    if (match) {
+      const [, key, leaf] = match;
+      if (collectionKey && key !== collectionKey) return;
+      if (!collectionKey || !collectionItems.length) {
+        if (!result.notes.some((note) => note.includes('title-only collection'))) result.notes.push('Add a title-only collection such as items/sections/steps in the plan JSON so per-card body capacity can be calculated.');
+        return;
+      }
+      collectionItems.forEach((item, itemIndex) => {
+        result.slots.push(adjustPlannedSlot(slot, collectionKey + '[' + itemIndex + '].' + leaf, itemTitle(item) || (collection.label || collectionKey) + ' ' + (itemIndex + 1), collectionItems.length, collection));
+      });
+      return;
+    }
+    if (isFillableScalarSlot(slot.field)) result.slots.push({ ...slot, title: plannedScalarTitle(slide, slot.field) });
+  });
+  return result;
+}
+
+function adjustPlannedSlot(slot, field, title, count, collection) {
+  const isTitle = field.endsWith('.title') || field.endsWith('.label') || field.endsWith('.name');
+  let min = slot.min;
+  let max = slot.max;
+  if (collection && !isTitle) {
+    const factor = Math.max(0.72, Math.min(2.05, Number(collection.maxItems || count || 1) / Math.max(1, count || 1)));
+    max = Math.max(min, Math.floor(max * factor));
+  }
+  return { field, label: slot.label, title, min, max, note: plannedSlotNote(slot, count, collection) };
+}
+
+function plannedSlotNote(slot, count, collection) {
+  const notes = [];
+  if (slot.note) notes.push(slot.note);
+  if (collection && count) notes.push('Calculated for ' + count + ' planned ' + (collection.label || 'item') + '(s). Regenerate if count changes.');
+  return notes.join(' ');
+}
+
+function isFillableScalarSlot(field) {
+  return !field.includes('[]') && !['title', 'subtitle', 'kicker', 'agendaTitle', 'agendaSubtitle'].includes(field);
+}
+
+function plannedScalarTitle(slide, field) {
+  const titleKey = field + 'Title';
+  return slide[titleKey] || slide.title || '';
+}
+
+function plannedCmbTextWeaveCapacity(slide, index, layout) {
+  const sourceKey = firstCollectionKey(slide, ['sections', 'items', 'columns', 'points', 'agenda']);
+  const items = sourceKey ? normalizeItems(slide[sourceKey]).slice(0, 6) : [];
+  const result = { slide: index + 1, layout, title: slide.title || '', slots: [], notes: [] };
+  if (!items.length) {
+    result.notes.push('Add title-only sections/items/columns to the plan JSON so CMB text-card capacity can be calculated.');
+    return result;
+  }
+  cmbTextWeaveCardBoxes(items.length, !!slide.subtitle).forEach(({ box, options }, itemIndex) => {
+    const item = items[itemIndex];
+    if (!item) return;
+    const title = itemTitle(item) || String(itemIndex + 1).padStart(2, '0');
+    const cap = cmbCardBodyCapacity(box, title, options);
+    result.slots.push({ field: sourceKey + '[' + itemIndex + '].body', min: 12, max: cap.max, label: 'card body', title, note: 'Calculated from actual card ' + (itemIndex + 1) + '/' + items.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    result.slots.push({ field: sourceKey + '[' + itemIndex + '].points[]', min: 6, max: Math.max(8, Math.floor(cap.max / Math.max(2, Math.min(4, cap.maxLines)))), label: 'explicit bullet point', title, note: 'Use only when content should be bullets. Total estimated lines across points must stay <= ' + cap.maxLines + '.' });
+  });
+  return result;
+}
+
+function plannedCmbBriefingCapacity(slide, index, layout) {
+  const sourceKey = firstCollectionKey(slide, ['sections', 'items', 'columns', 'points', 'agenda']);
+  const items = sourceKey ? normalizeItems(slide[sourceKey]).slice(0, 6) : [];
+  const hasLead = hasAnyKey(slide, ['summary', 'body', 'lead', 'summaryTitle', 'leadTitle', 'focusTitle']);
+  const hasConclusion = hasAnyKey(slide, ['conclusion', 'takeaway', 'footerSummary', 'nextStep', 'conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle']);
+  const pseudo = { ...slide, summary: hasLead ? '__planned__' : '', conclusion: hasConclusion ? '__planned__' : '' };
+  const entries = cmbBriefingCardEntries(pseudo, items.length);
+  const result = { slide: index + 1, layout, title: slide.title || '', slots: [], notes: [] };
+  const plannedRestCount = hasLead ? items.length : Math.max(0, items.length - 1);
+  const maxRestCount = hasConclusion ? 4 : 5;
+  if (plannedRestCount > maxRestCount) {
+    result.notes.push('This CMB briefing plan has ' + plannedRestCount + ' middle text block(s), but the layout supports at most ' + maxRestCount + (hasConclusion ? ' when conclusion/takeaway is present.' : '.') + ' Reduce item count or use textWeave/denseText.');
+  }
+  const leadEntry = entries.find((entry) => entry.kind === 'lead');
+  if (leadEntry) {
+    const title = slide.summaryTitle || slide.leadTitle || slide.focusTitle || (hasLead ? '摘要' : itemTitle(items[0]) || '摘要');
+    const cap = cmbCardBodyCapacity(leadEntry.box, title, leadEntry.options);
+    const field = hasLead ? 'summary' : (sourceKey || 'items') + '[0].body';
+    result.slots.push({ field, min: 20, max: cap.max, label: hasLead ? 'top summary body' : 'lead card body', title, note: 'Calculated from lead card: max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+  }
+  const rest = hasLead ? items : items.slice(1);
+  entries.filter((entry) => entry.kind === 'rest').forEach((entry, i) => {
+    const sourceIndex = hasLead ? i : i + 1;
+    const item = rest[i];
+    if (!item) return;
+    const title = itemTitle(item) || '分析' + (i + 1);
+    const cap = cmbCardBodyCapacity(entry.box, title, entry.options);
+    result.slots.push({ field: (sourceKey || 'items') + '[' + sourceIndex + '].body', min: 12, max: cap.max, label: 'analysis card body', title, note: 'Calculated from actual card ' + (i + 1) + '/' + rest.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    result.slots.push({ field: (sourceKey || 'items') + '[' + sourceIndex + '].points[]', min: 6, max: Math.max(8, Math.floor(cap.max / Math.max(2, Math.min(4, cap.maxLines)))), label: 'analysis bullet point', title, note: 'Use only when content should be bullets. Total estimated lines across points must stay <= ' + cap.maxLines + '.' });
+  });
+  const conclusionEntry = entries.find((entry) => entry.kind === 'conclusion');
+  if (conclusionEntry) {
+    const title = slide.conclusionTitle || slide.takeawayTitle || slide.footerSummaryTitle || slide.nextStepTitle || '结论';
+    const cap = cmbCardBodyCapacity(conclusionEntry.box, title, conclusionEntry.options);
+    result.slots.push({ field: 'conclusion', min: 10, max: cap.max, label: 'bottom conclusion body', title, note: 'Calculated from bottom card: max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+  }
+  if (!items.length && !hasLead) result.notes.push('Add title-only sections/items or a summary field in the plan JSON so briefing capacity can be calculated.');
+  return result;
+}
+
+function hasAnyKey(source, keys) {
+  return keys.some((key) => Object.prototype.hasOwnProperty.call(source, key));
+}
 function warnSpecTextCapacity(spec) {
   const style = spec.style || 'swiss';
   const guide = guideForStyle(style);
@@ -426,4 +591,4 @@ function textVisualLength(text) {
   }, 0);
 }
 
-module.exports = { layoutCapacityGuide, layoutCapacityMarkdown, writeLayoutCapacityGuide, warnSpecTextCapacity, textVisualLength };
+module.exports = { layoutCapacityGuide, layoutCapacityGuideForSpec, layoutCapacityMarkdown, layoutCapacityMarkdownForSpec, writeLayoutCapacityGuide, writePlannedCapacityGuide, warnSpecTextCapacity, textVisualLength };
