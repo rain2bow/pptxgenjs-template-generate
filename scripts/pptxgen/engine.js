@@ -53,7 +53,6 @@ function normalizeSpec(spec, options = {}) {
   const layoutChanges = diversifyRepeatedLayouts(spec, { mutate: shouldDiversify });
   if (layoutChanges.length && shouldDiversify) spec.__layoutDiversified = true;
   validateSpecSlots(spec, { specDir: options.specDir || process.cwd() });
-  warnThinContent(spec);
   warnSpecTextCapacity(spec);
   warnLayoutVariety(spec);
   spec.__normalized = true;
@@ -2843,7 +2842,7 @@ function renderDataBlocks(slide, ctx, s, mode) {
   blocks.forEach((block) => {
     if (!block || block.enabled === false) return;
     if ((block.type === 'chart' || block.type === 'table') && !hasExplicitBox(block)) {
-      console.warn(`Warning: slide ${ctx.index + 1} skipped unpositioned ${block.type} block to avoid overlap. Put it in layout "media"/"mediaGrid" or set x/y/w/h explicitly.`);
+      fail(`slide ${ctx.index + 1} has unpositioned ${block.type} block. Put it in layout "media"/"mediaGrid", remove it, or set x/y/w/h explicitly so it is not silently skipped.`);
       return;
     }
     if (block.type === 'chart') addChartBlock(slide, ctx, block, block, s, mode);
@@ -3026,6 +3025,8 @@ function validateSpecSlots(spec, options = {}) {
     validateTextFieldTypes(slide, index, errors);
     validateMediaSlots(slide, index, errors, warnings, options.specDir || process.cwd());
     validateTextSlots(slide, index, spec.style, errors, warnings);
+    validateRenderableDataBlocks(slide, index, errors);
+    validateThinContent(slide, index, errors);
   });
   if (errors.length) {
     fail(`Spec slot validation failed:\n- ${errors.join('\n- ')}`);
@@ -3084,11 +3085,11 @@ function validateMediaSlots(slide, index, errors, warnings, specDir) {
   }
   images.forEach((image, imageIndex) => {
     if (!resolveImage(specDir, image)) {
-      warnings.push(`Warning: slide ${index + 1} image ${imageIndex + 1} path is missing or unsupported; an image placeholder will be rendered.`);
+      errors.push(`slide ${index + 1} image ${imageIndex + 1} path is missing or unsupported; provide a valid image path, remove the image entry, or set allowEmptyMediaSlots:true with no image path when a blank placeholder is intentional.`);
     }
   });
   if (isVisualMediaLayout(layout) && !images.length && !charts.length && !slide.allowEmptyMediaSlots) {
-    warnings.push(`Warning: slide ${index + 1} uses layout "${layout}" with media/image slot(s) but provides no images or charts. Use a text-only layout such as textGrid/article/fourCards/agenda/radial, provide image/chart data, or set allowEmptyMediaSlots:true only when a blank placeholder is intentional.`);
+    errors.push(`slide ${index + 1} uses layout "${layout}" with media/image slot(s) but provides no images or charts. Use a text-only layout such as textGrid/article/fourCards/agenda/radial, provide image/chart data, or set allowEmptyMediaSlots:true only when a blank placeholder is intentional.`);
   }
 }
 
@@ -3165,11 +3166,11 @@ function validateTextSlots(slide, index, style, errors, warnings) {
 function validateSlotCollection(source, index, rule, errors, warnings) {
   const present = rule.keys.filter((key) => source[key] !== undefined && source[key] !== null);
   if (!present.length) {
-    if (rule.min > 0) warnings.push(`Warning: slide ${index + 1} has no ${rule.label}; the layout may look empty.`);
+    if (rule.min > 0 && !source.allowSparseContent) errors.push(`slide ${index + 1} has no ${rule.label}; the layout may look empty. Add the required content field(s), change layout, or set allowSparseContent:true only for intentional sparse draft slides.`);
     return [];
   }
   if (present.length > 1) {
-    warnings.push(`Warning: slide ${index + 1} provides multiple fields for ${rule.label}: ${present.map((key) => `${rule.prefix || ''}${key}`).join(', ')}. The generator uses the first non-empty field only.`);
+    errors.push(`slide ${index + 1} provides multiple fields for ${rule.label}: ${present.map((key) => `${rule.prefix || ''}${key}`).join(', ')}. Keep only one field so content is not silently ignored.`);
   }
   const key = present[0];
   const items = normalizeSlotItemsForValidation(source[key]);
@@ -3181,7 +3182,7 @@ function validateSlotCollection(source, index, rule, errors, warnings) {
     errors.push(`slide ${index + 1} has ${items.length} ${rule.label}, but layout "${source.layout || 'nested'}" renders at most ${rule.max}; split content or change layout.`);
   }
   if (rule.min && items.length < rule.min) {
-    warnings.push(`Warning: slide ${index + 1} has ${items.length} ${rule.label}; expected at least ${rule.min}.`);
+    if (!source.allowSparseContent) errors.push(`slide ${index + 1} has ${items.length} ${rule.label}; expected at least ${rule.min}. Add content, change layout, or set allowSparseContent:true only for intentional sparse draft slides.`);
   }
   items.forEach((item, itemIndex) => {
     if (!slotItemHasDisplayTextForRule(item, rule)) {
@@ -3226,22 +3227,22 @@ function validateIgnoredSlotFields(slide, index, layout, layoutRules, errors, is
 function validateChartSlots(slide, index, max, errors, warnings) {
   const charts = normalizeMediaCharts(slide);
   if (charts.length > max) errors.push(`slide ${index + 1} has ${charts.length} charts, but dashboard renders at most ${max}.`);
-  if (!charts.length) warnings.push(`Warning: slide ${index + 1} dashboard has no charts; chart area will be empty.`);
+  if (!charts.length && !slide.allowMissingChart) errors.push(`slide ${index + 1} dashboard has no charts; chart area will be empty. Provide charts[] or set allowMissingChart:true only for intentional draft output.`);
 }
 
 function validateChartDataSlot(slide, index, errors, warnings) {
   const chart = slide.chart || slide;
-  if (!normalizeChartData(chart).length) warnings.push(`Warning: slide ${index + 1} chart layout has no chart data; a NO DATA box will be rendered.`);
+  if (!normalizeChartData(chart).length && !slide.allowMissingChart) errors.push(`slide ${index + 1} chart layout has no chart data; a NO DATA box will be rendered. Provide chart data or set allowMissingChart:true only for intentional draft output.`);
 }
 
 function validateTableSlot(slide, index, errors, warnings) {
   if (!slide.table) {
-    warnings.push(`Warning: slide ${index + 1} dataSheet has no table.`);
+    if (!slide.allowMissingTable) errors.push(`slide ${index + 1} dataSheet has no table. Provide table data or set allowMissingTable:true only for intentional draft output.`);
     return;
   }
   if (slide.table.headers && !Array.isArray(slide.table.headers)) errors.push(`slide ${index + 1} table.headers must be an array.`);
   const rows = normalizeTableRows(slide.table);
-  if (!rows.length) warnings.push(`Warning: slide ${index + 1} table has no rows.`);
+  if (!rows.length && !slide.allowMissingTable) errors.push(`slide ${index + 1} table has no rows. Provide table.rows or set allowMissingTable:true only for intentional draft output.`);
 }
 
 function slotCollectionFormatError(value, index, rule, key) {
@@ -3377,21 +3378,39 @@ function resolveMediaSlotCount(data) {
   const declaredMedia = Array.isArray(data.media) ? data.media.length : 0;
   return clamp(Math.max(images.length, charts.length, captions ? captions.length : 0, declaredMedia, 1), 1, 6);
 }
-function warnThinContent(spec) {
-  spec.slides.forEach((slide, index) => {
-    if (['matrix'].includes(slide.layout || '')) return;
-    const candidates = normalizeSections(slide.sections || slide.items || slide.columns || slide.nodes || slide.layers || slide.steps || slide.milestones || slide.agenda || []);
-    if (candidates.length < 3) return;
-    const titleOnly = candidates.filter((item) => {
-      const title = item.title || item.label || item.name;
-      const body = item.body || item.desc || item.note || item.text || item.summary || item.detail || (Array.isArray(item.points) && item.points.length) || (Array.isArray(item.bullets) && item.bullets.length) || (Array.isArray(item.list) && item.list.length);
-      return title && !body;
-    }).length;
-    if (titleOnly >= Math.ceil(candidates.length * 0.6)) {
-      console.warn(`Warning: slide ${index + 1} has ${titleOnly}/${candidates.length} title-only items. Add body/desc/note for each point so the page is not just headings.`);
+
+function validateRenderableDataBlocks(slide, index, errors) {
+  const layout = slide.layout || '';
+  const chartLayouts = ['chart', 'dashboard', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy'];
+  const blocks = [...(slide.blocks || [])];
+  if (!chartLayouts.includes(layout)) {
+    blocks.push(...(slide.charts || []).map((chart) => ({ ...chart, type: 'chart' })));
+  }
+  blocks.push(...(slide.tables || []).map((table) => ({ ...table, type: 'table' })));
+  blocks.forEach((block) => {
+    if (!block || block.enabled === false) return;
+    if ((block.type === 'chart' || block.type === 'table') && !hasExplicitBox(block)) {
+      errors.push(`slide ${index + 1} has unpositioned ${block.type} block. Put it in layout "media"/"mediaGrid", remove it, or set x/y/w/h explicitly so it is not silently skipped.`);
     }
   });
 }
+
+function validateThinContent(slide, index, errors) {
+  if (slide.allowSparseContent) return;
+  const layout = slide.layout || '';
+  if (['matrix', 'bigNumbers', 'kpiTower', 'dashboard', 'imageHero', 'caseStudy'].includes(layout)) return;
+  const candidates = normalizeSections(slide.sections || slide.items || slide.columns || slide.nodes || slide.layers || slide.steps || slide.milestones || slide.agenda || []);
+  if (candidates.length < 3) return;
+  const titleOnly = candidates.filter((item) => {
+    const title = item.title || item.label || item.name;
+    const body = item.body || item.desc || item.note || item.text || item.summary || item.detail || (Array.isArray(item.points) && item.points.length) || (Array.isArray(item.bullets) && item.bullets.length) || (Array.isArray(item.list) && item.list.length);
+    return title && !body;
+  }).length;
+  if (titleOnly >= Math.ceil(candidates.length * 0.6)) {
+    errors.push(`slide ${index + 1} has ${titleOnly}/${candidates.length} title-only items. Add body/desc/note/points for each point, change layout, or set allowSparseContent:true only for intentional sparse draft slides.`);
+  }
+}
+
 function diversifyRepeatedLayouts(spec, options = {}) {
   if (spec.preserveLayouts || spec.lockLayouts || spec.disableLayoutDiversify) return [];
   const mutate = options.mutate === true;
