@@ -3023,13 +3023,46 @@ function validateSpecSlots(spec, options = {}) {
   const errors = [];
   const warnings = [];
   spec.slides.forEach((slide, index) => {
+    validateTextFieldTypes(slide, index, errors);
     validateMediaSlots(slide, index, errors, warnings, options.specDir || process.cwd());
     validateTextSlots(slide, index, spec.style, errors, warnings);
   });
-  warnings.forEach((message) => console.warn(message));
   if (errors.length) {
     fail(`Spec slot validation failed:\n- ${errors.join('\n- ')}`);
   }
+  warnings.forEach((message) => console.warn(message));
+}
+
+const SCALAR_TEXT_FIELD_NAMES = new Set([
+  'kicker', 'title', 'subtitle', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'story',
+  'conclusion', 'takeaway', 'footerSummary', 'nextStep', 'lead', 'callout',
+  'quote', 'cite', 'source', 'caseTitle', 'summaryTitle', 'leadTitle', 'focusTitle',
+  'label', 'value', 'unit', 'metric', 'name', 'caption',
+]);
+
+function validateTextFieldTypes(value, index, errors, pathName = 'slide', depth = 0) {
+  if (!value || typeof value !== 'object' || depth > 5) return;
+  if (Array.isArray(value)) {
+    value.forEach((item, itemIndex) => validateTextFieldTypes(item, index, errors, `${pathName}[${itemIndex}]`, depth + 1));
+    return;
+  }
+  Object.entries(value).forEach(([key, child]) => {
+    const childPath = `${pathName}.${key}`;
+    if (SCALAR_TEXT_FIELD_NAMES.has(key) && child !== undefined && child !== null && typeof child === 'object') {
+      const kind = Array.isArray(child) ? 'array' : 'object';
+      const hint = key === 'body'
+        ? 'If this is a list of content blocks, put it in sections/items/columns/steps/nodes according to the slide layout; if it is bullet text inside one card, put strings in points[].'
+        : 'Use a plain string/number for this field, or move structured content into the layout collection field.';
+      errors.push(`slide ${index + 1} field ${childPath} must be plain text, but got ${kind}. ${hint}`);
+    }
+    if (child && typeof child === 'object' && !isOpaqueValidationObject(key)) {
+      validateTextFieldTypes(child, index, errors, childPath, depth + 1);
+    }
+  });
+}
+
+function isOpaqueValidationObject(key) {
+  return key === 'chart' || key === 'table' || key === 'speakerNotes';
 }
 
 function validateMediaSlots(slide, index, errors, warnings, specDir) {
@@ -3141,7 +3174,7 @@ function validateSlotCollection(source, index, rule, errors, warnings) {
   const key = present[0];
   const items = normalizeSlotItemsForValidation(source[key]);
   if (!items) {
-    errors.push(`slide ${index + 1} field ${rule.prefix || ''}${key} has unsupported format; use an array of strings/objects or an object map.`);
+    errors.push(slotCollectionFormatError(source[key], index, rule, key));
     return [];
   }
   if (rule.max && items.length > rule.max) {
@@ -3211,11 +3244,28 @@ function validateTableSlot(slide, index, errors, warnings) {
   if (!rows.length) warnings.push(`Warning: slide ${index + 1} table has no rows.`);
 }
 
+function slotCollectionFormatError(value, index, rule, key) {
+  const field = `${rule.prefix || ''}${key}`;
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const badKeys = Object.entries(value)
+      .filter(([, body]) => body !== undefined && body !== null && typeof body === 'object')
+      .map(([title]) => title);
+    if (badKeys.length) {
+      return `slide ${index + 1} field ${field} uses an object map with structured value(s): ${badKeys.slice(0, 5).join(', ')}. Use ${field}: [{ title, body }] for structured items, or ${field}: { "Title": "plain text" } for a simple object map.`;
+    }
+  }
+  return `slide ${index + 1} field ${field} has unsupported format; use an array of strings/objects or an object map with plain-text values.`;
+}
+
 function normalizeSlotItemsForValidation(value) {
   if (value === undefined || value === null) return [];
   if (typeof value === 'string' || typeof value === 'number') return [{ body: String(value) }];
   if (Array.isArray(value)) return value;
-  if (typeof value === 'object') return Object.entries(value).map(([title, body]) => ({ title, body: String(body ?? '') }));
+  if (typeof value === 'object') {
+    const entries = Object.entries(value);
+    if (entries.some(([, body]) => body !== undefined && body !== null && typeof body === 'object')) return null;
+    return entries.map(([title, body]) => ({ title, body: String(body ?? '') }));
+  }
   return null;
 }
 
