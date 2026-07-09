@@ -250,6 +250,7 @@ Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/
 
 - 用户提供 `image` / `images` / `gallery` 时优先插入用户图片。
 - `mediaGrid` / `gallery` / `imageGrid` 未显式设置 `mediaCount` 时，槽位数自动等于图片数、显式图表数或 caption 数。
+- `mediaGrid` / `gallery` / `imageGrid` 中的 `captions` / `items` / `sections` 只作为短图片说明，渲染字段是 `caption` / `title` / `label`；不要写 `body`，否则会报错。
 - 显式设置 `mediaCount` 时必须与图片数量匹配，除非明确允许空槽。
 - 没有用户图片但提供 `chart` / `charts` 时，使用 PowerPoint 原生图表。
 - 没有图片和显式图表时，显示图片占位符，不再默认填充图表。
