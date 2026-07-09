@@ -3068,7 +3068,13 @@ function isOpaqueValidationObject(key) {
 
 function validateMediaSlots(slide, index, errors, warnings, specDir) {
   const layout = slide.layout || '';
-  if (!MEDIA_SLOT_LAYOUTS.has(layout)) return;
+  if (!MEDIA_SLOT_LAYOUTS.has(layout)) {
+    const imageFields = unsupportedImageFields(slide);
+    if (imageFields.length) {
+      errors.push(`slide ${index + 1} layout "${layout}" does not render image/media field(s): ${imageFields.join(', ')}. Use a media layout such as media/mediaGrid/imageGrid/imageHero/statement/caseStudy, or remove these fields.`);
+    }
+    return;
+  }
   const images = normalizeMediaImages(slide);
   const charts = normalizeMediaCharts(slide);
   const slotCount = isMediaGridLayout(layout) ? resolveMediaSlotCount(slide) : 1;
@@ -3096,6 +3102,8 @@ function validateMediaSlots(slide, index, errors, warnings, specDir) {
 function validateTextSlots(slide, index, style, errors, warnings) {
   const layout = slide.layout || '';
   const sideMax = style === 'swiss' ? 5 : style === 'cmb' ? 4 : 3;
+  const cmbTextWeaveMin = style === 'cmb' ? 0 : 1;
+  const cmbTextGridMax = style === 'cmb' ? 6 : 9;
   const narrativeFields = ['body', 'desc', 'note', 'summary', 'detail', 'text', 'story'];
   const metricNarrativeFields = ['body', 'desc', 'summary', 'detail', 'text', 'story'];
   const textLayoutSuggestion = 'Use textGrid, article, sectionList, fourCards, agenda, or radial for title + body content.';
@@ -3130,10 +3138,10 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     briefing: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
     executiveBrief: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
     contentBrief: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
-    textGrid: [{ keys: ['sections', 'items', 'columns'], max: 9, min: 1, label: 'text grid cells' }],
-    textWeave: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 1, label: 'text weave blocks' }],
-    contentSynthesis: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 1, label: 'text weave blocks' }],
-    denseText: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 1, label: 'dense text blocks' }],
+    textGrid: [{ keys: ['sections', 'items', 'columns'], max: cmbTextGridMax, min: cmbTextWeaveMin, label: style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text grid cells' }],
+    textWeave: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: cmbTextWeaveMin, label: style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text weave blocks' }],
+    contentSynthesis: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: cmbTextWeaveMin, label: style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text weave blocks' }],
+    denseText: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: cmbTextWeaveMin, label: style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'dense text blocks' }],
     sectionList: [{ keys: ['sections', 'items', 'columns'], max: 7, min: 1, label: 'section list items' }],
     agenda: [{ keys: ['items', 'sections', 'agenda'], max: 8, min: 1, label: 'agenda items' }],
     pyramid: [{ keys: ['layers', 'items', 'sections'], max: 5, min: 1, label: 'pyramid layers' }],
@@ -3157,6 +3165,7 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     validateSlotCollection(slide.before || {}, index, { keys: ['items'], max: 6, min: 1, label: 'before items', prefix: 'before.' }, errors, warnings);
     validateSlotCollection(slide.after || {}, index, { keys: ['items'], max: 6, min: 1, label: 'after items', prefix: 'after.' }, errors, warnings);
   }
+  validateCmbTextWeaveStructure(slide, index, style, layout, errors);
   validateCmbBriefingCapacity(slide, index, style, layout, errors);
   if (layout === 'dashboard') validateChartSlots(slide, index, 2, errors, warnings);
   if (layout === 'chart') validateChartDataSlot(slide, index, errors, warnings);
@@ -3192,6 +3201,15 @@ function validateSlotCollection(source, index, rule, errors, warnings) {
     validateUnusedSlotItemFields(item, index, rule, key, itemIndex, errors);
   });
   return items;
+}
+
+function validateCmbTextWeaveStructure(slide, index, style, layout, errors) {
+  if (style !== 'cmb') return;
+  if (!['textGrid', 'fourCards', 'textWeave', 'contentSynthesis', 'denseText'].includes(layout)) return;
+  const count = cmbTextItems(slide).length;
+  if (count < 2) {
+    errors.push(`slide ${index + 1} layout "${layout}" needs at least 2 CMB text weave cards: 1 lead card and at least 1 right-side card; got ${count}. Add another sections/items/columns/points/agenda entry or change layout.`);
+  }
 }
 
 function validateCmbBriefingCapacity(slide, index, style, layout, errors) {
@@ -3291,6 +3309,18 @@ function validateUnusedSlotItemFields(item, index, rule, key, itemIndex, errors)
   if (!ignored.length) return;
   const suggestion = rule.suggestion || 'Use a layout that renders these item fields, or remove the unused fields.';
   errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] includes field(s) not rendered by ${rule.label}: ${ignored.join(', ')}. ${suggestion}`);
+}
+
+function unsupportedImageFields(slide) {
+  const fields = [];
+  ['image', 'images', 'gallery'].forEach((key) => {
+    if (slide[key] !== undefined && slide[key] !== null) fields.push(key);
+  });
+  if (Array.isArray(slide.media) && normalizeMediaImages({ media: slide.media }).length) fields.push('media');
+  ['mediaCount', 'imageSlots', 'slotCount'].forEach((key) => {
+    if (slide[key] !== undefined && slide[key] !== null) fields.push(key);
+  });
+  return fields;
 }
 
 const MEDIA_SLOT_LAYOUTS = new Set(['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy']);

@@ -94,7 +94,7 @@ function cmbBriefingSlots(name) {
 function cmbTextWeaveSlots(name) {
   return slots([
     ['title', 'page title', 8, 32], ['sections[].title', 'text card title', 4, 14], ['sections[].body', 'text card body', 15, 52], ['sections[].points[]', 'text card explicit bullet point', 8, 24], ['items[].title', 'text card title', 4, 14], ['items[].body', 'text card body', 15, 52], ['items[].points[]', 'text card explicit bullet point', 8, 24], ['columns[].title', 'text card title', 4, 14], ['columns[].body', 'text card body', 15, 52], ['columns[].points[]', 'text card explicit bullet point', 8, 24],
-  ], name + ': CMB asymmetric 1-6 text cards; 5-6 cards need shorter bodies. For points[] arrays, line count is estimated per point; each point occupies at least one line.');
+  ], name + ': CMB asymmetric 2-6 text cards: 1 lead card + at least 1 right-side card. 5-6 cards need shorter bodies. For points[] arrays, line count is estimated per point; each point occupies at least one line.');
 }
 
 function guideForStyle(style = 'swiss') {
@@ -255,8 +255,11 @@ function plannedCmbTextWeaveCapacity(slide, index, layout) {
   const items = sourceKey ? normalizeItems(slide[sourceKey]).slice(0, 6) : [];
   const result = { slide: index + 1, layout, title: slide.title || '', slots: [], notes: [] };
   if (!items.length) {
-    result.notes.push('Add title-only sections/items/columns to the plan JSON so CMB text-card capacity can be calculated.');
+    result.notes.push('Add at least 2 title-only sections/items/columns to the plan JSON so CMB text-card capacity can be calculated: 1 lead card + at least 1 right-side card.');
     return result;
+  }
+  if (items.length < 2) {
+    result.notes.push('CMB ' + layout + ' needs at least 2 text cards so the right side is not empty. Add one more title-only item before writing body text.');
   }
   cmbTextWeaveCardBoxes(items.length, !!slide.subtitle).forEach(({ box, options }, itemIndex) => {
     const item = items[itemIndex];
