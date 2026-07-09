@@ -53,7 +53,7 @@ const CMB_GUIDE = {
 function slots(items, description = '', extra = {}) {
   return { description, ...extra, slots: items.map(([field, label, min, max, note]) => {
     const adjustedMax = Math.max(min, Math.floor(max * CAPACITY_SCALE_FOR_UNIFIED_TYPOGRAPHY));
-    return { field, label, min: Math.min(min, adjustedMax), max: adjustedMax, note };
+    return { field, label, min: recommendedCapacityMin(adjustedMax), max: adjustedMax, note };
   }) };
 }
 
@@ -210,13 +210,28 @@ function plannedGenericCapacity(style, slide, index, layout) {
 
 function adjustPlannedSlot(slot, field, title, count, collection) {
   const isTitle = field.endsWith('.title') || field.endsWith('.label') || field.endsWith('.name');
-  let min = slot.min;
   let max = slot.max;
   if (collection && !isTitle) {
     const factor = Math.max(0.72, Math.min(2.05, Number(collection.maxItems || count || 1) / Math.max(1, count || 1)));
-    max = Math.max(min, Math.floor(max * factor));
+    max = Math.max(1, Math.floor(max * factor));
   }
-  return { field, label: slot.label, title, min, max, note: plannedSlotNote(slot, count, collection) };
+  return { field, label: slot.label, title, min: recommendedCapacityMin(max), max, note: plannedSlotNote(slot, count, collection) };
+}
+
+function recommendedCapacityMin(max) {
+  return Math.max(1, Math.floor(Number(max || 0) * 0.6));
+}
+
+function plannedPointSlot(field, title, cap, label) {
+  const max = Math.max(8, Math.floor(cap.max / Math.max(2, Math.min(4, cap.maxLines))));
+  return {
+    field,
+    min: recommendedCapacityMin(max),
+    max,
+    label,
+    title,
+    note: 'Use only when content should be bullets. Total estimated lines across points must stay <= ' + cap.maxLines + '.',
+  };
 }
 
 function plannedSlotNote(slot, count, collection) {
@@ -248,8 +263,8 @@ function plannedCmbTextWeaveCapacity(slide, index, layout) {
     if (!item) return;
     const title = itemTitle(item) || String(itemIndex + 1).padStart(2, '0');
     const cap = cmbCardBodyCapacity(box, title, options);
-    result.slots.push({ field: sourceKey + '[' + itemIndex + '].body', min: 12, max: cap.max, label: 'card body', title, note: 'Calculated from actual card ' + (itemIndex + 1) + '/' + items.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
-    result.slots.push({ field: sourceKey + '[' + itemIndex + '].points[]', min: 6, max: Math.max(8, Math.floor(cap.max / Math.max(2, Math.min(4, cap.maxLines)))), label: 'explicit bullet point', title, note: 'Use only when content should be bullets. Total estimated lines across points must stay <= ' + cap.maxLines + '.' });
+    result.slots.push({ field: sourceKey + '[' + itemIndex + '].body', min: recommendedCapacityMin(cap.max), max: cap.max, label: 'card body', title, note: 'Calculated from actual card ' + (itemIndex + 1) + '/' + items.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    result.slots.push(plannedPointSlot(sourceKey + '[' + itemIndex + '].points[]', title, cap, 'explicit bullet point'));
   });
   return result;
 }
@@ -272,7 +287,7 @@ function plannedCmbBriefingCapacity(slide, index, layout) {
     const title = slide.summaryTitle || slide.leadTitle || slide.focusTitle || (hasLead ? '摘要' : itemTitle(items[0]) || '摘要');
     const cap = cmbCardBodyCapacity(leadEntry.box, title, leadEntry.options);
     const field = hasLead ? 'summary' : (sourceKey || 'items') + '[0].body';
-    result.slots.push({ field, min: 20, max: cap.max, label: hasLead ? 'top summary body' : 'lead card body', title, note: 'Calculated from lead card: max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    result.slots.push({ field, min: recommendedCapacityMin(cap.max), max: cap.max, label: hasLead ? 'top summary body' : 'lead card body', title, note: 'Calculated from lead card: max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
   }
   const rest = hasLead ? items : items.slice(1);
   entries.filter((entry) => entry.kind === 'rest').forEach((entry, i) => {
@@ -281,14 +296,14 @@ function plannedCmbBriefingCapacity(slide, index, layout) {
     if (!item) return;
     const title = itemTitle(item) || '分析' + (i + 1);
     const cap = cmbCardBodyCapacity(entry.box, title, entry.options);
-    result.slots.push({ field: (sourceKey || 'items') + '[' + sourceIndex + '].body', min: 12, max: cap.max, label: 'analysis card body', title, note: 'Calculated from actual card ' + (i + 1) + '/' + rest.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
-    result.slots.push({ field: (sourceKey || 'items') + '[' + sourceIndex + '].points[]', min: 6, max: Math.max(8, Math.floor(cap.max / Math.max(2, Math.min(4, cap.maxLines)))), label: 'analysis bullet point', title, note: 'Use only when content should be bullets. Total estimated lines across points must stay <= ' + cap.maxLines + '.' });
+    result.slots.push({ field: (sourceKey || 'items') + '[' + sourceIndex + '].body', min: recommendedCapacityMin(cap.max), max: cap.max, label: 'analysis card body', title, note: 'Calculated from actual card ' + (i + 1) + '/' + rest.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    result.slots.push(plannedPointSlot((sourceKey || 'items') + '[' + sourceIndex + '].points[]', title, cap, 'analysis bullet point'));
   });
   const conclusionEntry = entries.find((entry) => entry.kind === 'conclusion');
   if (conclusionEntry) {
     const title = slide.conclusionTitle || slide.takeawayTitle || slide.footerSummaryTitle || slide.nextStepTitle || '结论';
     const cap = cmbCardBodyCapacity(conclusionEntry.box, title, conclusionEntry.options);
-    result.slots.push({ field: 'conclusion', min: 10, max: cap.max, label: 'bottom conclusion body', title, note: 'Calculated from bottom card: max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    result.slots.push({ field: 'conclusion', min: recommendedCapacityMin(cap.max), max: cap.max, label: 'bottom conclusion body', title, note: 'Calculated from bottom card: max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
   }
   if (!items.length && !hasLead) result.notes.push('Add title-only sections/items or a summary field in the plan JSON so briefing capacity can be calculated.');
   return result;
