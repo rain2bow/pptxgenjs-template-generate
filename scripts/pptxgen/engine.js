@@ -45,13 +45,10 @@ function normalizeSpec(spec, options = {}) {
   spec.theme = spec.theme || defaultThemeForStyle(spec.style);
   if (!THEMES[spec.style][spec.theme]) fail(`Unsupported theme "${spec.theme}" for style "${spec.style}"`);
   if (!Array.isArray(spec.slides) || spec.slides.length === 0) fail('Spec must include a non-empty slides array.');
-  const shouldDiversify = options.diversifyLayouts || spec.diversifyLayouts === true;
-  if (shouldDiversify && !options.writeNormalizedSpec && !spec.allowUnsyncedLayoutDiversify) {
-    fail('Layout diversification changes slide.layout. Use --write-normalized-spec path/to/normalized.json so the JSON matches the generated PPTX, or remove --diversify-layouts.');
+  if (spec.diversifyLayouts === true) {
+    fail('diversifyLayouts is no longer supported. Edit each slide.layout in JSON manually; the generator never changes layout automatically.');
   }
   normalizeLayoutCompatibility(spec);
-  const layoutChanges = diversifyRepeatedLayouts(spec, { mutate: shouldDiversify });
-  if (layoutChanges.length && shouldDiversify) spec.__layoutDiversified = true;
   validateSpecSlots(spec, { specDir: options.specDir || process.cwd() });
   warnSpecTextCapacity(spec);
   warnLayoutVariety(spec);
@@ -3386,8 +3383,11 @@ function replacementCandidatesForLayout(layout) {
 function suggestedLayoutsForSlide(slide, currentLayout, limit = 4) {
   const candidates = filterLayoutCandidates(slide, replacementCandidatesForLayout(currentLayout))
     .filter((layout) => layout !== currentLayout);
-  const preferred = chooseDiversifiedLayout(slide, currentLayout, 0, candidates);
-  const ordered = preferred ? [preferred, ...candidates.filter((layout) => layout !== preferred)] : candidates;
+  const ordered = [];
+  if (slide.layoutAlt && layoutAllowedByContent(slide, slide.layoutAlt) && slide.layoutAlt !== currentLayout) ordered.push(slide.layoutAlt);
+  candidates.forEach((layout) => {
+    if (!ordered.includes(layout)) ordered.push(layout);
+  });
   return ordered.slice(0, limit);
 }
 function explicitMediaCount(data) {
@@ -3441,68 +3441,6 @@ function validateThinContent(slide, index, errors) {
   }
 }
 
-function diversifyRepeatedLayouts(spec, options = {}) {
-  if (spec.preserveLayouts || spec.lockLayouts || spec.disableLayoutDiversify) return [];
-  const mutate = options.mutate === true;
-  let previous = null;
-  let runLength = 0;
-  const diversifyCounts = new Map();
-  const changes = [];
-  spec.slides.forEach((slide, index) => {
-    const layout = slide.layout || (spec.style === 'magazine' ? 'textImage' : 'statement');
-    if (slide.lockLayout || slide.preserveLayout) {
-      previous = layout;
-      runLength = 1;
-      return;
-    }
-    if (layout === previous) {
-      runLength += 1;
-    } else {
-      previous = layout;
-      runLength = 1;
-      return;
-    }
-    if (runLength < 2) return;
-    const replacementCount = diversifyCounts.get(layout) || 0;
-    const nextLayout = chooseDiversifiedLayout(slide, layout, replacementCount, replacementCandidatesForLayout(layout));
-    if (nextLayout && nextLayout !== layout) {
-      changes.push({ slide: index + 1, from: layout, to: nextLayout });
-      diversifyCounts.set(layout, replacementCount + 1);
-      previous = nextLayout;
-      runLength = 1;
-      if (mutate) {
-        slide.originalLayout = slide.originalLayout || layout;
-        slide.layout = nextLayout;
-        console.warn(`Info: slide ${index + 1} layout changed from "${layout}" to "${nextLayout}". A normalized spec will be written so JSON and PPTX stay in sync.`);
-      } else {
-        console.warn(`Suggestion: slide ${index + 1} repeats layout "${layout}"; consider changing it to "${nextLayout}" in JSON. The generator did not auto-change it, so JSON and PPTX stay consistent.`);
-      }
-    }
-  });
-  return changes;
-}
-
-function chooseDiversifiedLayout(slide, currentLayout, replacementCount, candidates) {
-  if (slide.layoutAlt && layoutAllowedByContent(slide, slide.layoutAlt)) return slide.layoutAlt;
-  if (hasTableData(slide) && currentLayout !== 'dataSheet') return 'dataSheet';
-  if (hasChartData(slide) && !CHART_DATA_LAYOUTS.has(currentLayout)) {
-    if (layoutAllowedByContent(slide, 'dashboard')) return 'dashboard';
-    if (layoutAllowedByContent(slide, 'chart')) return 'chart';
-  }
-  if ((slide.lanes || slide.stages) && currentLayout !== 'swimlane') return 'swimlane';
-  if ((slide.steps || slide.milestones) && currentLayout !== 'roadmap') return 'roadmap';
-  if (hasUserImages(slide) && (slide.metrics || slide.caseTitle || slide.story) && currentLayout !== 'caseStudy') return 'caseStudy';
-  const allowedCandidates = filterLayoutCandidates(slide, candidates);
-  if (!allowedCandidates.length) return null;
-  const items = normalizeSections(slide.sections || slide.items || slide.columns || slide.nodes || []);
-  const count = items.length;
-  const offset = replacementCount % allowedCandidates.length;
-  if (['textGrid', 'article', 'sectionList', 'fourCards', 'matrix'].includes(currentLayout) && count >= 3) return allowedCandidates[offset];
-  if (count >= 7 && currentLayout !== 'matrix' && layoutAllowedByContent(slide, 'matrix')) return 'matrix';
-  if (count >= 5 && currentLayout !== 'agenda' && layoutAllowedByContent(slide, 'agenda')) return 'agenda';
-  if (count >= 3 && count <= 8 && currentLayout !== 'fourCards' && layoutAllowedByContent(slide, 'fourCards')) return 'fourCards';
-  return allowedCandidates[offset];
-}
 function warnLayoutVariety(spec) {
   let runLayout = null;
   let runStart = 0;
@@ -3515,7 +3453,7 @@ function warnLayoutVariety(spec) {
       : ' No image/media-slot layout is suggested unless this page provides images or chart data.';
     if (runLength >= 3) {
       console.warn(
-        `Warning: slides ${runStart + 1}-${runStart + runLength} use layout "${runLayout}" consecutively. Change at least one page to an equivalent layout or run --diversify-layouts --write-normalized-spec so the deck does not feel repetitive.${suffix}`
+        `Warning: slides ${runStart + 1}-${runStart + runLength} use layout "${runLayout}" consecutively. Change at least one page to an equivalent layout by editing slide.layout in JSON so the deck does not feel repetitive.${suffix}`
       );
     } else if (runLength === 2) {
       console.warn(

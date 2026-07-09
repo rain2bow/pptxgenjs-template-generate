@@ -181,8 +181,7 @@ Layout 字数容量指南和 JSON 预检 warning。
 - 校验 style 是否在 `config.STYLE_ORDER` 中。
 - 填默认 theme。
 - 校验 `slides` 非空。
-- 校验是否允许自动改 layout。
-- 调用 `diversifyRepeatedLayouts()`。
+- 保持用户 JSON 中的 `slide.layout` 不变；页面类型只由 JSON 字段决定。
 - 调用 `validateSpecSlots()`。
 - 调用 `warnThinContent()`、`warnSpecTextCapacity()` 和 `warnLayoutVariety()`。
 - 标记 `spec.__normalized = true`。
@@ -481,16 +480,14 @@ CMB 继续复用 Swiss renderer 的 layout：
 核心函数：
 
 - `warnThinContent()`
-- `diversifyRepeatedLayouts()`
-- `chooseDiversifiedLayout()`
 - `warnLayoutVariety()`
+- `suggestedLayoutsForSlide()`
 
 实现重点：
 
 - `warnThinContent()` 检查大量 title-only item，提示补 body/desc/note。
 - `warnLayoutVariety()` 发现连续 3 页以上同 layout 时给 warning。
-- `diversifyRepeatedLayouts()` 默认只给建议，不改 JSON。
-- 只有用户使用 `--diversify-layouts --write-normalized-spec` 时，才会真实改 slide.layout，并写出 normalized JSON。
+- 生成器不会自动修改 `slide.layout`；如需调整页面类型，必须手动编辑 JSON。
 
 ### 13. 自适应排版和几何工具
 

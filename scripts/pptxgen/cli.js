@@ -8,6 +8,10 @@ const { layoutCapacityMarkdown, layoutCapacityMarkdownForSpec, writeLayoutCapaci
 
 async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
+  if (args.unsupportedFlags?.length) {
+    fail(args.unsupportedFlags.join(', ') + ' is no longer supported. Edit slide.layout in the JSON manually; the generator never changes layout automatically.');
+  }
+
   if (args.capacityGuide) {
     if (args.spec) {
       const planPath = path.resolve(args.spec);
@@ -24,7 +28,7 @@ async function main(argv = process.argv.slice(2)) {
   }
 
   if (!args.sample && !args.spec) {
-    fail('Usage: node scripts/generate-pptx.js --spec deck.json --out deck.pptx\n       node scripts/generate-pptx.js --spec deck.json --out deck.pptx --diversify-layouts --write-normalized-spec deck.normalized.json\n       node scripts/generate-pptx.js --capacity-guide --spec deck.plan.json --out outputs/deck-capacity.md\n       node scripts/generate-pptx.js --capacity-guide cmb --out outputs/cmb-capacity.md\n       node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx');
+    fail('Usage: node scripts/generate-pptx.js --spec deck.json --out deck.pptx\n       node scripts/generate-pptx.js --capacity-guide --spec deck.plan.json --out outputs/deck-capacity.md\n       node scripts/generate-pptx.js --capacity-guide cmb --out outputs/cmb-capacity.md\n       node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx');
   }
 
   const specPath = args.spec ? path.resolve(args.spec) : null;
@@ -33,7 +37,7 @@ async function main(argv = process.argv.slice(2)) {
   const spec = args.sample ? sampleSpec(args.sampleStyle) : loadSpecFile(specPath);
 
   const normalizedSpecPath = args.writeNormalizedSpec ? path.resolve(args.writeNormalizedSpec) : null;
-  normalizeSpec(spec, { diversifyLayouts: !!args.diversifyLayouts, writeNormalizedSpec: normalizedSpecPath, specDir });
+  normalizeSpec(spec, { writeNormalizedSpec: normalizedSpecPath, specDir });
   if (normalizedSpecPath) writeNormalizedSpec(spec, normalizedSpecPath);
   await buildDeck(spec, specDir, outPath);
 }

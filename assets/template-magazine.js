@@ -47,7 +47,7 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
    - shared rich layouts: agenda, caseStudy, pyramid, radial, roadmap, swimlane
    - multi-item pages auto-adapts column count; set columnsCount only when fixed columns are required
    - avoid long runs of the same layout; rotate page types for visual variety
-   - repeated layouts only emit suggestions by default; use --diversify-layouts --write-normalized-spec to change layout and sync JSON
+   - repeated layouts only emit suggestions; change layout manually in JSON when visual variety is needed
    - every card/point should include body/desc/note; title-only pages trigger warnings
    - closing     收束页
    ============================================================================ */
@@ -240,5 +240,3 @@ async function main() {
   console.log(`  node scripts/validate-pptx-native.js "${outFile}"`);
   console.log(`  node scripts/validate-pptx-layout.js "${outFile}"`);
 }
-
-

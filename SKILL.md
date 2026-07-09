@@ -101,11 +101,7 @@ npm run sample:cmb:layouts
 npm run sample:cmb:max-text
 ```
 
-使用自动布局多样化时，写出规范化后的规格文件：
-
-```bash
-node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx --diversify-layouts --write-normalized-spec outputs/deck.normalized.json
-```
+布局只能通过 JSON 中每页的 `layout` 字段手动修改；生成器不会自动改写 layout。
 
 从 JSON 生成 Markdown 大纲：
 

@@ -265,15 +265,7 @@ bar, column, line, pie, doughnut, area, radar, scatter
 
 CMB 高密度纯文本页可使用 `briefing` 和 `textWeave`；需要编号分点时，应在 JSON 中显式写入 `points` / `bullets` / `list` 数组，生成器按数组顺序编号渲染，不会自动把一段正文拆句。若估算超出容量则输出 warning。
 
-规划 deck 时应避免连续 3 页以上使用同一 layout 或同一视觉节奏。生成器默认只输出重复 layout 的替换建议，不会擅自修改输入 JSON，保证 JSON 与 PPTX 一致。
-
-如果确实要自动改 layout，必须同时使用：
-
-```bash
-node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx --diversify-layouts --write-normalized-spec outputs/deck.normalized.json
-```
-
-后续应以 normalized JSON 作为真实源文件。
+规划 deck 时应避免连续 3 页以上使用同一 layout 或同一视觉节奏。生成器只输出重复 layout 的替换建议，不会修改输入 JSON；layout 只能通过编辑 JSON 中每页的 `layout` 字段手动调整。
 
 ## 推荐开发检查流程
 
@@ -301,4 +293,4 @@ node scripts/validate-pptx-layout.js assets/outputs/deck-cmb-all-layouts.pptx
 - 这是原生 PPTX 生成器，不承诺跨 PowerPoint/WPS/Keynote 的像素级一致。
 - PowerPoint 与 WPS 的字体渲染可能不同，长文本仍建议拆页或减少分点。
 - 后置插入的 `blocks`、`charts`、`tables` 若缺少显式 `x/y/w/h` 会被跳过并打印 warning，避免与正文重叠。
-- 自动 layout 多样化会改变页面类型，必须配合 `--write-normalized-spec` 使用。
+- layout 不会被生成器自动修改；如需调整页面类型，必须手动编辑 JSON 中对应页的 `layout` 字段。

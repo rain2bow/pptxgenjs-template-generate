@@ -14,7 +14,7 @@ function parseArgs(argv) {
       const next = argv[i + 1];
       result.capacityGuide = next && !next.startsWith('--') ? argv[++i] : true;
     }
-    else if (a === '--diversify-layouts') result.diversifyLayouts = true;
+    else if (a === '--diversify-layouts') (result.unsupportedFlags ||= []).push(a);
     else if (a === '--write-normalized-spec') result.writeNormalizedSpec = argv[++i];
     else if (a === '--help' || a === '-h') result.help = true;
   }
