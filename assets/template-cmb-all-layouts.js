@@ -15,6 +15,13 @@ function item(n, title = pointTitles[(n - 1) % pointTitles.length]) {
   };
 }
 
+function captionItem(n, title = pointTitles[(n - 1) % pointTitles.length]) {
+  return {
+    icon: ['image', 'chart-line', 'scan-search', 'file-text', 'database', 'target'][n % 6],
+    label: `0${n}`,
+    caption: title,
+  };
+}
 function pointItem(n, title = pointTitles[(n - 1) % pointTitles.length]) {
   return {
     ...item(n, title),
@@ -65,9 +72,9 @@ const deckSpec = {
     { layout: 'chart', kicker: '图表页', title: '单一主图表与右侧洞察', chart: chart('客户活跃趋势', 'line'), insights: [item(1, '活跃'), item(2, '转化'), item(3, '留存')] },
     { layout: 'dataSheet', kicker: '数据表', title: '可编辑表格与侧边说明', table: table(), notes: [item(1, '负责人'), item(2, '节奏'), item(3, '风险')] },
     { layout: 'media', kicker: '媒体页', title: '媒体区域与侧边解释', body: '媒体槽位可承载图表、图片或图片占位符。', chart: chart('媒体区图表', 'bar'), items: [item(1, '信号'), item(2, '行动'), item(3, '复盘')] },
-    { layout: 'mediaGrid', kicker: '媒体网格', title: '自适应媒体网格', captions: [item(1, '槽位一'), item(2, '槽位二'), item(3, '槽位三'), item(4, '槽位四')], charts: [chart('图表一'), chart('图表二', 'line'), chart('图表三', 'doughnut'), chart('图表四', 'column')] },
-    { layout: 'gallery', kicker: '图片集', title: '图库别名页面', captions: [item(1, '图片一'), item(2, '图片二'), item(3, '图片三')], charts: [chart('图库一'), chart('图库二', 'line'), chart('图库三', 'doughnut')] },
-    { layout: 'imageGrid', kicker: '图片网格', title: '图片网格兼容页面', captions: [item(1, '证据一'), item(2, '证据二'), item(3, '证据三'), item(4, '证据四')], charts: [chart('证据一'), chart('证据二', 'line'), chart('证据三', 'doughnut'), chart('证据四', 'column')] },
+    { layout: 'mediaGrid', kicker: '媒体网格', title: '自适应媒体网格', captions: [captionItem(1, '槽位一'), captionItem(2, '槽位二'), captionItem(3, '槽位三'), captionItem(4, '槽位四')], charts: [chart('图表一'), chart('图表二', 'line'), chart('图表三', 'doughnut'), chart('图表四', 'column')] },
+    { layout: 'gallery', kicker: '图片集', title: '图库别名页面', captions: [captionItem(1, '图片一'), captionItem(2, '图片二'), captionItem(3, '图片三')], charts: [chart('图库一'), chart('图库二', 'line'), chart('图库三', 'doughnut')] },
+    { layout: 'imageGrid', kicker: '图片网格', title: '图片网格兼容页面', captions: [captionItem(1, '证据一'), captionItem(2, '证据二'), captionItem(3, '证据三'), captionItem(4, '证据四')], charts: [chart('证据一'), chart('证据二', 'line'), chart('证据三', 'doughnut'), chart('证据四', 'column')] },
     { layout: 'imageHero', kicker: '主视觉媒体', title: '大图媒体与指标组合', body: '上方区域保留给关键证据图片或图表。', chart: chart('关键证据', 'area'), items: [metric('触达', '46%'), metric('信任度', '91'), metric('时效', '2.4h')] },
     { layout: 'quoteImage', allowEmptyMediaSlots: true, kicker: '引用图片', title: '引用图片兼容页面', quote: '当信号、服务和风险形成协同，客户价值会持续累积。', body: '主视觉媒体区域仍保持可编辑。' },
     { layout: 'textImage', allowEmptyMediaSlots: true, kicker: '图文页', title: '图文兼容页面', body: '没有图片时，本页可作为清爽的高密度观点页使用。' },

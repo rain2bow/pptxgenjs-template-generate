@@ -21,7 +21,7 @@ const COMMON_GUIDE = {
   radial: collectionSlots('items', 'radial node', 4, 8, 3, 12, 8, 32),
   pyramid: collectionSlots('layers', 'pyramid layer', 3, 5, 3, 12, 8, 35),
   swimlane: collectionSlots('lanes', 'swimlane lane', 2, 4, 4, 16, 8, 36),
-  media: slots([['title', 'page title', 8, 32], ['body', 'media body', 20, 80], ['items[].title', 'side point title', 4, 14], ['items[].body', 'side point body', 12, 45], ['insights[].body', 'side insight body', 12, 45], ['points[].body', 'side point body', 12, 45]]),
+  media: slots([['title', 'page title', 8, 32], ['body', 'media body', 20, 80], ['summary', 'media body alias', 20, 80], ['items[].title', 'side point title', 4, 14], ['items[].body', 'side point body', 12, 45], ['insights[].body', 'side insight body', 12, 45], ['points[].body', 'side point body', 12, 45]]),
   chart: slots([['title', 'page title', 8, 32], ['insights[].title', 'chart insight title', 4, 14], ['insights[].body', 'chart insight body', 12, 48], ['notes[].body', 'chart note body', 12, 48]]),
   dataSheet: slots([['title', 'page title', 8, 32], ['notes[].title', 'side note title', 4, 14], ['notes[].body', 'side note body', 10, 42], ['insights[].body', 'side insight body', 10, 42]]),
   dashboard: slots([['title', 'page title', 8, 32], ['metrics[].label', 'metric label', 2, 10], ['metrics[].value', 'metric value', 1, 8]]),
@@ -30,7 +30,7 @@ const COMMON_GUIDE = {
   compare: slots([['title', 'page title', 8, 32], ['before.title', 'left title', 4, 18], ['after.title', 'right title', 4, 18], ['before.items[].body', 'left item body', 8, 36], ['after.items[].body', 'right item body', 8, 36]]),
   duoCompare: null,
   splitCompare: null,
-  caseStudy: slots([['title', 'page title', 8, 32], ['caseTitle', 'case title', 6, 26], ['body', 'case body', 25, 90], ['metrics[].note', 'case metric note', 6, 28]]),
+  caseStudy: slots([['title', 'page title', 8, 32], ['caseTitle', 'case title', 6, 26], ['body', 'case body', 25, 90], ['summary', 'case body alias', 25, 90], ['metrics[].note', 'case metric note', 6, 28]]),
 };
 COMMON_GUIDE.duoCompare = COMMON_GUIDE.compare;
 COMMON_GUIDE.splitCompare = COMMON_GUIDE.compare;

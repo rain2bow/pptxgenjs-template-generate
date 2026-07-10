@@ -115,6 +115,7 @@ node scripts/spec-to-md.js --spec path/to/deck.json --out outputs/deck-outline.m
 
 - 顶层字段：`style`、`theme`、`title`、`subtitle`、`author`、`company`、`slides`。
 - 幻灯片级字段：`layout`、`kicker`、`title`、`subtitle`、`body`、`summary`、`conclusion`。
+- `summary` 在 `media`、`caseStudy` 和 CMB `briefing` 中会作为正文/摘要显示；如果同页同时写 `body` 和 `summary`，优先渲染 `body`。
 - 集合字段：`sections`、`items`、`columns`、`steps`、`nodes`、`layers`、`lanes`、`metrics`。
 - 媒体和数据字段：`image`、`images`、`media`、`captions`、`chart`、`charts`、`table`。
 - 备注字段：`speakerNotes`、`speaker_notes`、`presenterNotes`、`presenter_notes`。
@@ -123,6 +124,8 @@ node scripts/spec-to-md.js --spec path/to/deck.json --out outputs/deck-outline.m
 ## 布局选择
 
 先按 `style` 选择布局。同名 layout 在不同 style 下会尽量兼容字段，但视觉结构和容量不一定完全相同；不要假设直接切换 style 后仍适合原来的文本密度。写 JSON 前始终运行对应 style 的 `--capacity-guide`。
+
+生成器会按 layout 校验已填写字段是否实际渲染，也会校验主要内容字段是否缺失。不要向某个 layout 填写容量指南或样例中没有的正文槽位；如果确实需要这些字段，应改 `layout` 或按样例字段名重写。
 
 通用基础页面：
 

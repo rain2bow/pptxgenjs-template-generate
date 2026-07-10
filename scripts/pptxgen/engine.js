@@ -554,6 +554,7 @@ function cmbStatement(slide, ctx, s) {
   slide.addText(data.kicker || '核心摘要', { x: 1.05, y: headY, w: 5.8, h: 0.24, fontFace: FONTS.sans, fontSize: 8, bold: true, charSpace: 1.1, color: ctx.theme.accent, margin: 0, fit: 'shrink' });
   slide.addText(data.title || '', { x: 1.02, y: headY + 0.48, w: 6.85, h: 1.58, fontFace: FONTS.sansZh, fontSize: fitTitle(data.title || '', 34, 26), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
   if (data.body || data.subtitle) slide.addText(data.body || data.subtitle, { x: 1.05, y: headY + 2.42, w: 6.45, h: 1.1, fontFace: FONTS.sansZh, fontSize: 14.2, color: s.fg, transparency: 14, margin: 0, fit: 'shrink', valign: 'top' });
+  if (data.callout) addCallout(slide, data.callout, 1.05, headY + 3.68, 6.45, 0.68, s.fg, ctx.theme.paperTint || ctx.theme.grey1);
   addStatementImageSlot(slide, ctx, { x: 8.05, y: headY + 1.72, w: 3.85, h: 3.0 }, ctx.theme.accent, data.imageLabel || '图片占位');
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -1347,7 +1348,7 @@ function magazineMedia(slide, ctx, s) {
   const data = ctx.slideSpec;
   addPageHead(slide, data, s.fg, 'magazine', 0.88);
   const mediaBox = { x: 6.95, y: 2.2, w: 5.05, h: 3.6 };
-  slide.addText(data.body || data.story || data.note || '', { x: 0.78, y: 2.55, w: 5.35, h: 1.18, fontFace: FONTS.sansZh, fontSize: 13.2, color: s.fg, transparency: 16, margin: 0.03, fit: 'shrink', valign: 'top' });
+  slide.addText(data.body || data.summary || data.story || data.note || '', { x: 0.78, y: 2.55, w: 5.35, h: 1.18, fontFace: FONTS.sansZh, fontSize: 13.2, color: s.fg, transparency: 16, margin: 0.03, fit: 'shrink', valign: 'top' });
   const items = normalizeSections(data.items || data.insights || data.points || []).slice(0, 3);
   items.forEach((item, i) => {
     const y = 4.0 + i * 0.58;
@@ -1401,7 +1402,7 @@ function magazineBigQuote(slide, ctx, s) {
   const data = ctx.slideSpec;
   slide.addText(data.kicker || 'Quote', { x: 0.78, y: 1.15, w: 4, h: 0.3, fontFace: FONTS.mono, fontSize: 8.5, charSpace: 2, color: s.fg, transparency: 35, margin: 0 });
   slide.addText(data.quote || data.title, { x: 0.78, y: 1.85, w: 10.2, h: 2.25, fontFace: FONTS.serifZh, fontSize: fitTitle(data.quote || data.title, 38, 27), bold: true, color: s.fg, margin: 0, fit: 'shrink' });
-  slide.addText(data.body || data.cite || '', { x: 0.82, y: 4.55, w: 7.2, h: 0.6, fontFace: FONTS.serifZh, fontSize: 16, color: s.fg, transparency: 30, margin: 0, fit: 'shrink' });
+  slide.addText(data.body || data.cite || data.source || '', { x: 0.82, y: 4.55, w: 7.2, h: 0.6, fontFace: FONTS.serifZh, fontSize: 16, color: s.fg, transparency: 30, margin: 0, fit: 'shrink' });
   addFoot(slide, ctx, s.fg, 'magazine');
 }
 
@@ -1601,7 +1602,7 @@ function magazineCaseStudy(slide, ctx, s) {
   addMediaOrChart(slide, ctx, data, { x: 0.78, y: 2.35, w: 5.5, h: 3.45 }, s, 'magazine', 'CASE');
   addCaption(slide, data.caption || data.image?.caption, 0.78, 5.92, 5.5, s.fg, 'magazine');
   slide.addText(data.caseTitle || data.label || 'Case', { x: 6.75, y: 2.35, w: 4.95, h: 0.5, fontFace: FONTS.serifZh, fontSize: 22, bold: true, color: s.fg, margin: 0, fit: 'shrink' });
-  slide.addText(data.body || data.story || '', { x: 6.78, y: 3.05, w: 4.95, h: 1.15, fontFace: FONTS.sansZh, fontSize: 11, color: s.fg, transparency: 18, margin: 0.03, fit: 'shrink', valign: 'top' });
+  slide.addText(data.body || data.summary || data.story || '', { x: 6.78, y: 3.05, w: 4.95, h: 1.15, fontFace: FONTS.sansZh, fontSize: 11, color: s.fg, transparency: 18, margin: 0.03, fit: 'shrink', valign: 'top' });
   const metrics = (data.metrics || data.items || []).slice(0, 3);
   metrics.forEach((item, i) => {
     const x = 6.78 + i * 1.72;
@@ -1753,6 +1754,7 @@ function swissStatement(slide, ctx, s) {
   if (data.body || data.subtitle) {
     slide.addText(data.body || data.subtitle, { x: 0.72, y: headY + 3.22, w: 5.9, h: 0.95, fontFace: FONTS.sansZh, fontSize: 15.5, color: s.fg, transparency: 20, margin: 0, fit: 'shrink', valign: 'top' });
   }
+  if (data.callout) addCallout(slide, data.callout, 0.72, headY + 4.35, 5.9, 0.58, s.fg, ctx.theme.grey1 || ctx.theme.paperTint);
   addStatementImageSlot(slide, ctx, { x: 7.38, y: headY + 0.74, w: 4.25, h: 3.65 }, s.fg, data.imageLabel || '图片占位');
   addFoot(slide, ctx, s.fg, 'swiss');
 }
@@ -2142,7 +2144,7 @@ function swissCaseStudy(slide, ctx, s) {
   slide.addText(data.title || '', { x: 1.06, y: 1.15, w: 4.25, h: 0.55, fontFace: FONTS.sans, fontSize: 24, color: ctx.theme.ink, margin: 0, fit: 'shrink' });
   slide.addShape(pptx.ShapeType.rect, { x: 0, y: 3.25, w: SLIDE.w, h: 4.25, fill: { color: ctx.theme.paper }, line: { color: ctx.theme.paper, transparency: 100 } });
   slide.addText(data.caseTitle || data.label || 'Case', { x: 0.78, y: 3.85, w: 4.8, h: 0.42, fontFace: FONTS.sansZh, fontSize: 19, bold: true, color: ctx.theme.ink, margin: 0, fit: 'shrink' });
-  slide.addText(data.body || data.story || data.subtitle || '', { x: 0.78, y: 4.42, w: 4.8, h: 0.78, fontFace: FONTS.sansZh, fontSize: 11, color: ctx.theme.ink, transparency: 15, margin: 0, fit: 'shrink' });
+  slide.addText(data.body || data.summary || data.story || data.subtitle || '', { x: 0.78, y: 4.42, w: 4.8, h: 0.78, fontFace: FONTS.sansZh, fontSize: 11, color: ctx.theme.ink, transparency: 15, margin: 0, fit: 'shrink' });
   const metrics = (data.metrics || data.items || []).slice(0, 3);
   metrics.forEach((item, i) => {
     const x = 6.25 + i * 2.0;
@@ -2249,7 +2251,7 @@ function swissSectionCompat(slide, ctx, s) {
 
 function swissBigQuoteCompat(slide, ctx, s) {
   const data = ctx.slideSpec;
-  swissStatement(slide, { ...ctx, slideSpec: { ...data, title: data.quote || data.title, body: data.body || data.cite || data.subtitle || '' } }, s);
+  swissStatement(slide, { ...ctx, slideSpec: { ...data, title: data.quote || data.title, body: data.body || data.cite || data.source || data.subtitle || '' } }, s);
 }
 
 function swissQuoteImageCompat(slide, ctx, s) {
@@ -2282,7 +2284,7 @@ function swissMedia(slide, ctx, s) {
   addMediaOrChart(slide, ctx, data, mediaBox, s, 'swiss', 'MEDIA');
   const panelX = 7.42;
   const summaryH = isCmb ? 0.78 : 0.72;
-  slide.addText(data.body || data.story || data.note || '', { x: panelX, y: contentTop + 0.05, w: 4.65, h: summaryH, fontFace: FONTS.sansZh, fontSize: isCmb ? 12 : 11.7, color: s.fg, transparency: 15, margin: 0.03, fit: 'shrink', valign: 'top' });
+  slide.addText(data.body || data.summary || data.story || data.note || '', { x: panelX, y: contentTop + 0.05, w: 4.65, h: summaryH, fontFace: FONTS.sansZh, fontSize: isCmb ? 12 : 11.7, color: s.fg, transparency: 15, margin: 0.03, fit: 'shrink', valign: 'top' });
   const sideLimit = isCmb ? 4 : 5;
   const items = normalizeSections(data.items || data.insights || data.points || []).slice(0, sideLimit);
   const itemStartY = contentTop + summaryH + (isCmb ? 0.2 : 0.18);
@@ -3020,23 +3022,36 @@ function validateSpecSlots(spec, options = {}) {
   const warnings = [];
   spec.slides.forEach((slide, index) => {
     validateTextFieldTypes(slide, index, errors);
+    validateSlideScalarFields(slide, index, spec.style, errors);
+    validateRequiredSlideFields(slide, index, spec.style, errors);
     validateMediaSlots(slide, index, errors, warnings, options.specDir || process.cwd());
     validateTextSlots(slide, index, spec.style, errors, warnings);
     validateRenderableDataBlocks(slide, index, errors);
     validateThinContent(slide, index, errors);
   });
   if (errors.length) {
-    fail(`Spec slot validation failed:\n- ${errors.join('\n- ')}`);
+    fail(`Spec slot validation failed:\n- ${errors.join('\n- ')}\n\n${VALIDATION_FORMAT_HINT}`);
   }
   warnings.forEach((message) => console.warn(message));
 }
+
+const VALIDATION_FORMAT_HINT = 'Check the sample JSON format in SKILL.md / README.md / assets/template-cmb-all-layouts.js, or run: node scripts/generate-pptx.js --capacity-guide --spec path/to/plan.json --out outputs/capacity.md';
 
 const SCALAR_TEXT_FIELD_NAMES = new Set([
   'kicker', 'title', 'subtitle', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'story',
   'conclusion', 'takeaway', 'footerSummary', 'nextStep', 'lead', 'callout',
   'quote', 'cite', 'source', 'caseTitle', 'summaryTitle', 'leadTitle', 'focusTitle',
+  'conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle',
   'label', 'value', 'unit', 'metric', 'name', 'caption',
 ]);
+
+const SLIDE_CONTENT_SCALAR_FIELDS = [
+  'kicker', 'title', 'subtitle', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'story',
+  'conclusion', 'takeaway', 'footerSummary', 'nextStep', 'lead', 'callout',
+  'quote', 'cite', 'source', 'caseTitle', 'summaryTitle', 'leadTitle', 'focusTitle',
+  'conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle',
+  'label', 'value', 'unit', 'metric', 'name', 'caption',
+];
 
 function validateTextFieldTypes(value, index, errors, pathName = 'slide', depth = 0) {
   if (!value || typeof value !== 'object' || depth > 5) return;
@@ -3063,6 +3078,75 @@ function isOpaqueValidationObject(key) {
   return key === 'chart' || key === 'table' || key === 'speakerNotes';
 }
 
+function validateSlideScalarFields(slide, index, style, errors) {
+  const layout = slide.layout || defaultLayoutForStyle(style);
+  const allowed = allowedScalarFieldsForLayout(style, layout);
+  const filled = SLIDE_CONTENT_SCALAR_FIELDS.filter((key) => Object.prototype.hasOwnProperty.call(slide, key) && hasMeaningfulValue(slide[key]));
+  const ignored = filled.filter((key) => !allowed.has(key));
+  if (ignored.length) {
+    errors.push(`slide ${index + 1} layout "${layout}" does not render field(s): ${ignored.join(', ')}. Remove them, rename them to fields supported by this layout, or change slide.layout.`);
+  }
+}
+
+function validateRequiredSlideFields(slide, index, style, errors) {
+  const layout = slide.layout || defaultLayoutForStyle(style);
+  const groups = requiredScalarGroupsForLayout(style, layout);
+  groups.forEach((group) => {
+    if (group.skipWhen?.(slide)) return;
+    if (group.allowSparse && slide.allowSparseContent) return;
+    if (!group.keys.some((key) => hasMeaningfulValue(slide[key]))) {
+      errors.push(`slide ${index + 1} layout "${layout}" is missing required field: ${group.keys.join(' or ')}. ${group.reason || 'Fill the required content field or change slide.layout.'}`);
+    }
+  });
+}
+
+function defaultLayoutForStyle(style) {
+  return style === 'magazine' ? 'textImage' : 'statement';
+}
+
+function hasMeaningfulValue(value) {
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number' || typeof value === 'boolean') return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.keys(value).length > 0;
+  return false;
+}
+
+function allowedScalarFieldsForLayout(style, layout) {
+  const common = ['kicker', 'title', 'subtitle'];
+  const set = new Set(common);
+  const add = (...keys) => keys.forEach((key) => set.add(key));
+  const isCmb = style === 'cmb';
+  if (['cover', 'section', 'closing'].includes(layout)) add('body');
+  else if (layout === 'statement') add('body', 'callout');
+  else if (layout === 'bigQuote') add('quote', 'body', 'cite', 'source');
+  else if (layout === 'quoteImage') add('quote', 'body', 'cite', 'source', 'callout', 'caption');
+  else if (layout === 'textImage') add('body', 'callout', 'caption');
+  else if (layout === 'media') add('body', 'summary', 'story', 'note', 'caption');
+  else if (layout === 'caseStudy') add('caseTitle', 'label', 'body', 'summary', 'story', 'caption');
+  else if (layout === 'imageHero') add('body');
+  else if (layout === 'dataSheet' && style === 'magazine') add('body');
+  else if (layout === 'pyramid') add('body', 'note');
+  else if (['article', 'sectionList', 'briefing', 'executiveBrief', 'contentBrief'].includes(layout) && isCmb) {
+    add('summary', 'body', 'lead', 'summaryTitle', 'leadTitle', 'focusTitle', 'conclusion', 'takeaway', 'footerSummary', 'nextStep', 'conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle');
+  } else if (['article', 'briefing', 'executiveBrief', 'contentBrief'].includes(layout) && style === 'magazine') {
+    add('callout');
+  }
+  return set;
+}
+
+function requiredScalarGroupsForLayout(style, layout) {
+  const titleKeys = ['bigQuote', 'quoteImage'].includes(layout) ? ['title', 'quote'] : ['title'];
+  const groups = [{ keys: titleKeys, reason: 'Every slide should have a visible title or primary headline.' }];
+  if (layout === 'statement') groups.push({ keys: ['body', 'subtitle'], allowSparse: true, reason: 'Statement slides need supporting text unless this is an intentional sparse draft.' });
+  if (layout === 'textImage') groups.push({ keys: ['body'], reason: 'textImage renders its main paragraph from body.' });
+  if (layout === 'bigQuote') groups.push({ keys: ['quote', 'title'], reason: 'bigQuote needs quote or title as the large quote text.' });
+  if (layout === 'media') groups.push({ keys: ['body', 'summary', 'story', 'note', 'items', 'insights', 'points'], allowSparse: true, reason: 'media needs a summary/body or side point collection in addition to the media area.' });
+  if (layout === 'caseStudy') groups.push({ keys: ['body', 'summary', 'story', 'subtitle'], allowSparse: true, reason: 'caseStudy needs case narrative text.' });
+  if (layout === 'imageHero') groups.push({ keys: ['body', 'subtitle'], allowSparse: true, reason: 'imageHero needs a short body/subtitle under the hero media.' });
+  return groups;
+}
 function validateMediaSlots(slide, index, errors, warnings, specDir) {
   const layout = slide.layout || '';
   if (!MEDIA_SLOT_LAYOUTS.has(layout)) {

@@ -226,6 +226,11 @@ CMB 风格使用技能内置 logo 资源：
 }
 ```
 
+字段兼容规则：
+
+- `summary` 在 `media`、`caseStudy` 和 CMB `briefing` 中作为正文/摘要别名显示；同页同时有 `body` 和 `summary` 时优先使用 `body`。
+- 生成器会按 layout 校验顶层正文/说明字段；如果 JSON 填写了该 layout 不渲染的字段，或缺少该 layout 的主内容字段，会直接报错并提示查看样例格式/容量指南。
+
 JSON 引号与编码规则：
 
 - 文件统一使用 UTF-8。
