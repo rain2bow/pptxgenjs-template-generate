@@ -375,6 +375,8 @@ function validatePlanScalars(layout, layoutGuide, slide, index, errors) {
         errors.push('slide ' + (index + 1) + ' layout "' + layout + '" does not render media field "' + key + '". Remove it or choose a media layout before generating capacity-guide.');
       }
     });
+  } else if (!planHasMediaOrChart(slide)) {
+    errors.push('slide ' + (index + 1) + ' layout "' + layout + '" requires image/images/media/gallery or chart/charts in deck.plan.json. mediaCount/imageSlots/allowEmptyMediaSlots are not enough because the page would start with an unfilled media slot.');
   }
   const allowed = new Set(['layout', 'title', 'kicker', 'subtitle', 'theme', 'style', 'mediaCount', 'imageSlots', 'slotCount', 'allowEmptyMediaSlots', 'allowSparseContent', 'allowMissingChart', 'allowMissingTable']);
   ['image', 'images', 'gallery', 'media', 'chart', 'charts', 'table', 'before', 'after', 'left', 'right'].forEach((key) => allowed.add(key));
@@ -395,6 +397,19 @@ function validatePlanScalars(layout, layoutGuide, slide, index, errors) {
 
 function planLayoutHasMediaSlot(layout) {
   return ['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy'].includes(layout || '');
+}
+
+function planHasMediaOrChart(slide) {
+  return ['image', 'images', 'media', 'gallery', 'chart', 'charts'].some((key) => hasPlanAssetValue(slide[key]));
+}
+
+function hasPlanAssetValue(value) {
+  if (value === undefined || value === null) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number' || typeof value === 'boolean') return true;
+  if (Array.isArray(value)) return value.some((item) => hasPlanAssetValue(item));
+  if (typeof value === 'object') return Object.keys(value).length > 0;
+  return false;
 }
 
 function plannedSlideCapacity(style, slide, index) {

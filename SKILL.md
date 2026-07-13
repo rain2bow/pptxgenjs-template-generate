@@ -43,7 +43,7 @@ description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 Powe
 ## 工作流程
 
 1. 选择样式和主题。如果用户没有指定样式，招商银行或银行类需求使用 `cmb`，数据/产品/战略类演示使用 `swiss`，编辑叙事类演示使用 `magazine`。
-2. 先根据用户输入创建标题级规划文件 `deck.plan.json`。该文件只写结构，不写正文：顶层写 `style`、`theme`、`title`、`slides`；每页写 `layout`、`title`；有分点、卡片、步骤或节点时，只写对应集合项的 `title` 或 `label`，不要写 `body` 正文。
+2. 先根据用户输入创建标题级规划文件 `deck.plan.json`。该文件只写结构，不写正文：顶层写 `style`、`theme`、`title`、`slides`；每页写 `layout`、`title`；有分点、卡片、步骤或节点时，只写对应集合项的 `title` 或 `label`，不要写 `body` 正文。如果选择媒体槽位 layout，必须在 plan 中已经提供 `image`、`images`、`media`、`gallery`、`chart` 或 `charts`，只写 `mediaCount`、`imageSlots` 或 `allowEmptyMediaSlots` 不算有效素材。
 3. 根据 `deck.plan.json` 生成真实容量指南。该指南只包含已规划页面，并按每页 layout、卡片数量、分点数量估算每个可填字段的容量：
 
    ```bash
