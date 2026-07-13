@@ -20,7 +20,7 @@ scripts/generate-pptx.js
     -> spec-io.writeNormalizedSpec()          # only when requested
     -> engine.buildDeck()
       -> renderByStyle()
-        -> renderMagazine() / renderSwiss() / renderCmb()
+        -> templates/magazine.js / templates/swiss.js / templates/cmb.js
           -> concrete layout renderer
           -> renderDataBlocks()
 ```
@@ -93,7 +93,8 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 - `STYLE_ORDER`
 - `DEFAULT_THEMES`
 - `THEMES[style]`
-- `engine.js` 的 `renderByStyle()` 和对应 `renderXxx()`
+- `engine.js` 的 `getTemplateRenderers()`
+- `scripts/pptxgen/templates/<style>.js`
 - `samples.js` 的 `sampleSpec(style)`
 
 ### `spec-io.js`
@@ -151,7 +152,7 @@ Layout 字数容量指南和 JSON 预检 warning。
 
 ## `engine.js` 核心结构
 
-`engine.js` 仍然较长，因为它承载了真正的 PowerPoint 原生渲染逻辑。阅读时建议按下面的分区看。
+`engine.js` 保留生成主流程、spec 校验、图片/图表/文本/图标等共用能力。具体模板设计和 layout 渲染放在 `templates/` 目录；新增或修改某个 style 时，优先只改对应模板文件。
 
 ### 1. 顶部依赖和运行时缓存
 
@@ -201,11 +202,13 @@ Layout 字数容量指南和 JSON 预检 warning。
 核心函数：
 
 - `renderByStyle(style, slide, ctx)`
-- `renderMagazine(slide, ctx)`
-- `renderSwiss(slide, ctx)`
-- `renderCmb(slide, ctx)`
+- `templates/magazine.js`
+- `templates/swiss.js`
+- `templates/cmb.js`
 
-`renderByStyle()` 是 style 分发入口。新增 style 时，要在这里注册新 renderer。
+`renderByStyle()` 是 style 分发入口。新增 style 时，要新增 `templates/<style>.js`，并在 `getTemplateRenderers()` 注册 renderer。
+
+模板文件之间不互相 `require`。即使某些 layout 代码相似，也应复制到对应模板文件内，避免修改一个模板时影响另一个模板。
 
 每个 `renderXxx()` 的基本模式一致：
 
@@ -216,7 +219,7 @@ Layout 字数容量指南和 JSON 预检 warning。
 5. 调用对应 renderer。
 6. 调用 `renderDataBlocks()` 插入后置 block/chart/table。
 
-CMB 当前复用了大量 Swiss layout renderer，只对 CMB 独有背景、页眉、封面、statement、closing 做独立实现。
+CMB 内部保留了与 Swiss 相似的 layout 代码副本，但运行时不依赖 Swiss 模板文件。这样修改 CMB 不会影响 Swiss，修改 Swiss 也不会影响 CMB。
 
 ### 4. 背景、页眉、品牌和图片基础能力
 
@@ -521,8 +524,8 @@ CMB 继续复用 Swiss renderer 的 layout：
 1. 在 `config.js` 中新增 `THEMES[newStyle]`。
 2. 把新 style 加入 `STYLE_ORDER`。
 3. 在 `DEFAULT_THEMES` 中设置默认 theme。
-4. 在 `engine.js` 中新增 `renderNewStyle(slide, ctx)`。
-5. 在 `renderByStyle()` 的 `renderers` map 中注册新 style。
+4. 新增 `scripts/pptxgen/templates/newStyle.js`，导出 `createNewStyleTemplate(api)`。
+5. 在 `engine.js` 的 `getTemplateRenderers()` 中 require 并注册新 style。
 6. 复用已有 layout renderer，或新增独立 layout renderer。
 7. 在 `samples.js` 中增加 `sampleSpec(newStyle)` 分支。
 8. 增加或更新 `assets/template-new-style.js`。
@@ -543,8 +546,8 @@ node scripts/validate-pptx-layout.js outputs/sample-new-style.pptx
 ## 新增 layout 的推荐步骤
 
 1. 选择目标 style：`magazine`、`swiss`、`cmb`，或决定是否三者都支持。
-2. 在 `engine.js` 中新增具体 renderer，例如 `swissNewLayout()`。
-3. 在对应 `renderXxx()` 的 `renderers` map 中注册 `newLayout`。
+2. 在对应模板文件中新增具体 renderer，例如 `templates/swiss.js` 里的 `swissNewLayout()`。
+3. 在同一模板文件的 `renderXxx()` layout map 中注册 `newLayout`。
 4. 如果跨 style 兼容，给其他 style 注册兼容 renderer 或映射到相近 layout。
 5. 在 `validateTextSlots()` 的 `rules` 中新增该 layout 的字段名、最大数量、最小数量。
 6. 如果有媒体区，检查 `validateMediaSlots()` 的 `mediaLayouts` 是否需要加入该 layout。
@@ -558,5 +561,5 @@ node scripts/validate-pptx-layout.js outputs/sample-new-style.pptx
 - 修改主题或配色优先看 `config.js`。
 - 修改 JSON 解析问题优先看 `spec-io.js`。
 - 修改命令行参数优先看 `cli.js` 和 `spec-io.parseArgs()`。
-- 修改 layout 或渲染视觉问题才看 `engine.js`。
-- 若继续拆分 `engine.js`，建议下一步按 `styles/`、`renderers/`、`media/`、`validation/`、`geometry/` 分目录拆，而不是再引入一个更大的工具文件。
+- 修改单个 style 的 layout 或渲染视觉问题，优先看 `scripts/pptxgen/templates/<style>.js`。
+- 修改跨模板共用能力，例如图片、图表、校验、字体可读性，再看 `engine.js`。
