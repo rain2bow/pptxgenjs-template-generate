@@ -4,6 +4,7 @@ const specMd = require('./spec-md');
 const speakerNotes = require('./speaker-notes');
 const specIo = require('./spec-io');
 const textCapacity = require('./text-capacity');
+const docxImport = require('./docx-import');
 
 module.exports = {
   buildDeck,
@@ -13,4 +14,5 @@ module.exports = {
   ...speakerNotes,
   ...specIo,
   ...textCapacity,
+  ...docxImport,
 };

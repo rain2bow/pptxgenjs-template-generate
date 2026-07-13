@@ -20,6 +20,7 @@ pptxgenjs-template-generate/
 |-- package.json
 |-- scripts/
 |   |-- generate-pptx.js              # CLI and compatibility export entry
+|   |-- docx-to-pptx.js               # extract DOCX text/images into JSON/Markdown and processed assets
 |   |-- validate-pptx-native.js
 |   |-- validate-pptx-layout.js
 |   |-- check-media-slot-warnings.js
@@ -31,6 +32,7 @@ pptxgenjs-template-generate/
 |       |-- engine.js                 # PPTX rendering runtime and layout renderers
 |       |-- config.js                 # style/theme/font/icon/page constants
 |       |-- spec-io.js                # JSON loading, loose repair, normalized output
+|       |-- docx-import.js            # DOCX text/image/crop extraction helpers
 |       |-- spec-md.js                # user-facing Markdown outline renderer
 |       |-- speaker-notes.js          # speaker notes normalization and auto-generation
 |       |-- samples.js                # built-in --sample specs
@@ -53,11 +55,13 @@ pptxgenjs-template-generate/
 - `README.md`：面向仓库维护和使用者的概览文档，说明安装、运行、文件结构和当前能力边界。
 - `package.json`：Node 依赖和快捷命令入口，包含 `sample:*`、`validate:*` 等脚本命令。
 - `scripts/generate-pptx.js`: thin CLI and compatibility entry. Existing templates can still `require('../scripts/generate-pptx.js')` and call `buildDeck`.
+- `scripts/docx-to-pptx.js`：DOCX 提取入口，读取 Word 文档中的文本、图片、图片裁剪和显示尺寸，只输出 extracted JSON/Markdown 与已处理图片资产，不生成 PPT spec 或 PPTX。
 - `scripts/pptxgen/index.js`: public module export surface for `buildDeck`, `sampleSpec`, JSON parsing, and normalized spec helpers.
 - `scripts/pptxgen/cli.js`: CLI orchestration after arguments are parsed: load spec, normalize spec, write normalized spec, and build the deck.
 - `scripts/pptxgen/engine.js`: PPTX rendering runtime. Layout renderers, media/chart/table insertion, slot checks, and readability logic live here.
 - `scripts/pptxgen/config.js`: style/theme registry, default themes, unified font tokens, typography size tiers, slide constants, icon aliases, and readability constants. Add new style/theme configuration here first.
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose JSON repair, quote/comment/trailing-comma handling, and normalized spec output.
+- `scripts/pptxgen/docx-import.js`：DOCX 解析模块，提取段落文本、图片 block 顺序、inline/anchor 信息、`wp:extent` 显示尺寸、`a:srcRect` 裁剪参数，并用 `sharp` 输出与 Word 裁剪效果一致的 PNG 素材。
 - `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, media notes, and speaker notes.
 - `scripts/pptxgen/text-capacity.js`: emits plan-specific text capacity guides from title-only JSON plans, keeps legacy per-style guides, and warns when generated JSON fields exceed recommended ranges.
 - `scripts/pptxgen/speaker-notes.js`: normalizes explicit `speakerNotes` fields and can derive basic speaker notes from slide content when `generateSpeakerNotes` is enabled.
@@ -87,6 +91,8 @@ npm install
 主要依赖：
 
 - `pptxgenjs`：生成可编辑 `.pptx`
+- `jszip`：读取和改写 `.pptx` / `.docx` 包结构
+- `sharp`：将 SVG 和 DOCX 图片裁剪/缩放结果栅格化为 PNG
 - `lucide`：为分点、卡片、指标等元素提供图标
 
 ## 生成 PPTX
@@ -96,6 +102,21 @@ npm install
 ```bash
 node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx
 ```
+
+从 DOCX 提取内容和图片资产（不会生成 PPT JSON，也不会生成 PPTX）：
+
+```bash
+node scripts/docx-to-pptx.js \
+  --docx path/to/source.docx \
+  --write-extracted outputs/from-docx.extracted.json \
+  --write-md outputs/from-docx.extracted.md
+```
+
+- `--write-extracted` 输出 DOCX 解析结果，包含文本 block、图片 block、段落/run 相对位置、图片 `wp:extent` 显示尺寸、`a:srcRect` 裁剪参数、处理后的图片路径。
+- 严禁把 DOCX 解析 block 顺序直接当成 PPT 页面结构；block 顺序只能作为阅读材料和图片引用依据。
+- PPT JSON 必须由模型或人工基于 extracted 内容按语义重新规划后编写。
+- PPT JSON 中引用图片时，必须使用 extracted 结果中的已处理 PNG `path`，这样才能保留 Word 中的裁剪/缩放视觉效果。
+- 图片会提取到输出目录旁的 `*-docx-assets/` 目录，并统一经 `sharp` 按 DOCX 裁剪/缩放效果处理为 PNG。
 
 把 JSON spec 转成用户友好的 Markdown 大纲，便于人工检查页数、页面类型、每页内容和演讲者备注：
 
@@ -300,3 +321,4 @@ node scripts/validate-pptx-layout.js assets/outputs/deck-cmb-all-layouts.pptx
 - PowerPoint 与 WPS 的字体渲染可能不同，长文本仍建议拆页或减少分点。
 - 后置插入的 `blocks`、`charts`、`tables` 若缺少显式 `x/y/w/h` 会被跳过并打印 warning，避免与正文重叠。
 - layout 不会被生成器自动修改；如需调整页面类型，必须手动编辑 JSON 中对应页的 `layout` 字段。
+- DOCX 导入只提取文本、图片顺序参考、图片裁剪和显示尺寸处理后的资产；不会复刻 Word 的复杂分页、页眉页脚、浮动环绕排版，也不会生成 PPT spec。生成 PPT 前应检查 `from-docx.extracted.json` / `from-docx.extracted.md`，再按语义编写 JSON spec。

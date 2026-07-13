@@ -1,6 +1,6 @@
 ---
 name: pptxgenjs-template-generate
-description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 PowerPoint .pptx 演示文稿。当 Codex 需要创建商务演示、招商银行风格演示、杂志风或瑞士风演示、文本密集型可编辑幻灯片、包含图片/图表/表格/图标/演讲者备注的幻灯片、容量警告，或用户友好的 Markdown 大纲时使用。
+description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 PowerPoint .pptx 演示文稿。当 Codex 需要创建商务演示、招商银行风格演示、杂志风或瑞士风演示、文本密集型可编辑幻灯片、包含图片/图表/表格/图标/演讲者备注的幻灯片、容量警告、DOCX 内容解析导入，或用户友好的 Markdown 大纲时使用。
 ---
 
 # PPTXGenJS 模板生成
@@ -108,6 +108,28 @@ npm run sample:cmb:max-text
 ```bash
 node scripts/spec-to-md.js --spec path/to/deck.json --out outputs/deck-outline.md
 ```
+
+
+## DOCX 导入工作流
+
+当用户提供 `.docx` 并要求基于文档生成 PPTX 时，使用 DOCX 专用入口，不要先手工复制 Word 内容：
+
+```bash
+node scripts/docx-to-pptx.js \
+  --docx path/to/source.docx \
+  --write-extracted outputs/from-docx.extracted.json \
+  --write-md outputs/from-docx.extracted.md
+```
+
+规则：
+
+- `--write-extracted` 必须在复杂文档或含图片文档中使用，便于检查文本 block、图片 block、段落/run 相对位置、inline/anchor 信息、`wp:extent` 显示尺寸和 `a:srcRect` 裁剪参数。
+- 严禁把 DOCX 解析 block 顺序直接当成 PPT 页面结构；block 顺序只能作为阅读材料和图片引用依据。
+- PPT JSON 中引用图片时，必须使用 extracted 结果中的已处理 PNG `path`，这样才能保留 Word 中的裁剪/缩放视觉效果。
+- 图片会提取到输出目录旁的 `*-docx-assets/` 目录，并用 `sharp` 按 Word 中的裁剪和显示尺寸处理为 PNG；后续 PPT JSON 必须引用这些已处理 PNG 路径。
+- 本命令不会生成 `from-docx.spec.json`，也不会按 DOCX 顺序规则转换 PPT。必须由模型或人工阅读 `from-docx.extracted.json` / `from-docx.extracted.md`，根据语义重新规划页面并编写 PPT JSON。
+- DOCX 导入只保留文本、图片顺序参考、图片视觉裁剪和缩放后的资产；不要信任 Word 排版本身，不要把 DOCX 布局机械映射为 PPT 布局。生成 PPT 前必须先基于语义写 JSON，再检查 spec 和 PPTX。
+- Linux 上传入绝对路径或带空格路径时，直接把路径作为 CLI 参数传入；不要把路径拆成多个参数，也不要通过 shell 拼接图片路径。
 
 ## JSON 规格结构
 
