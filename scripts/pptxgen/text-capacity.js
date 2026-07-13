@@ -21,7 +21,11 @@ const COMMON_GUIDE = {
   radial: collectionSlots('items', 'radial node', 4, 8, 3, 12, 8, 32),
   pyramid: collectionSlots('layers', 'pyramid layer', 3, 5, 3, 12, 8, 35),
   swimlane: collectionSlots('lanes', 'swimlane lane', 2, 4, 4, 16, 8, 36),
-  media: slots([['title', 'page title', 8, 32], ['body', 'media body', 20, 80], ['summary', 'media body alias', 20, 80], ['items[].title', 'side point title', 4, 14], ['items[].body', 'side point body', 12, 45], ['insights[].body', 'side insight body', 12, 45], ['points[].body', 'side point body', 12, 45]]),
+  media: mediaSlots(),
+  mediaGrid: mediaGridSlots('mediaGrid'),
+  gallery: mediaGridSlots('gallery'),
+  imageGrid: mediaGridSlots('imageGrid'),
+  imageHero: imageHeroSlots(),
   chart: slots([['title', 'page title', 8, 32], ['insights[].title', 'chart insight title', 4, 14], ['insights[].body', 'chart insight body', 12, 48], ['notes[].body', 'chart note body', 12, 48]]),
   dataSheet: slots([['title', 'page title', 8, 32], ['notes[].title', 'side note title', 4, 14], ['notes[].body', 'side note body', 10, 42], ['insights[].body', 'side insight body', 10, 42]]),
   dashboard: slots([['title', 'page title', 8, 32], ['metrics[].label', 'metric label', 2, 10], ['metrics[].value', 'metric value', 1, 8]]),
@@ -30,7 +34,7 @@ const COMMON_GUIDE = {
   compare: slots([['title', 'page title', 8, 32], ['before.title', 'left title', 4, 18], ['after.title', 'right title', 4, 18], ['before.items[].body', 'left item body', 8, 36], ['after.items[].body', 'right item body', 8, 36]]),
   duoCompare: null,
   splitCompare: null,
-  caseStudy: slots([['title', 'page title', 8, 32], ['caseTitle', 'case title', 6, 26], ['body', 'case body', 25, 90], ['summary', 'case body alias', 25, 90], ['metrics[].note', 'case metric note', 6, 28]]),
+  caseStudy: caseStudySlots(),
 };
 COMMON_GUIDE.duoCompare = COMMON_GUIDE.compare;
 COMMON_GUIDE.splitCompare = COMMON_GUIDE.compare;
@@ -68,6 +72,77 @@ function multiCollectionSlots(keys, label, minItems, maxItems, titleMin, titleMa
     fields.push([key + '[].body', label + ' body', bodyMin, bodyMax]);
   });
   return slots(fields, minItems + '-' + maxItems + ' items; keep every item title + body within range.', { collection: { keys, label, minItems, maxItems, titleMin, titleMax, bodyMin, bodyMax } });
+}
+
+function mediaSlots() {
+  return slots([
+    ['title', 'page title', 8, 32],
+    ['body', 'media body', 20, 80, 'Use as the short main paragraph only; side points are still required unless allowSparseContent:true.'],
+    ['summary', 'media body alias', 20, 80, 'Alias of body; do not fill both body and summary. Side points are still required.'],
+    ['items[].title', 'side point title', 4, 14],
+    ['items[].body', 'side point body', 12, 45],
+    ['insights[].title', 'side insight title', 4, 14],
+    ['insights[].body', 'side insight body', 12, 45],
+    ['points[].title', 'side point title alias', 4, 14],
+    ['points[].body', 'side point body alias', 12, 45],
+  ], 'media: one media/chart area + short main paragraph + 1-4 side points. Do not use body/summary alone, otherwise the page is too empty.', {
+    collection: { keys: ['items', 'insights', 'points'], label: 'side points', minItems: 1, maxItems: 4, titleMin: 4, titleMax: 14, bodyMin: 12, bodyMax: 45 },
+    plannedScalarFields: ['title', 'body'],
+    plannedCollectionFields: ['title', 'body'],
+  });
+}
+
+function caseStudySlots() {
+  return slots([
+    ['title', 'page title', 8, 32],
+    ['caseTitle', 'case title', 6, 26],
+    ['body', 'case body', 25, 90],
+    ['summary', 'case body alias', 25, 90, 'Alias of body; do not fill both body and summary.'],
+    ['metrics[].label', 'case metric label', 2, 10],
+    ['metrics[].value', 'case metric value', 1, 8],
+    ['metrics[].note', 'case metric note', 6, 28],
+    ['items[].label', 'case metric label alias', 2, 10],
+    ['items[].value', 'case metric value alias', 1, 8],
+    ['items[].note', 'case metric note alias', 6, 28],
+  ], 'caseStudy: case narrative + 1-3 metric chips. Do not provide only body/summary; metrics/items are required unless allowSparseContent:true.', {
+    collection: { keys: ['metrics', 'items'], label: 'case metrics', minItems: 1, maxItems: 3, titleMin: 2, titleMax: 10, bodyMin: 6, bodyMax: 28 },
+    plannedScalarFields: ['title', 'caseTitle', 'body'],
+    plannedCollectionFields: ['label', 'value', 'note'],
+  });
+}
+
+function mediaGridSlots(name) {
+  return slots([
+    ['title', 'page title', 8, 32],
+    ['captions[].caption', 'media caption', 4, 28],
+    ['captions[].title', 'media caption title alias', 4, 22],
+    ['captions[].label', 'media caption label alias', 3, 18],
+    ['items[].caption', 'media caption alias', 4, 28],
+    ['items[].title', 'media caption title alias', 4, 22],
+    ['items[].label', 'media caption label alias', 3, 18],
+    ['sections[].caption', 'media caption alias', 4, 28],
+    ['sections[].title', 'media caption title alias', 4, 22],
+    ['sections[].label', 'media caption label alias', 3, 18],
+  ], name + ': 1-6 media slots with short captions. Use captions/items/sections with caption/title/label only; long body text is not rendered in this layout.', {
+    collection: { keys: ['captions', 'items', 'sections'], label: 'media captions', minItems: 1, maxItems: 6, titleMin: 4, titleMax: 28, bodyMin: 0, bodyMax: 0 },
+    plannedScalarFields: ['title'],
+    plannedCollectionFields: ['caption'],
+  });
+}
+
+function imageHeroSlots() {
+  return slots([
+    ['title', 'page title', 8, 32],
+    ['body', 'short hero explanation', 20, 72],
+    ['subtitle', 'short hero explanation alias', 20, 72],
+    ['items[].label', 'hero metric label', 2, 10],
+    ['items[].value', 'hero metric value', 1, 8],
+    ['items[].note', 'hero metric note', 6, 24],
+  ], 'imageHero: large media area + short explanation + 1-3 metric chips. Metrics are required unless allowSparseContent:true.', {
+    collection: { keys: ['items'], label: 'hero metrics', minItems: 1, maxItems: 3, titleMin: 2, titleMax: 10, bodyMin: 6, bodyMax: 24 },
+    plannedScalarFields: ['title', 'body'],
+    plannedCollectionFields: ['label', 'value', 'note'],
+  });
 }
 
 function cmbAgendaSlots() {
@@ -189,6 +264,20 @@ function plannedGenericCapacity(style, slide, index, layout) {
   const collection = layoutGuide.collection;
   const collectionKey = collection ? firstCollectionKey(slide, collection.keys) : null;
   const collectionItems = collectionKey ? normalizeItems(slide[collectionKey]) : [];
+  if (collection && Array.isArray(layoutGuide.plannedCollectionFields)) {
+    pushPlannedScalarSlots(result, layoutGuide, slide);
+    if (!collectionKey || !collectionItems.length) {
+      result.notes.push('Add a title-only ' + (collection.label || 'collection') + ' array in the plan JSON so this layout does not become too empty. Supported field(s): ' + collection.keys.join(', ') + '.');
+      return result;
+    }
+    collectionItems.forEach((item, itemIndex) => {
+      layoutGuide.plannedCollectionFields.forEach((leaf) => {
+        const slot = plannedCollectionSlot(layoutGuide, collectionKey, leaf, collection);
+        result.slots.push(adjustPlannedSlot(slot, collectionKey + '[' + itemIndex + '].' + leaf, itemTitle(item) || (collection.label || collectionKey) + ' ' + (itemIndex + 1), collectionItems.length, collection));
+      });
+    });
+    return result;
+  }
   layoutGuide.slots.forEach((slot) => {
     const match = slot.field.match(/^([^.[\]]+)\[\]\.(.+)$/);
     if (match) {
@@ -206,6 +295,28 @@ function plannedGenericCapacity(style, slide, index, layout) {
     if (isFillableScalarSlot(slot.field)) result.slots.push({ ...slot, title: plannedScalarTitle(slide, slot.field) });
   });
   return result;
+}
+
+function pushPlannedScalarSlots(result, layoutGuide, slide) {
+  const fields = Array.isArray(layoutGuide.plannedScalarFields) ? layoutGuide.plannedScalarFields : null;
+  layoutGuide.slots.forEach((slot) => {
+    if (!isFillableScalarSlot(slot.field)) return;
+    if (fields && !fields.includes(slot.field)) return;
+    result.slots.push({ ...slot, title: plannedScalarTitle(slide, slot.field) });
+  });
+}
+
+function plannedCollectionSlot(layoutGuide, collectionKey, leaf, collection) {
+  const slot = layoutGuide.slots.find((candidate) => candidate.field === collectionKey + '[].' + leaf)
+    || layoutGuide.slots.find((candidate) => candidate.field.endsWith('[].' + leaf));
+  if (slot) return slot;
+  const isTitle = ['title', 'label', 'caption', 'name', 'value'].includes(leaf);
+  return {
+    field: collectionKey + '[].' + leaf,
+    label: (collection.label || collectionKey) + ' ' + leaf,
+    min: recommendedCapacityMin(isTitle ? collection.titleMax : collection.bodyMax),
+    max: isTitle ? collection.titleMax : collection.bodyMax,
+  };
 }
 
 function adjustPlannedSlot(slot, field, title, count, collection) {

@@ -73,6 +73,7 @@ async function buildDeck(spec, specDir, outPath) {
 
   const theme = THEMES[spec.style][spec.theme];
   await prepareIconAssets(spec, theme);
+  await prepareImageAspectAssets(spec, specDir);
   await prepareSvgImageAssets(spec, specDir);
   spec.slides.forEach((slideSpec, index) => {
     const slide = pptx.addSlide();
@@ -868,6 +869,43 @@ async function prepareSvgImageAssets(spec, specDir) {
   await Promise.all(jobs);
 }
 
+async function prepareImageAspectAssets(spec, specDir) {
+  const images = collectLocalImageInputs(spec, specDir);
+  if (!images.size) return;
+  let sharp = null;
+  try {
+    sharp = require('sharp');
+  } catch (_) {
+    return;
+  }
+  await Promise.all(Array.from(images).map(async (imagePath) => {
+    if (IMAGE_ASPECT_CACHE.has(imagePath)) return;
+    try {
+      const metadata = await sharp(imagePath).metadata();
+      if (metadata.width && metadata.height) IMAGE_ASPECT_CACHE.set(imagePath, metadata.width / metadata.height);
+    } catch (_) {
+      // Keep the lightweight PNG/JPEG/SVG header readers as a fallback.
+    }
+  }));
+}
+
+function collectLocalImageInputs(value, specDir, images = new Set()) {
+  if (!value) return images;
+  if (typeof value === 'string') {
+    if (/\.(png|jpe?g|webp|gif|bmp|tiff?|svg)(?:[?#].*)?$/i.test(value)) {
+      const resolved = resolveImage(specDir, value);
+      if (resolved) images.add(resolved);
+    }
+    return images;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectLocalImageInputs(item, specDir, images));
+    return images;
+  }
+  if (typeof value === 'object') Object.values(value).forEach((item) => collectLocalImageInputs(item, specDir, images));
+  return images;
+}
+
 function collectSvgImageInputs(value, specDir, images = new Set()) {
   if (!value) return images;
   if (typeof value === 'string') {
@@ -936,6 +974,7 @@ function imageAspectRatio(imagePath) {
   try {
     if (ext === '.svg') ratio = svgAspectRatio(fs.readFileSync(imagePath, 'utf8'));
     else if (ext === '.png') ratio = pngAspectRatio(fs.readFileSync(imagePath));
+    else if (ext === '.jpg' || ext === '.jpeg') ratio = jpegAspectRatio(fs.readFileSync(imagePath));
   } catch (_) {
     ratio = null;
   }
@@ -959,6 +998,35 @@ function pngAspectRatio(buffer) {
   const width = buffer.readUInt32BE(16);
   const height = buffer.readUInt32BE(20);
   return width && height ? width / height : null;
+}
+
+function jpegAspectRatio(buffer) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 4) return null;
+  if (buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+  let offset = 2;
+  while (offset + 9 < buffer.length) {
+    if (buffer[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+    const marker = buffer[offset + 1];
+    if (marker === 0xd9 || marker === 0xda) break;
+    const length = buffer.readUInt16BE(offset + 2);
+    if (!length || offset + 2 + length > buffer.length) break;
+    const isSof = (
+      (marker >= 0xc0 && marker <= 0xc3) ||
+      (marker >= 0xc5 && marker <= 0xc7) ||
+      (marker >= 0xc9 && marker <= 0xcb) ||
+      (marker >= 0xcd && marker <= 0xcf)
+    );
+    if (isSof) {
+      const height = buffer.readUInt16BE(offset + 5);
+      const width = buffer.readUInt16BE(offset + 7);
+      return width && height ? width / height : null;
+    }
+    offset += 2 + length;
+  }
+  return null;
 }
 
 function readSvgWithOpacity(imagePath, opacity) {
@@ -3229,12 +3297,12 @@ function validateTextSlots(slide, index, style, errors, warnings) {
     radial: [{ keys: ['items', 'nodes', 'sections'], max: 8, min: 1, label: 'radial nodes' }],
     roadmap: [{ keys: ['steps', 'items'], max: 6, min: 1, label: 'roadmap steps' }],
     swimlane: [{ keys: ['lanes', 'sections'], max: 4, min: 1, label: 'swimlanes' }],
-    media: [{ keys: ['items', 'insights', 'points'], max: sideMax, min: 0, label: 'side points' }],
-    mediaGrid: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 0, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for mediaGrid captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
-    gallery: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 0, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for gallery captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
-    imageGrid: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 0, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for imageGrid captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
-    imageHero: [{ keys: ['items'], max: 3, min: 0, label: 'image hero metrics', itemTextKeys: ['label', 'value', 'note'], unusedItemFields: ['title', ...metricNarrativeFields], suggestion: metricLayoutSuggestion }],
-    caseStudy: [{ keys: ['metrics', 'items'], max: 3, min: 0, label: 'case metrics', itemTextKeys: ['label', 'title', 'value', 'note'], unusedItemFields: metricNarrativeFields, suggestion: metricLayoutSuggestion }],
+    media: [{ keys: ['items', 'insights', 'points'], max: sideMax, min: 1, label: 'side points', suggestion: 'Add 1-4 side points with title/body, or use textImage/statement when the slide only needs one paragraph beside media.' }],
+    mediaGrid: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 1, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for mediaGrid captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
+    gallery: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 1, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for gallery captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
+    imageGrid: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 1, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for imageGrid captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
+    imageHero: [{ keys: ['items'], max: 3, min: 1, label: 'image hero metrics', itemTextKeys: ['label', 'value', 'note'], unusedItemFields: ['title', ...metricNarrativeFields], suggestion: metricLayoutSuggestion }],
+    caseStudy: [{ keys: ['metrics', 'items'], max: 3, min: 1, label: 'case metrics', itemTextKeys: ['label', 'title', 'value', 'note'], unusedItemFields: metricNarrativeFields, suggestion: metricLayoutSuggestion }],
     dataSheet: [{ keys: ['notes', 'insights'], max: style === 'swiss' ? 4 : 3, min: 0, label: 'side notes' }],
     chart: [{ keys: ['insights', 'notes'], max: style === 'swiss' ? 3 : 4, min: 0, label: 'chart insights' }],
     dashboard: [dashboardMetricRule],
@@ -3255,8 +3323,9 @@ function validateTextSlots(slide, index, style, errors, warnings) {
 
 function validateSlotCollection(source, index, rule, errors, warnings) {
   const present = rule.keys.filter((key) => source[key] !== undefined && source[key] !== null);
+  const suggestion = rule.suggestion ? ` ${rule.suggestion}` : '';
   if (!present.length) {
-    if (rule.min > 0 && !source.allowSparseContent) errors.push(`slide ${index + 1} has no ${rule.label}; the layout may look empty. Add the required content field(s), change layout, or set allowSparseContent:true only for intentional sparse draft slides.`);
+    if (rule.min > 0 && !source.allowSparseContent) errors.push(`slide ${index + 1} has no ${rule.label}; the layout may look empty. Add the required content field(s), change layout, or set allowSparseContent:true only for intentional sparse draft slides.${suggestion}`);
     return [];
   }
   if (present.length > 1) {
@@ -3272,7 +3341,7 @@ function validateSlotCollection(source, index, rule, errors, warnings) {
     errors.push(`slide ${index + 1} has ${items.length} ${rule.label}, but layout "${source.layout || 'nested'}" renders at most ${rule.max}; split content or change layout.`);
   }
   if (rule.min && items.length < rule.min) {
-    if (!source.allowSparseContent) errors.push(`slide ${index + 1} has ${items.length} ${rule.label}; expected at least ${rule.min}. Add content, change layout, or set allowSparseContent:true only for intentional sparse draft slides.`);
+    if (!source.allowSparseContent) errors.push(`slide ${index + 1} has ${items.length} ${rule.label}; expected at least ${rule.min}. Add content, change layout, or set allowSparseContent:true only for intentional sparse draft slides.${suggestion}`);
   }
   items.forEach((item, itemIndex) => {
     if (!slotItemHasDisplayTextForRule(item, rule)) {
