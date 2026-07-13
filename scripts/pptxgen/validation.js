@@ -477,10 +477,49 @@ module.exports = function createValidationTools(deps) {
       if (slide[key] !== undefined && slide[key] !== null) fields.push(key);
     });
     if (Array.isArray(slide.media) && normalizeMediaImages({ media: slide.media }).length) fields.push('media');
+    collectUnsupportedNestedImageFields(slide, 'slide', fields);
     ['mediaCount', 'imageSlots', 'slotCount'].forEach((key) => {
       if (slide[key] !== undefined && slide[key] !== null) fields.push(key);
     });
-    return fields;
+    return Array.from(new Set(fields));
+  }
+
+  function collectUnsupportedNestedImageFields(value, pathName, fields, depth = 0) {
+    if (!value || depth > 5) return;
+    if (typeof value === 'string') {
+      if (looksLikeImagePath(value)) fields.push(pathName);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item, itemIndex) => collectUnsupportedNestedImageFields(item, `${pathName}[${itemIndex}]`, fields, depth + 1));
+      return;
+    }
+    if (typeof value !== 'object') return;
+    Object.entries(value).forEach(([key, child]) => {
+      if (isTopLevelCheckedImageKey(pathName, key) || isNonContentValidationObject(key)) return;
+      const childPath = `${pathName}.${key}`;
+      if (isImageLikeKey(key) && hasMeaningfulValue(child)) {
+        fields.push(childPath);
+        return;
+      }
+      collectUnsupportedNestedImageFields(child, childPath, fields, depth + 1);
+    });
+  }
+
+  function isTopLevelCheckedImageKey(pathName, key) {
+    return pathName === 'slide' && ['image', 'images', 'gallery', 'media', 'mediaCount', 'imageSlots', 'slotCount'].includes(key);
+  }
+
+  function isNonContentValidationObject(key) {
+    return ['chart', 'charts', 'table', 'tables', 'speakerNotes', 'speaker_notes', 'presenterNotes', 'presenter_notes'].includes(key);
+  }
+
+  function isImageLikeKey(key) {
+    return ['image', 'images', 'gallery', 'media', 'photo', 'photos', 'picture', 'pictures', 'src', 'path'].includes(key);
+  }
+
+  function looksLikeImagePath(value) {
+    return /\.(png|jpe?g|webp|gif|bmp|tiff?|svg)(?:[?#].*)?$/i.test(String(value).trim());
   }
 
   function isVisualMediaLayout(layout) {

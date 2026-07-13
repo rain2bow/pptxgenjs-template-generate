@@ -368,6 +368,14 @@ function validatePlanScalars(layout, layoutGuide, slide, index, errors) {
       errors.push('slide ' + (index + 1) + ' field "' + key + '" should not be in deck.plan.json. Use title-only planning fields first, generate capacity-guide, then fill body text in the full JSON.');
     }
   });
+  const mediaScalars = ['image', 'images', 'gallery', 'media', 'mediaCount', 'imageSlots', 'slotCount'];
+  if (!planLayoutHasMediaSlot(layout)) {
+    mediaScalars.forEach((key) => {
+      if (slide[key] !== undefined && slide[key] !== null) {
+        errors.push('slide ' + (index + 1) + ' layout "' + layout + '" does not render media field "' + key + '". Remove it or choose a media layout before generating capacity-guide.');
+      }
+    });
+  }
   const allowed = new Set(['layout', 'title', 'kicker', 'subtitle', 'theme', 'style', 'mediaCount', 'imageSlots', 'slotCount', 'allowEmptyMediaSlots', 'allowSparseContent', 'allowMissingChart', 'allowMissingTable']);
   ['image', 'images', 'gallery', 'media', 'chart', 'charts', 'table', 'before', 'after', 'left', 'right'].forEach((key) => allowed.add(key));
   ['summaryTitle', 'leadTitle', 'focusTitle', 'conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle', 'agendaTitle', 'agendaSubtitle'].forEach((key) => allowed.add(key));
@@ -383,6 +391,10 @@ function validatePlanScalars(layout, layoutGuide, slide, index, errors) {
       errors.push('slide ' + (index + 1) + ' layout "' + layout + '" has unsupported plan field "' + key + '". Remove it or use a supported layout field.');
     }
   });
+}
+
+function planLayoutHasMediaSlot(layout) {
+  return ['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy'].includes(layout || '');
 }
 
 function plannedSlideCapacity(style, slide, index) {
