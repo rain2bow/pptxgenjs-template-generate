@@ -28,9 +28,9 @@ const COMMON_GUIDE = {
   imageHero: imageHeroSlots(),
   chart: slots([['title', 'page title', 8, 32], ['insights[].title', 'chart insight title', 4, 14], ['insights[].body', 'chart insight body', 12, 48], ['notes[].body', 'chart note body', 12, 48]]),
   dataSheet: slots([['title', 'page title', 8, 32], ['notes[].title', 'side note title', 4, 14], ['notes[].body', 'side note body', 10, 42], ['insights[].body', 'side insight body', 10, 42]]),
-  dashboard: slots([['title', 'page title', 8, 32], ['metrics[].label', 'metric label', 2, 10], ['metrics[].value', 'metric value', 1, 8]]),
-  bigNumbers: slots([['title', 'page title', 8, 32], ['items[].label', 'number label', 2, 12], ['items[].value', 'number value', 1, 8], ['items[].note', 'number note', 8, 32]]),
-  kpiTower: slots([['title', 'page title', 8, 32], ['items[].label', 'KPI label', 2, 12], ['items[].value', 'KPI value', 1, 8], ['items[].note', 'KPI note', 8, 32]]),
+  dashboard: metricSlots('metrics', 'dashboard metric', 1, 4, [['label', 'metric label', 2, 10], ['value', 'metric value', 1, 8]]),
+  bigNumbers: metricSlots('items', 'number card', 1, 6, [['label', 'number label', 2, 12], ['value', 'number value', 1, 8], ['note', 'number note', 8, 32]]),
+  kpiTower: metricSlots('items', 'KPI card', 1, 4, [['label', 'KPI label', 2, 12], ['value', 'KPI value', 1, 8], ['note', 'KPI note', 8, 32]]),
   compare: slots([['title', 'page title', 8, 32], ['before.title', 'left title', 4, 18], ['after.title', 'right title', 4, 18], ['before.items[].body', 'left item body', 8, 36], ['after.items[].body', 'right item body', 8, 36]]),
   duoCompare: null,
   splitCompare: null,
@@ -72,6 +72,17 @@ function multiCollectionSlots(keys, label, minItems, maxItems, titleMin, titleMa
     fields.push([key + '[].body', label + ' body', bodyMin, bodyMax]);
   });
   return slots(fields, minItems + '-' + maxItems + ' items; keep every item title + body within range.', { collection: { keys, label, minItems, maxItems, titleMin, titleMax, bodyMin, bodyMax } });
+}
+
+function metricSlots(key, label, minItems, maxItems, fields) {
+  return slots(
+    [['title', 'page title', 8, 32], ...fields.map(([leaf, fieldLabel, min, max, note]) => [key + '[].' + leaf, fieldLabel, min, max, note])],
+    minItems + '-' + maxItems + ' ' + label + '(s). Fill every listed metric field; do not use title/body for metric cards.',
+    {
+      collection: { keys: [key], label, minItems, maxItems, titleMin: 2, titleMax: 12, bodyMin: 6, bodyMax: 32 },
+      plannedCollectionFields: fields.map(([leaf]) => leaf),
+    }
+  );
 }
 
 function mediaSlots() {
@@ -266,35 +277,58 @@ function plannedGenericCapacity(style, slide, index, layout) {
   const collectionItems = collectionKey ? normalizeItems(slide[collectionKey]) : [];
   if (collection && Array.isArray(layoutGuide.plannedCollectionFields)) {
     pushPlannedScalarSlots(result, layoutGuide, slide);
-    if (!collectionKey || !collectionItems.length) {
-      result.notes.push('Add a title-only ' + (collection.label || 'collection') + ' array in the plan JSON so this layout does not become too empty. Supported field(s): ' + collection.keys.join(', ') + '.');
-      return result;
+    const plannedKey = collectionKey || primaryCollectionKey(collection);
+    const plannedItems = collectionItems.length ? collectionItems : plannedPlaceholderItems(slide, collection);
+    if (!collectionItems.length) {
+      result.notes.push('This layout requires ' + (collection.label || 'collection') + '. Fill the listed ' + plannedKey + '[n] field(s), or add a title-only ' + plannedKey + ' array in the plan JSON and regenerate capacity-guide for exact per-item ranges. Supported field(s): ' + collection.keys.join(', ') + '.');
     }
-    collectionItems.forEach((item, itemIndex) => {
-      layoutGuide.plannedCollectionFields.forEach((leaf) => {
-        const slot = plannedCollectionSlot(layoutGuide, collectionKey, leaf, collection);
-        result.slots.push(adjustPlannedSlot(slot, collectionKey + '[' + itemIndex + '].' + leaf, itemTitle(item) || (collection.label || collectionKey) + ' ' + (itemIndex + 1), collectionItems.length, collection));
-      });
-    });
+    pushPlannedCollectionSlots(result, layoutGuide, plannedKey, plannedItems, collection, layoutGuide.plannedCollectionFields);
     return result;
   }
   layoutGuide.slots.forEach((slot) => {
+    const nestedMatch = slot.field.match(/^([^.[\]]+)\.([^.[\]]+)\[\]\.(.+)$/);
+    if (nestedMatch) {
+      const [, parentKey, collectionName, leaf] = nestedMatch;
+      const nestedCollection = slide[parentKey] && typeof slide[parentKey] === 'object' ? slide[parentKey][collectionName] : null;
+      const nestedItems = nestedCollection ? normalizeItems(nestedCollection) : plannedPlaceholderItems(slide, null);
+      if (!nestedCollection) {
+        result.notes.push('This layout requires ' + parentKey + '.' + collectionName + ' content. Fill the listed ' + parentKey + '.' + collectionName + '[n] field(s), or add title-only nested items in the plan JSON and regenerate capacity-guide.');
+      }
+      nestedItems.forEach((item, itemIndex) => {
+        result.slots.push(adjustPlannedSlot(slot, parentKey + '.' + collectionName + '[' + itemIndex + '].' + leaf, itemTitle(item) || parentKey + ' ' + (itemIndex + 1), nestedItems.length, null));
+      });
+      return;
+    }
     const match = slot.field.match(/^([^.[\]]+)\[\]\.(.+)$/);
     if (match) {
       const [, key, leaf] = match;
-      if (collectionKey && key !== collectionKey) return;
-      if (!collectionKey || !collectionItems.length) {
-        if (!result.notes.some((note) => note.includes('title-only collection'))) result.notes.push('Add a title-only collection such as items/sections/steps in the plan JSON so per-card body capacity can be calculated.');
-        return;
+      const actualItems = !collection && slide[key] !== undefined && slide[key] !== null ? normalizeItems(slide[key]) : [];
+      if (!collection && !actualItems.length) return;
+      const plannedKey = collection ? (collectionKey || primaryCollectionKey(collection)) : key;
+      const plannedItems = collectionItems.length ? collectionItems : (actualItems.length ? actualItems : plannedPlaceholderItems(slide, collection));
+      if (key !== plannedKey) return;
+      if (!collectionItems.length && collection) {
+        if (!result.notes.some((note) => note.includes('requires ' + (collection.label || 'collection')))) {
+          result.notes.push('This layout requires ' + (collection.label || 'collection') + '. Fill the listed ' + plannedKey + '[n] field(s), or add a title-only collection in the plan JSON and regenerate capacity-guide for exact per-item ranges. Supported field(s): ' + collection.keys.join(', ') + '.');
+        }
       }
-      collectionItems.forEach((item, itemIndex) => {
-        result.slots.push(adjustPlannedSlot(slot, collectionKey + '[' + itemIndex + '].' + leaf, itemTitle(item) || (collection.label || collectionKey) + ' ' + (itemIndex + 1), collectionItems.length, collection));
+      plannedItems.forEach((item, itemIndex) => {
+        result.slots.push(adjustPlannedSlot(slot, plannedKey + '[' + itemIndex + '].' + leaf, itemTitle(item) || (collection?.label || plannedKey) + ' ' + (itemIndex + 1), plannedItems.length, collection));
       });
       return;
     }
     if (isFillableScalarSlot(slot.field)) result.slots.push({ ...slot, title: plannedScalarTitle(slide, slot.field) });
   });
   return result;
+}
+
+function pushPlannedCollectionSlots(result, layoutGuide, collectionKey, items, collection, leaves) {
+  items.forEach((item, itemIndex) => {
+    leaves.forEach((leaf) => {
+      const slot = plannedCollectionSlot(layoutGuide, collectionKey, leaf, collection);
+      result.slots.push(adjustPlannedSlot(slot, collectionKey + '[' + itemIndex + '].' + leaf, itemTitle(item) || (collection.label || collectionKey) + ' ' + (itemIndex + 1), items.length, collection));
+    });
+  });
 }
 
 function pushPlannedScalarSlots(result, layoutGuide, slide) {
@@ -319,8 +353,36 @@ function plannedCollectionSlot(layoutGuide, collectionKey, leaf, collection) {
   };
 }
 
+function primaryCollectionKey(collection) {
+  return Array.isArray(collection?.keys) && collection.keys.length ? collection.keys[0] : 'items';
+}
+
+function plannedPlaceholderItems(slide, collection) {
+  const count = plannedPlaceholderCount(slide, collection);
+  return Array.from({ length: count }, (_, index) => ({ title: (collection?.label || 'item') + ' ' + (index + 1) }));
+}
+
+function plannedPlaceholderCount(slide, collection) {
+  const minItems = Math.max(1, Number(collection?.minItems || 1));
+  const maxItems = Math.max(minItems, Number(collection?.maxItems || minItems));
+  const explicit = Number(slide.mediaCount || slide.itemCount || slide.count || 0);
+  const mediaCount = Math.max(
+    arrayLength(slide.images),
+    arrayLength(slide.gallery),
+    arrayLength(slide.media),
+    arrayLength(slide.charts),
+    slide.image || slide.chart ? 1 : 0
+  );
+  const planned = Math.max(minItems, explicit || 0, mediaCount || 0);
+  return Math.min(maxItems, planned);
+}
+
+function arrayLength(value) {
+  return Array.isArray(value) ? value.length : 0;
+}
+
 function adjustPlannedSlot(slot, field, title, count, collection) {
-  const isTitle = field.endsWith('.title') || field.endsWith('.label') || field.endsWith('.name');
+  const isTitle = ['.title', '.label', '.name', '.value', '.unit', '.caption'].some((suffix) => field.endsWith(suffix));
   let max = slot.max;
   if (collection && !isTitle) {
     const factor = Math.max(0.72, Math.min(2.05, Number(collection.maxItems || count || 1) / Math.max(1, count || 1)));
@@ -363,11 +425,11 @@ function plannedScalarTitle(slide, field) {
 
 function plannedCmbTextWeaveCapacity(slide, index, layout) {
   const sourceKey = firstCollectionKey(slide, ['sections', 'items', 'columns', 'points', 'agenda']);
-  const items = sourceKey ? normalizeItems(slide[sourceKey]).slice(0, 6) : [];
+  const plannedKey = sourceKey || 'items';
+  const items = sourceKey ? normalizeItems(slide[sourceKey]).slice(0, 6) : plannedPlaceholderItems(slide, { keys: ['items'], label: 'CMB text weave cards', minItems: 2, maxItems: 6 });
   const result = { slide: index + 1, layout, title: slide.title || '', slots: [], notes: [] };
-  if (!items.length) {
-    result.notes.push('Add at least 2 title-only sections/items/columns to the plan JSON so CMB text-card capacity can be calculated: 1 lead card + at least 1 right-side card.');
-    return result;
+  if (!sourceKey) {
+    result.notes.push('This CMB layout requires at least 2 text cards. Fill the listed items[n] fields, or add a title-only sections/items/columns array in the plan JSON and regenerate capacity-guide for exact per-card ranges.');
   }
   if (items.length < 2) {
     result.notes.push('CMB ' + layout + ' needs at least 2 text cards so the right side is not empty. Add one more title-only item before writing body text.');
@@ -377,20 +439,24 @@ function plannedCmbTextWeaveCapacity(slide, index, layout) {
     if (!item) return;
     const title = itemTitle(item) || String(itemIndex + 1).padStart(2, '0');
     const cap = cmbCardBodyCapacity(box, title, options);
-    result.slots.push({ field: sourceKey + '[' + itemIndex + '].body', min: recommendedCapacityMin(cap.max), max: cap.max, label: 'card body', title, note: 'Calculated from actual card ' + (itemIndex + 1) + '/' + items.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
-    result.slots.push(plannedPointSlot(sourceKey + '[' + itemIndex + '].points[]', title, cap, 'explicit bullet point'));
+    result.slots.push({ field: plannedKey + '[' + itemIndex + '].body', min: recommendedCapacityMin(cap.max), max: cap.max, label: 'card body', title, note: 'Calculated from actual card ' + (itemIndex + 1) + '/' + items.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    result.slots.push(plannedPointSlot(plannedKey + '[' + itemIndex + '].points[]', title, cap, 'explicit bullet point'));
   });
   return result;
 }
 
 function plannedCmbBriefingCapacity(slide, index, layout) {
   const sourceKey = firstCollectionKey(slide, ['sections', 'items', 'columns', 'points', 'agenda']);
-  const items = sourceKey ? normalizeItems(slide[sourceKey]).slice(0, 6) : [];
+  const plannedKey = sourceKey || 'items';
+  const items = sourceKey ? normalizeItems(slide[sourceKey]).slice(0, 6) : plannedPlaceholderItems(slide, { keys: ['items'], label: 'briefing text blocks', minItems: 2, maxItems: 6 });
   const hasLead = hasAnyKey(slide, ['summary', 'body', 'lead', 'summaryTitle', 'leadTitle', 'focusTitle']);
   const hasConclusion = hasAnyKey(slide, ['conclusion', 'takeaway', 'footerSummary', 'nextStep', 'conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle']);
   const pseudo = { ...slide, summary: hasLead ? '__planned__' : '', conclusion: hasConclusion ? '__planned__' : '' };
   const entries = cmbBriefingCardEntries(pseudo, items.length);
   const result = { slide: index + 1, layout, title: slide.title || '', slots: [], notes: [] };
+  if (!sourceKey && !hasLead) {
+    result.notes.push('This CMB briefing layout requires briefing text blocks. Fill the listed items[n] fields, or add a title-only sections/items/columns array in the plan JSON and regenerate capacity-guide for exact card ranges.');
+  }
   const plannedRestCount = hasLead ? items.length : Math.max(0, items.length - 1);
   const maxRestCount = hasConclusion ? 4 : 5;
   if (plannedRestCount > maxRestCount) {
@@ -400,8 +466,9 @@ function plannedCmbBriefingCapacity(slide, index, layout) {
   if (leadEntry) {
     const title = slide.summaryTitle || slide.leadTitle || slide.focusTitle || (hasLead ? '摘要' : itemTitle(items[0]) || '摘要');
     const cap = cmbCardBodyCapacity(leadEntry.box, title, leadEntry.options);
-    const field = hasLead ? 'summary' : (sourceKey || 'items') + '[0].body';
+    const field = hasLead ? 'summary' : plannedKey + '[0].body';
     result.slots.push({ field, min: recommendedCapacityMin(cap.max), max: cap.max, label: hasLead ? 'top summary body' : 'lead card body', title, note: 'Calculated from lead card: max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    if (!hasLead) result.slots.push(plannedPointSlot(plannedKey + '[0].points[]', title, cap, 'lead card bullet point'));
   }
   const rest = hasLead ? items : items.slice(1);
   entries.filter((entry) => entry.kind === 'rest').forEach((entry, i) => {
@@ -410,8 +477,8 @@ function plannedCmbBriefingCapacity(slide, index, layout) {
     if (!item) return;
     const title = itemTitle(item) || '分析' + (i + 1);
     const cap = cmbCardBodyCapacity(entry.box, title, entry.options);
-    result.slots.push({ field: (sourceKey || 'items') + '[' + sourceIndex + '].body', min: recommendedCapacityMin(cap.max), max: cap.max, label: 'analysis card body', title, note: 'Calculated from actual card ' + (i + 1) + '/' + rest.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
-    result.slots.push(plannedPointSlot((sourceKey || 'items') + '[' + sourceIndex + '].points[]', title, cap, 'analysis bullet point'));
+    result.slots.push({ field: plannedKey + '[' + sourceIndex + '].body', min: recommendedCapacityMin(cap.max), max: cap.max, label: 'analysis card body', title, note: 'Calculated from actual card ' + (i + 1) + '/' + rest.length + ': max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
+    result.slots.push(plannedPointSlot(plannedKey + '[' + sourceIndex + '].points[]', title, cap, 'analysis bullet point'));
   });
   const conclusionEntry = entries.find((entry) => entry.kind === 'conclusion');
   if (conclusionEntry) {
@@ -419,7 +486,6 @@ function plannedCmbBriefingCapacity(slide, index, layout) {
     const cap = cmbCardBodyCapacity(conclusionEntry.box, title, conclusionEntry.options);
     result.slots.push({ field: 'conclusion', min: recommendedCapacityMin(cap.max), max: cap.max, label: 'bottom conclusion body', title, note: 'Calculated from bottom card: max ' + cap.maxLines + ' line(s), about ' + Math.floor(cap.charsPerLine) + ' CJK chars/line at 12pt.' });
   }
-  if (!items.length && !hasLead) result.notes.push('Add title-only sections/items or a summary field in the plan JSON so briefing capacity can be calculated.');
   return result;
 }
 
@@ -493,9 +559,11 @@ function cmbBriefingCardEntries(slide, itemCount) {
   const y0 = slide.subtitle ? 2.78 : 2.45;
   const hasLead = !!(slide.summary || slide.body || slide.lead);
   const conclusionText = slide.conclusion || slide.takeaway || slide.footerSummary || slide.nextStep;
-  const entries = [{ kind: 'lead', box: { x: 0.78, y: y0, w: 11.45, h: 1.12 }, options: { lead: true, accent: true, titleFontSize: 13.2 } }];
+  const leadH = 1.46;
+  const leadGap = 0.22;
+  const entries = [{ kind: 'lead', box: { x: 0.78, y: y0, w: 11.45, h: leadH }, options: { lead: true, accent: true, titleFontSize: 13.2 } }];
   const restCount = hasLead ? itemCount : Math.max(0, itemCount - 1);
-  const midY = y0 + 1.34;
+  const midY = y0 + leadH + leadGap;
   const conclusionBox = { x: 0.78, y: 5.62, w: 11.45, h: 0.86 };
   const midBottom = conclusionText ? conclusionBox.y - 0.2 : 6.48;
   if (restCount <= 4) {

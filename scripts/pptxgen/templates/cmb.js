@@ -900,9 +900,11 @@ module.exports = function createCmbTemplate(api) {
     const restLimit = conclusionText ? 4 : 5;
     const rest = (hasLead ? items : items.slice(1)).slice(0, restLimit);
     const y0 = data.subtitle ? 2.78 : 2.45;
-    addCmbTextCard(slide, ctx, lead, { x: 0.78, y: y0, w: 11.45, h: 1.12 }, 0, { lead: true, accent: true, label: '摘要', maxPoints: 3, titleFontSize: 13.2 });
+    const leadH = 1.46;
+    const leadGap = 0.22;
+    addCmbTextCard(slide, ctx, lead, { x: 0.78, y: y0, w: 11.45, h: leadH }, 0, { lead: true, accent: true, label: '摘要', maxPoints: 3, titleFontSize: 13.2 });
 
-    const midY = y0 + 1.34;
+    const midY = y0 + leadH + leadGap;
     const conclusionBox = { x: 0.78, y: 5.62, w: 11.45, h: 0.86 };
     const midBottom = conclusionText ? conclusionBox.y - 0.2 : 6.48;
     if (rest.length) {
