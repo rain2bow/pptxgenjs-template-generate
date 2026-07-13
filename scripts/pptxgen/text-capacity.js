@@ -225,7 +225,11 @@ function layoutCapacityGuideForSpec(spec = {}) {
     style,
     unit: 'visual characters; CJK counts as 1, Latin letters count as about 0.56',
     instruction: 'This guide is calculated from the title-only deck plan. Fill only the listed fields. If a layout, media choice, or item count changes, regenerate this guide before writing full content.',
-    slides: slides.map((slide, index) => plannedSlideCapacity(style, slide || {}, index)),
+    slides: slides.map((slide, index) => {
+      const planned = plannedSlideCapacity(style, slide || {}, index);
+      planned.example = plannedSlideExample(slide || {}, planned);
+      return planned;
+    }),
   };
 }
 
@@ -241,6 +245,9 @@ function layoutCapacityMarkdownForSpec(spec = {}) {
       slide.slots.forEach((slot) => lines.push('| ' + slot.field + ' | ' + slot.min + '-' + slot.max + ' | ' + (slot.title || slot.label || '') + ' | ' + (slot.note || '') + ' |'));
     } else {
       lines.push('| - | - | - | This planned slide has no fillable body slots. |');
+    }
+    if (slide.example) {
+      lines.push('', 'Example slide JSON:', '', '```json', JSON.stringify(slide.example, null, 2), '```');
     }
     lines.push('');
   });
@@ -421,6 +428,117 @@ function isFillableScalarSlot(field) {
 function plannedScalarTitle(slide, field) {
   const titleKey = field + 'Title';
   return slide[titleKey] || slide.title || '';
+}
+
+function plannedSlideExample(sourceSlide, planned) {
+  const example = {};
+  example.layout = planned.layout || sourceSlide.layout || 'statement';
+  if (sourceSlide.title || planned.title) example.title = sourceSlide.title || planned.title;
+  if (sourceSlide.kicker) example.kicker = sourceSlide.kicker;
+  if (sourceSlide.subtitle) example.subtitle = sourceSlide.subtitle;
+  copyExamplePlanFields(sourceSlide, example);
+  (planned.slots || []).forEach((slot) => {
+    if (!slot?.field || slot.field === '-') return;
+    assignExampleField(example, slot.field, exampleValueForSlot(slot));
+  });
+  return example;
+}
+
+function copyExamplePlanFields(source, target) {
+  ['style', 'theme', 'mediaCount', 'imageSlots', 'slotCount', 'allowEmptyMediaSlots', 'allowSparseContent', 'allowMissingChart', 'allowMissingTable'].forEach((key) => {
+    if (source[key] !== undefined) target[key] = source[key];
+  });
+  ['image', 'images', 'gallery', 'media', 'chart', 'charts', 'table'].forEach((key) => {
+    if (source[key] !== undefined) target[key] = cloneJson(source[key]);
+  });
+  ['sections', 'items', 'columns', 'steps', 'nodes', 'layers', 'lanes', 'metrics', 'agenda', 'captions', 'notes', 'insights'].forEach((key) => {
+    if (source[key] !== undefined) target[key] = collectionSkeleton(source[key]);
+  });
+  ['before', 'after', 'left', 'right'].forEach((key) => {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) target[key] = nestedPlanSkeleton(source[key]);
+  });
+}
+
+function assignExampleField(target, field, value) {
+  const parts = String(field || '').split('.');
+  let current = target;
+  parts.forEach((part, index) => {
+    const last = index === parts.length - 1;
+    const arrayMatch = part.match(/^(.+)\[(\d+)\]$/);
+    const pushArrayMatch = part.match(/^(.+)\[\]$/);
+    if (arrayMatch || pushArrayMatch) {
+      const key = (arrayMatch || pushArrayMatch)[1];
+      const itemIndex = arrayMatch ? Number(arrayMatch[2]) : 0;
+      if (!Array.isArray(current[key])) current[key] = [];
+      while (current[key].length <= itemIndex) current[key].push({});
+      if (last) {
+        current[key][itemIndex] = value;
+      } else {
+        if (!current[key][itemIndex] || typeof current[key][itemIndex] !== 'object') current[key][itemIndex] = {};
+        current = current[key][itemIndex];
+      }
+      return;
+    }
+    if (last) {
+      if (current[part] === undefined) current[part] = value;
+      return;
+    }
+    if (!current[part] || typeof current[part] !== 'object' || Array.isArray(current[part])) current[part] = {};
+    current = current[part];
+  });
+}
+
+function exampleValueForSlot(slot) {
+  const field = String(slot.field || '');
+  const label = String(slot.label || '').toLowerCase();
+  const title = String(slot.title || slot.label || '').trim();
+  if (field.endsWith('points[]')) return samplePointText(title);
+  if (field.endsWith('.value') || field === 'value') return 'XX';
+  if (field.endsWith('.unit') || field === 'unit') return '%';
+  if (field.endsWith('.label') || field === 'label') return title && !/^\w+\s+\d+$/.test(title) ? title : '指标';
+  if (field.endsWith('.caption') || field === 'caption') return '图片说明';
+  if (field.endsWith('.title') || field === 'caseTitle' || label.includes('title')) return title && !/^\w+\s+\d+$/.test(title) ? title : '小标题';
+  if (field === 'quote') return '填写核心引述。';
+  if (field === 'conclusion' || field === 'takeaway') return '填写结论或下一步行动。';
+  if (field === 'summary' || field === 'body' || field === 'lead') return '填写本页核心正文，长度参考容量范围。';
+  return '填写内容，长度参考容量范围。';
+}
+
+function samplePointText(title) {
+  return (title && !/^\w+\s+\d+$/.test(title) ? title + '分点内容' : '分点内容');
+}
+
+function cloneJson(value) {
+  if (value === undefined) return value;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function collectionSkeleton(value) {
+  if (Array.isArray(value)) return value.map((item) => itemSkeleton(item));
+  if (value && typeof value === 'object') {
+    return Object.entries(value).map(([title, body]) => ({ title, ...(typeof body === 'string' && body.trim() ? { body } : {}) }));
+  }
+  if (typeof value === 'string' || typeof value === 'number') return [{ title: String(value) }];
+  return cloneJson(value);
+}
+
+function itemSkeleton(item) {
+  if (item === undefined || item === null) return {};
+  if (typeof item === 'string' || typeof item === 'number') return { title: String(item) };
+  if (typeof item !== 'object') return {};
+  const next = {};
+  ['title', 'label', 'name', 'heading', 'value', 'unit', 'caption', 'year', 'number', 'icon', 'highlight'].forEach((key) => {
+    if (item[key] !== undefined) next[key] = cloneJson(item[key]);
+  });
+  return next;
+}
+
+function nestedPlanSkeleton(value) {
+  const next = itemSkeleton(value);
+  ['items', 'sections', 'points', 'bullets', 'list'].forEach((key) => {
+    if (value[key] !== undefined) next[key] = collectionSkeleton(value[key]);
+  });
+  return next;
 }
 
 function plannedCmbTextWeaveCapacity(slide, index, layout) {
