@@ -125,10 +125,10 @@ node scripts/docx-to-pptx.js \
 
 - `--write-extracted` 必须在复杂文档或含图片文档中使用，便于检查文本 block、图片 block、段落/run 相对位置、inline/anchor 信息、`wp:extent` 显示尺寸和 `a:srcRect` 裁剪参数。
 - 严禁把 DOCX 解析 block 顺序直接当成 PPT 页面结构；block 顺序只能作为阅读材料和图片引用依据。
-- PPT JSON 中引用图片时，必须使用 extracted 结果中的已处理 PNG `path`，这样才能保留 Word 中的裁剪/缩放视觉效果。
-- 图片会提取到输出目录旁的 `*-docx-assets/` 目录，并用 `sharp` 按 Word 中的裁剪和显示尺寸处理为 PNG；后续 PPT JSON 必须引用这些已处理 PNG 路径。
+- PPT JSON 中引用图片时，必须使用 extracted 结果中的 `path`。无裁剪图片会保留原始文件，带裁剪图片会输出按源像素裁剪后的 PNG。
+- 图片会提取到输出目录旁的 `*-docx-assets/` 目录。DOCX 导入阶段只应用 Word 中的图片裁剪，不按 Word 显示尺寸重采样；PPTX 生成阶段会根据实际图片比例放入页面槽位。
 - 本命令不会生成 `from-docx.spec.json`，也不会按 DOCX 顺序规则转换 PPT。必须由模型或人工阅读 `from-docx.extracted.json` / `from-docx.extracted.md`，根据语义重新规划页面并编写 PPT JSON。
-- DOCX 导入只保留文本、图片顺序参考、图片视觉裁剪和缩放后的资产；不要信任 Word 排版本身，不要把 DOCX 布局机械映射为 PPT 布局。生成 PPT 前必须先基于语义写 JSON，再检查 spec 和 PPTX。
+- DOCX 导入只保留文本、图片顺序参考、图片视觉裁剪后的资产；不要信任 Word 排版本身，不要把 DOCX 布局机械映射为 PPT 布局。生成 PPT 前必须先基于语义写 JSON，再检查 spec 和 PPTX。
 - Linux 上传入绝对路径或带空格路径时，直接把路径作为 CLI 参数传入；不要把路径拆成多个参数，也不要通过 shell 拼接图片路径。
 
 ## JSON 规格结构

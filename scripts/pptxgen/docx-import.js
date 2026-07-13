@@ -4,7 +4,6 @@ const JSZip = require('jszip');
 const { fail } = require('./errors');
 
 const EMU_PER_INCH = 914400;
-const DOCX_RENDER_DPI = 144;
 const IMAGE_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
 
 async function extractDocxContent(options = {}) {
@@ -183,16 +182,19 @@ async function writeRenderedImage(buffer, options) {
   const ext = path.extname(options.sourceName).toLowerCase();
   const base = `docx-image-${String(options.imageIndex).padStart(3, '0')}`;
   const targetPng = path.join(options.assetDir, `${base}.png`);
-  const needsSharp = hasCrop(options.crop) || !!options.extent || isSharpFriendly(ext);
+  const needsSharp = hasCrop(options.crop);
   if (!needsSharp) {
     const target = path.join(options.assetDir, `${base}${ext || '.bin'}`);
     await fs.promises.writeFile(target, buffer);
-    options.warnings.push(`image ${options.imageIndex} was copied without raster processing because its format is unsupported by sharp: ${ext || 'unknown'}.`);
     return {
       absolutePath: target,
       relativePath: toPosixRelative(options.specDir, target),
       crop: normalizeCropForOutput(options.crop),
-      source: { format: ext.replace('.', '') || 'unknown', processed: false },
+      source: {
+        format: ext.replace('.', '') || 'unknown',
+        processed: false,
+        transform: 'copied-original',
+      },
     };
   }
 
@@ -213,14 +215,7 @@ async function writeRenderedImage(buffer, options) {
     if (cropBox.width <= 0 || cropBox.height <= 0) fail(`Invalid DOCX crop rectangle for image ${options.imageIndex}.`);
     pipeline = pipeline.extract(cropBox);
   }
-  if (options.extent?.wIn && options.extent?.hIn) {
-    pipeline = pipeline.resize({
-      width: Math.max(1, Math.round(options.extent.wIn * DOCX_RENDER_DPI)),
-      height: Math.max(1, Math.round(options.extent.hIn * DOCX_RENDER_DPI)),
-      fit: 'fill',
-    });
-  }
-  await pipeline.png().toFile(targetPng);
+  const outputInfo = await pipeline.png().toFile(targetPng);
   return {
     absolutePath: targetPng,
     relativePath: toPosixRelative(options.specDir, targetPng),
@@ -229,8 +224,10 @@ async function writeRenderedImage(buffer, options) {
       format: metadata.format || ext.replace('.', '') || 'unknown',
       width: metadata.width || null,
       height: metadata.height || null,
+      outputWidth: outputInfo.width || null,
+      outputHeight: outputInfo.height || null,
       processed: true,
-      dpi: DOCX_RENDER_DPI,
+      transform: 'cropped-source-pixels',
     },
   };
 }
@@ -430,7 +427,7 @@ function writeDocxExtractionMarkdown(filePath, extracted) {
   lines.push('## 写 PPT JSON 时的要求');
   lines.push('');
   lines.push('- 不要按 DOCX 排版机械映射页面；应根据语义重新组织封面、目录、正文、图文页、总结页。');
-  lines.push('- 插入图片时使用上方 `path` 中的已处理 PNG；这些图片已按 Word 中的裁剪和缩放效果处理。');
+  lines.push('- 插入图片时使用上方 `path`。无裁剪图片保留原始文件；带裁剪图片已按源像素裁剪为 PNG。PPT 生成阶段会按图片比例放入槽位。');
   lines.push('- 如果 DOCX 的 alt text 是工具自动生成的无意义描述，不要把它当作正文或标题。');
   lines.push('- PPT JSON 写完后再运行 `scripts/generate-pptx.js --spec ... --out ...` 生成演示文稿。');
   writeText(filePath, lines.join('\n') + '\n');
