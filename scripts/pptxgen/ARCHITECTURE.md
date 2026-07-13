@@ -150,6 +150,53 @@ Layout 字数容量指南和 JSON 预检 warning。
 - `fail(message)` 打印错误并用退出码 `2` 退出。
 - CLI 参数错误、spec 结构错误、槽位校验错误都可以使用它。
 
+### `validation.js`
+
+Spec、layout 和槽位校验模块。
+
+- `normalizeLayoutCompatibility()`：兼容旧 JSON 字段结构，例如 compare 左右列。
+- `validateSpecSlots()`：统一入口，检查字段类型、必填字段、图片/图表/表格槽位、文本集合数量、静默忽略字段、内容过空等问题。
+- `warnLayoutVariety()`：提示连续重复 layout。
+- `resolveMediaSlotCount()`：根据图片、图表、caption 和显式 `mediaCount` 计算媒体槽位数量。
+
+新增 layout 字段规则、缺字段 error/warning、静默忽略字段检查时，优先改这里。
+
+### `media.js`
+
+图片和媒体槽位模块。
+
+- `prepareImageAspectAssets()`：生成前预读取本地图片尺寸。
+- `prepareSvgImageAssets()`：SVG 图片/logo 默认转 PNG，避免兼容性问题。
+- `resolveImage()`：按 spec 目录、当前目录、skill assets、skill root 解析图片路径。
+- `addImageAsset()`：按原始比例居中插入图片，避免 PNG/JPG 变形。
+- `addImagePlaceholder()` / `addImageOrPlaceholder()` / `addStatementImageSlot()`：媒体占位符和图片槽位。
+- `normalizeMediaImages()` / `normalizeMediaCharts()`：统一解析 image/images/gallery/media/charts。
+- `addMediaOrChart()` / `addMediaGrid()`：媒体槽位中插入图片、图表或占位符。
+
+Linux 路径、图片比例、SVG/PNG/JPG/WebP、空媒体槽位等问题优先看这里。
+
+### `icons.js`
+
+Lucide 图标和项目符号图标模块。
+
+- `prepareIconAssets()`：生成前把图标 rasterize 到 PNG 缓存。
+- `iconAlias()`：图标别名映射。
+- `addSvgIcon()` / `addInlineIcon()` / `addBulletIcon()`：模板中使用的图标绘制入口。
+- `normalizeHex()`：颜色标准化工具，供模板背景和图标复用。
+
+图标库、图标兼容性、SVG 转 PNG、lucide 包兼容问题优先看这里。
+
+### `blocks.js`
+
+自由数据块、图表和表格模块。
+
+- `renderDataBlocks()`：渲染 `blocks[]`、显式定位的 chart/table/text/callout。
+- `addChartBlock()`：PptxGenJS 原生图表。
+- `addTableBlock()`：PptxGenJS 表格。
+- `normalizeChartData()` / `normalizeTableRows()`：图表和表格数据归一化。
+
+新增图表类型、表格样式、自由 block 类型时，优先改这里。
+
 ## `engine.js` 核心结构
 
 `engine.js` 保留生成主流程、spec 校验、图片/图表/文本/图标等共用能力。具体模板设计和 layout 渲染放在 `templates/` 目录；新增或修改某个 style 时，优先只改对应模板文件。
