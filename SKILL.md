@@ -50,6 +50,8 @@ description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 Powe
    node scripts/generate-pptx.js --capacity-guide --spec outputs/deck.plan.json --out outputs/deck-capacity-guide.md
    ```
 
+   该命令会先校验 `deck.plan.json`。如果页面 layout 不存在、集合字段与 layout 不匹配、集合项缺少标题字段、或标题级 plan 中提前写入正文类字段，会直接失败，先修正 plan 再继续。
+
 4. 按 `deck-capacity-guide.md` 扩写完整 JSON 正文。容量指南会在每页表格后给出 `Example slide JSON` 作为字段结构参考。不要新增 guide 中没有列出的正文槽位；如果需要更换 layout 或改变分点数量，先更新 `deck.plan.json` 并重新生成容量指南。
 5. 在最终生成前，将完整 JSON 规格转换为用户友好的 Markdown 大纲：
 
@@ -62,6 +64,8 @@ description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 Powe
    ```bash
    node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx
    ```
+
+   最终生成也会再次校验槽位完整性；例如正文卡片类 layout 的集合项不能只有 `body` 而没有 `title`，也不能只有 `title` 而没有正文说明。
 
 7. 如果生成失败，优先修复缺图、缺表、缺 chart data、必需集合缺失、字段冲突、标题过多正文不足等问题；如果 warning 提到文本容量或重复布局，也应尽量更新 JSON 并重新生成。
 8. 验证原生/可编辑结构和布局安全性：

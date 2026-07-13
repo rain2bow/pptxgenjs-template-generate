@@ -4,7 +4,7 @@ const { buildDeck, normalizeSpec } = require('./engine');
 const { sampleSpec } = require('./samples');
 const { parseArgs, loadSpecFile, writeNormalizedSpec } = require('./spec-io');
 const { fail } = require('./errors');
-const { layoutCapacityMarkdown, layoutCapacityMarkdownForSpec, writeLayoutCapacityGuide, writePlannedCapacityGuide } = require('./text-capacity');
+const { layoutCapacityMarkdown, layoutCapacityMarkdownForSpec, writeLayoutCapacityGuide, writePlannedCapacityGuide, validateCapacityPlan } = require('./text-capacity');
 
 async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
@@ -17,6 +17,11 @@ async function main(argv = process.argv.slice(2)) {
       const planPath = path.resolve(args.spec);
       const plan = loadSpecFile(planPath);
       if (!plan.style && typeof args.capacityGuide === 'string') plan.style = args.capacityGuide;
+      try {
+        validateCapacityPlan(plan);
+      } catch (error) {
+        fail(error.message);
+      }
       if (args.out) writePlannedCapacityGuide(plan, args.out);
       else process.stdout.write(layoutCapacityMarkdownForSpec(plan));
       return;

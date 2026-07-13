@@ -238,6 +238,21 @@ module.exports = function createValidationTools(deps) {
     const titleOnlyMatrixRule = style === 'magazine'
       ? { keys: ['items'], max: 12, min: 1, label: 'matrix cells' }
       : { keys: ['items'], max: 12, min: 1, label: 'matrix cells', itemTextKeys: ['title', 'label'], unusedItemFields: [...narrativeFields, 'name', 'value'], suggestion: textLayoutSuggestion };
+    const textCardRule = (keys, max, min, label, extra = {}) => ({
+      keys,
+      max,
+      min,
+      label,
+      itemTextKeys: ['title', 'label', 'name', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'points', 'bullets', 'list'],
+      requiredItemTitleKeys: ['title', 'label', 'name', 'heading'],
+      requiredItemBodyKeys: ['body', 'desc', 'note', 'summary', 'detail', 'text', 'points', 'bullets', 'list'],
+      suggestion: textLayoutSuggestion,
+      ...extra,
+    });
+    const processStepRule = (keys, max, min, label, extra = {}) => textCardRule(keys, max, min, label, {
+      requiredItemTitleKeys: ['title', 'label', 'year'],
+      ...extra,
+    });
     const numberMetricRule = style === 'magazine'
       ? { keys: ['items'], max: 6, min: 1, label: 'number cards', itemTextKeys: ['label', 'value', 'note', 'unit'], unusedItemFields: ['title', ...metricNarrativeFields], suggestion: metricLayoutSuggestion }
       : { keys: ['items'], max: 6, min: 1, label: 'number cards', itemTextKeys: ['label', 'value', 'note', 'unit'], unusedItemFields: ['title', ...metricNarrativeFields], suggestion: metricLayoutSuggestion };
@@ -257,25 +272,25 @@ module.exports = function createValidationTools(deps) {
       closing: [],
       bigNumbers: [numberMetricRule],
       kpiTower: [{ ...numberMetricRule, max: 4, label: 'KPI cards' }],
-      pipeline: [{ keys: ['steps', 'items'], max: 6, min: 1, label: 'pipeline steps' }],
-      timeline: [{ keys: ['items', 'steps'], max: 6, min: 1, label: 'timeline steps' }],
+      pipeline: [processStepRule(['steps', 'items'], 6, 1, 'pipeline steps')],
+      timeline: [processStepRule(['items', 'steps'], 6, 1, 'timeline steps')],
       matrix: [titleOnlyMatrixRule],
-      fourCards: [{ keys: ['items'], max: 8, min: 1, label: 'cards' }],
-      article: [{ keys: ['sections', 'items', 'columns'], max: 6, min: 1, label: 'article sections' }],
-      briefing: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
-      executiveBrief: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
-      contentBrief: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: 2, label: 'briefing text blocks' }],
-      textGrid: [{ keys: ['sections', 'items', 'columns'], max: cmbTextGridMax, min: cmbTextWeaveMin, label: style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text grid cells' }],
-      textWeave: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: cmbTextWeaveMin, label: style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text weave blocks' }],
-      contentSynthesis: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: cmbTextWeaveMin, label: style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text weave blocks' }],
-      denseText: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], max: 6, min: cmbTextWeaveMin, label: style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'dense text blocks' }],
-      sectionList: [{ keys: ['sections', 'items', 'columns'], max: 7, min: 1, label: 'section list items' }],
+      fourCards: [textCardRule(['items'], 8, 1, 'cards')],
+      article: [textCardRule(['sections', 'items', 'columns'], 6, 1, 'article sections')],
+      briefing: [textCardRule(['sections', 'items', 'columns', 'points', 'agenda'], 6, 2, 'briefing text blocks')],
+      executiveBrief: [textCardRule(['sections', 'items', 'columns', 'points', 'agenda'], 6, 2, 'briefing text blocks')],
+      contentBrief: [textCardRule(['sections', 'items', 'columns', 'points', 'agenda'], 6, 2, 'briefing text blocks')],
+      textGrid: [textCardRule(['sections', 'items', 'columns'], cmbTextGridMax, cmbTextWeaveMin, style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text grid cells')],
+      textWeave: [textCardRule(['sections', 'items', 'columns', 'points', 'agenda'], 6, cmbTextWeaveMin, style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text weave blocks')],
+      contentSynthesis: [textCardRule(['sections', 'items', 'columns', 'points', 'agenda'], 6, cmbTextWeaveMin, style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'text weave blocks')],
+      denseText: [textCardRule(['sections', 'items', 'columns', 'points', 'agenda'], 6, cmbTextWeaveMin, style === 'cmb' ? 'CMB text weave cards (lead + right card)' : 'dense text blocks')],
+      sectionList: [textCardRule(['sections', 'items', 'columns'], 7, 1, 'section list items')],
       agenda: [{ keys: ['items', 'sections', 'agenda'], max: 8, min: 1, label: 'agenda items' }],
-      pyramid: [{ keys: ['layers', 'items', 'sections'], max: 5, min: 1, label: 'pyramid layers' }],
-      radial: [{ keys: ['items', 'nodes', 'sections'], max: 8, min: 1, label: 'radial nodes' }],
-      roadmap: [{ keys: ['steps', 'items'], max: 6, min: 1, label: 'roadmap steps' }],
-      swimlane: [{ keys: ['lanes', 'sections'], max: 4, min: 1, label: 'swimlanes' }],
-      media: [{ keys: ['items', 'insights', 'points'], max: sideMax, min: 1, label: 'side points', suggestion: 'Add 1-4 side points with title/body, or use textImage/statement when the slide only needs one paragraph beside media.' }],
+      pyramid: [textCardRule(['layers', 'items', 'sections'], 5, 1, 'pyramid layers')],
+      radial: [textCardRule(['items', 'nodes', 'sections'], 8, 1, 'radial nodes')],
+      roadmap: [processStepRule(['steps', 'items'], 6, 1, 'roadmap steps')],
+      swimlane: [textCardRule(['lanes', 'sections'], 4, 1, 'swimlanes', { requiredItemTitleKeys: ['title', 'label', 'name'] })],
+      media: [textCardRule(['items', 'insights', 'points'], sideMax, 1, 'side points', { suggestion: 'Add 1-4 side points with title/body, or use textImage/statement when the slide only needs one paragraph beside media.' })],
       mediaGrid: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 1, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for mediaGrid captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
       gallery: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 1, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for gallery captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
       imageGrid: [{ keys: ['captions', 'items', 'sections'], max: 6, min: 1, label: 'media captions', itemTextKeys: ['caption', 'title', 'label'], unusedItemFields: [...narrativeFields, 'points', 'bullets', 'list', 'value'], suggestion: 'Use caption/title/label for imageGrid captions. Use media/textImage/caseStudy or split into a text slide when each image needs body text.' }],
@@ -326,6 +341,7 @@ module.exports = function createValidationTools(deps) {
         const keys = rule.itemTextKeys || DISPLAY_ITEM_TEXT_KEYS;
         errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] has no field rendered by ${rule.label}. Use one of: ${keys.join(', ')}.`);
       }
+      validateRequiredSlotItemFields(item, index, rule, key, itemIndex, errors);
       validateUnusedSlotItemFields(item, index, rule, key, itemIndex, errors);
     });
     return items;
@@ -435,6 +451,24 @@ module.exports = function createValidationTools(deps) {
     if (!ignored.length) return;
     const suggestion = rule.suggestion || 'Use a layout that renders these item fields, or remove the unused fields.';
     errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] includes field(s) not rendered by ${rule.label}: ${ignored.join(', ')}. ${suggestion}`);
+  }
+
+  function validateRequiredSlotItemFields(item, index, rule, key, itemIndex, errors) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+    if (rule.requiredItemTitleKeys?.length && !hasAnyTextField(item, rule.requiredItemTitleKeys)) {
+      errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] is missing a title field required by ${rule.label}. Use one of: ${rule.requiredItemTitleKeys.join(', ')}.`);
+    }
+    if (rule.requiredItemBodyKeys?.length && !hasAnyTextField(item, rule.requiredItemBodyKeys)) {
+      errors.push(`slide ${index + 1} ${rule.prefix || ''}${key}[${itemIndex}] is missing body/detail text required by ${rule.label}. Use one of: ${rule.requiredItemBodyKeys.join(', ')}.`);
+    }
+  }
+
+  function hasAnyTextField(item, keys) {
+    return keys.some((field) => {
+      const value = item[field];
+      if (Array.isArray(value)) return value.length > 0;
+      return String(value ?? '').trim().length > 0;
+    });
   }
 
   function unsupportedImageFields(slide) {

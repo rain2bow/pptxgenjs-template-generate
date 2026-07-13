@@ -219,6 +219,7 @@ function writeLayoutCapacityGuide(style, outPath) {
 }
 
 function layoutCapacityGuideForSpec(spec = {}) {
+  validateCapacityPlan(spec);
   const style = spec.style || 'swiss';
   const slides = Array.isArray(spec.slides) ? spec.slides : [];
   return {
@@ -262,6 +263,126 @@ function writePlannedCapacityGuide(spec, outPath) {
     : layoutCapacityMarkdownForSpec(spec);
   fs.writeFileSync(target, content, 'utf8');
   console.log('Wrote planned layout capacity guide ' + target);
+}
+
+function validateCapacityPlan(spec = {}) {
+  const errors = [];
+  const style = spec.style || 'swiss';
+  if (!Array.isArray(spec.slides) || !spec.slides.length) {
+    errors.push('deck.plan.json must contain a non-empty slides array.');
+  }
+  (Array.isArray(spec.slides) ? spec.slides : []).forEach((slide, index) => {
+    validatePlannedSlide(style, slide || {}, index, errors);
+  });
+  if (errors.length) {
+    throw new Error('Capacity plan validation failed:\n- ' + errors.join('\n- '));
+  }
+}
+
+function validatePlannedSlide(style, slide, index, errors) {
+  const layout = slide.layout || 'statement';
+  const layoutGuide = guideForStyle(style)[layout] || COMMON_GUIDE[layout];
+  if (!layoutGuide || !Array.isArray(layoutGuide.slots)) {
+    errors.push('slide ' + (index + 1) + ' uses unknown or unsupported layout "' + layout + '". Change slide.layout before generating capacity-guide.');
+    return;
+  }
+  validatePlanCollections(style, layout, layoutGuide, slide, index, errors);
+  validatePlanScalars(layout, layoutGuide, slide, index, errors);
+}
+
+function validatePlanCollections(style, layout, layoutGuide, slide, index, errors) {
+  const allowed = allowedPlanCollectionKeys(style, layout, layoutGuide);
+  const collectionKeys = ['items', 'sections', 'columns', 'steps', 'nodes', 'layers', 'lanes', 'metrics', 'agenda', 'captions', 'notes', 'insights', 'points'];
+  collectionKeys.forEach((key) => {
+    if (slide[key] === undefined || slide[key] === null) return;
+    if (!allowed.has(key)) {
+      errors.push('slide ' + (index + 1) + ' layout "' + layout + '" does not use collection field "' + key + '". Use one of: ' + Array.from(allowed).join(', ') + '.');
+      return;
+    }
+    validatePlanCollectionShape(slide[key], key, layout, index, errors);
+  });
+  if (['compare', 'duoCompare', 'splitCompare'].includes(layout)) {
+    ['before', 'after'].forEach((key) => {
+      if (slide[key] && typeof slide[key] === 'object' && slide[key].items !== undefined) {
+        validatePlanCollectionShape(slide[key].items, key + '.items', layout, index, errors);
+      }
+    });
+  }
+}
+
+function allowedPlanCollectionKeys(style, layout, layoutGuide) {
+  const keys = new Set();
+  (layoutGuide.slots || []).forEach((slot) => {
+    const field = String(slot.field || '');
+    const match = field.match(/^([^.[\]]+)\[\]/);
+    if (match) keys.add(match[1]);
+  });
+  if (layoutGuide.collection?.keys) layoutGuide.collection.keys.forEach((key) => keys.add(key));
+  if (style === 'cmb' && isCmbBriefingLayout(layout)) ['sections', 'items', 'columns', 'points', 'agenda'].forEach((key) => keys.add(key));
+  if (style === 'cmb' && isCmbTextWeaveLayout(layout)) ['sections', 'items', 'columns', 'points', 'agenda'].forEach((key) => keys.add(key));
+  return keys;
+}
+
+function validatePlanCollectionShape(value, key, layout, index, errors) {
+  if (typeof value === 'string' || typeof value === 'number') return;
+  const items = Array.isArray(value)
+    ? value
+    : (value && typeof value === 'object' ? Object.entries(value).map(([title, body]) => ({ title, body })) : null);
+  if (!items) {
+    errors.push('slide ' + (index + 1) + ' layout "' + layout + '" field "' + key + '" must be an array, object map, string, or number in deck.plan.json.');
+    return;
+  }
+  items.forEach((item, itemIndex) => {
+    if (item === null || item === undefined || typeof item === 'string' || typeof item === 'number') return;
+    if (typeof item !== 'object' || Array.isArray(item)) {
+      errors.push('slide ' + (index + 1) + ' field "' + key + '[' + itemIndex + ']" must be a title-only object or plain text.');
+      return;
+    }
+    const allowed = new Set(['title', 'label', 'name', 'heading', 'value', 'unit', 'caption', 'year', 'number', 'icon', 'highlight']);
+    const titleKeys = planTitleKeysForCollection(key, layout);
+    if (!titleKeys.some((field) => String(item[field] ?? '').trim().length > 0)) {
+      errors.push('slide ' + (index + 1) + ' field "' + key + '[' + itemIndex + ']" is missing a title field for deck.plan.json. Use one of: ' + titleKeys.join(', ') + '.');
+    }
+    Object.keys(item).forEach((field) => {
+      if (!allowed.has(field)) {
+        errors.push('slide ' + (index + 1) + ' field "' + key + '[' + itemIndex + '].' + field + '" should not be in deck.plan.json. Put body/detail text only after generating capacity-guide.');
+      }
+    });
+  });
+}
+
+function planTitleKeysForCollection(key, layout) {
+  if (['captions'].includes(key) || ['mediaGrid', 'gallery', 'imageGrid'].includes(layout)) return ['caption', 'title', 'label'];
+  if (['metrics'].includes(key) || ['dashboard', 'imageHero', 'caseStudy', 'bigNumbers', 'kpiTower'].includes(layout)) return ['label', 'title', 'name', 'value'];
+  if (['steps'].includes(key) || ['timeline', 'pipeline', 'roadmap'].includes(layout)) return ['title', 'label', 'year'];
+  if (['lanes'].includes(key)) return ['title', 'label', 'name'];
+  return ['title', 'label', 'name', 'heading'];
+}
+
+function validatePlanScalars(layout, layoutGuide, slide, index, errors) {
+  const contentScalars = ['body', 'summary', 'lead', 'story', 'note', 'desc', 'detail', 'text', 'quote', 'callout', 'conclusion', 'takeaway', 'footerSummary', 'nextStep'];
+  const invalidContentScalars = new Set();
+  contentScalars.forEach((key) => {
+    if (slide[key] !== undefined && slide[key] !== null && String(slide[key]).trim()) {
+      invalidContentScalars.add(key);
+      errors.push('slide ' + (index + 1) + ' field "' + key + '" should not be in deck.plan.json. Use title-only planning fields first, generate capacity-guide, then fill body text in the full JSON.');
+    }
+  });
+  const allowed = new Set(['layout', 'title', 'kicker', 'subtitle', 'theme', 'style', 'mediaCount', 'imageSlots', 'slotCount', 'allowEmptyMediaSlots', 'allowSparseContent', 'allowMissingChart', 'allowMissingTable']);
+  ['image', 'images', 'gallery', 'media', 'chart', 'charts', 'table', 'before', 'after', 'left', 'right'].forEach((key) => allowed.add(key));
+  ['summaryTitle', 'leadTitle', 'focusTitle', 'conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle', 'agendaTitle', 'agendaSubtitle'].forEach((key) => allowed.add(key));
+  (layoutGuide.slots || []).forEach((slot) => {
+    const field = String(slot.field || '');
+    if (!field.includes('.') && !field.includes('[]')) allowed.add(field);
+  });
+  const collections = ['items', 'sections', 'columns', 'steps', 'nodes', 'layers', 'lanes', 'metrics', 'agenda', 'captions', 'notes', 'insights', 'points'];
+  collections.forEach((key) => allowed.add(key));
+  Object.keys(slide).forEach((key) => {
+    if (invalidContentScalars.has(key)) return;
+    if (!allowed.has(key)) {
+      errors.push('slide ' + (index + 1) + ' layout "' + layout + '" has unsupported plan field "' + key + '". Remove it or use a supported layout field.');
+    }
+  });
 }
 
 function plannedSlideCapacity(style, slide, index) {
@@ -906,4 +1027,4 @@ function textVisualLength(text) {
   }, 0);
 }
 
-module.exports = { layoutCapacityGuide, layoutCapacityGuideForSpec, layoutCapacityMarkdown, layoutCapacityMarkdownForSpec, writeLayoutCapacityGuide, writePlannedCapacityGuide, warnSpecTextCapacity, textVisualLength };
+module.exports = { layoutCapacityGuide, layoutCapacityGuideForSpec, layoutCapacityMarkdown, layoutCapacityMarkdownForSpec, writeLayoutCapacityGuide, writePlannedCapacityGuide, validateCapacityPlan, warnSpecTextCapacity, textVisualLength };
