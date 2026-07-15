@@ -493,6 +493,15 @@ function decorativeBackgroundSvg(ctx, mode, baseColor, emphasized) {
     gridLines.push(`<line x1="${gridLeft}" y1="${yy}" x2="${gridRight}" y2="${yy}" />`);
   }
   const headerRect = headerH > 0 ? `<rect x="0" y="0" width="${w}" height="${headerH}" fill="#${svgEsc(header)}"/>` : '';
+  if (mode === 'swiss' && ctx?.spec?.style === 'swiss') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+<rect x="0" y="0" width="${w}" height="${h}" fill="#${svgEsc(base)}"/>
+${headerRect}
+<g fill="none" stroke="#${svgEsc(grid)}" stroke-width="${lineW}" stroke-opacity="${gridOpacity}" vector-effect="non-scaling-stroke">
+${gridLines.join('\n')}
+</g>
+</svg>`;
+  }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
 <defs>
   <linearGradient id="bgShade" x1="0" y1="${headerH}" x2="0" y2="${h}" gradientUnits="userSpaceOnUse">
