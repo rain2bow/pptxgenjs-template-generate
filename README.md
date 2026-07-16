@@ -71,7 +71,7 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/ARCHITECTURE.md`: module responsibility, engine section map, and style/layout extension guide.
 - `scripts/validate-pptx-native.js`：校验 PPTX 是否包含原生 PowerPoint 结构，避免输出整页截图型文件。
 - `scripts/validate-pptx-layout.js`：扫描生成后的 PPTX 结构，检查明显的布局冲突、文本覆盖和底部安全区风险。
-- `scripts/check-media-slot-warnings.js`：回归检查所有带图片/媒体槽位的 layout 在没有图片或图表时都会输出 warning。
+- `scripts/check-media-slot-warnings.js`：回归检查所有带图片/媒体槽位的 layout 在没有图片或图表时都会阻断生成。
 - `assets/template-magazine.js`：`magazine` 风格样例 spec，适合作为电子杂志/叙事型页面的输入参考。
 - `assets/template-swiss.js`：`swiss` 风格样例 spec，适合作为数据、科技、方法论页面的输入参考。
 - `assets/template-cmb.js`：招商银行 `cmb` 独立风格样例 spec，内置 CMB logo 配置和金融汇报页面结构。
@@ -277,9 +277,9 @@ Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/
 - 用户提供 `image` / `images` / `gallery` 时优先插入用户图片。
 - `mediaGrid` / `gallery` / `imageGrid` 未显式设置 `mediaCount` 时，槽位数自动等于图片数、显式图表数或 caption 数。
 - `mediaGrid` / `gallery` / `imageGrid` 中的 `captions` / `items` / `sections` 只作为短图片说明，渲染字段是 `caption` / `title` / `label`；不要写 `body`，否则会报错。
-- 显式设置 `mediaCount` 时必须与图片数量匹配，除非明确允许空槽。
+- 显式设置 `mediaCount` 时必须与图片或图表素材数量匹配，不允许用空槽补齐。
 - 没有用户图片但提供 `chart` / `charts` 时，使用 PowerPoint 原生图表。
-- 没有图片和显式图表时，显示图片占位符，不再默认填充图表。
+- 没有图片和显式图表时，媒体槽位 layout 会报错；应提供素材或改用纯文本 layout。
 - `statement` 只支持 1 个图片槽位，不支持 chart；多图请使用 `mediaGrid` / `imageGrid`。
 
 图表类型支持：

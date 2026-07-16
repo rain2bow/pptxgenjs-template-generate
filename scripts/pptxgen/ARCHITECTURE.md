@@ -467,7 +467,7 @@ CMB 继续复用 Swiss renderer 的 layout：
 
 - 用户提供图片时优先插入图片。
 - 没有图片但显式提供 chart 时插入原生 PPT 图表。
-- 没有图片和图表时显示图片占位符。
+- 没有图片和图表时校验失败；应提供素材或改用纯文本 layout。
 - `mediaGrid`、`gallery`、`imageGrid` 的槽位数由图片数、图表数、caption 数或 `mediaCount` 决定。
 - `resolveImage()` 负责把 spec 相对路径、技能内置 asset 路径解析成可用文件路径。
 

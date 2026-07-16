@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-const { normalizeSpec } = require('./pptxgen/engine');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { spawnSync } = require('child_process');
 
 const MEDIA_SLOT_LAYOUTS = [
   'statement',
@@ -14,7 +17,7 @@ const MEDIA_SLOT_LAYOUTS = [
 ];
 
 const spec = {
-  title: 'Media slot warning check',
+  title: 'Media slot error check',
   style: 'magazine',
   theme: 'ink',
   slides: MEDIA_SLOT_LAYOUTS.map((layout) => ({
@@ -28,27 +31,43 @@ const spec = {
   })),
 };
 
-const originalWarn = console.warn;
-const warnings = [];
-console.warn = (message) => warnings.push(String(message));
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pptx-media-slot-check-'));
+const specPath = path.join(tempDir, 'missing-media.spec.json');
+const outPath = path.join(tempDir, 'missing-media.pptx');
+fs.writeFileSync(specPath, JSON.stringify(spec, null, 2), 'utf8');
 
-try {
-  normalizeSpec(spec, { specDir: process.cwd() });
-} finally {
-  console.warn = originalWarn;
-}
-
-const missing = MEDIA_SLOT_LAYOUTS.filter((layout, index) => {
-  const slideNumber = index + 1;
-  return !warnings.some((message) => (
-    message.includes(`slide ${slideNumber} uses layout "${layout}"`)
-    && message.includes('with media/image slot(s) but provides no images or charts')
-  ));
+const result = spawnSync(process.execPath, [
+  path.join(__dirname, 'generate-pptx.js'),
+  '--spec',
+  specPath,
+  '--out',
+  outPath,
+], {
+  cwd: path.resolve(__dirname, '..'),
+  encoding: 'utf8',
 });
 
-if (missing.length) {
-  console.error(`Missing media slot warning for layout(s): ${missing.join(', ')}`);
+try {
+  fs.rmSync(tempDir, { recursive: true, force: true });
+} catch (_) {
+  // Best-effort cleanup only; a failed cleanup should not hide validation results.
+}
+
+if (result.status === 0) {
+  console.error('Expected media slot validation to fail, but generation succeeded.');
   process.exit(1);
 }
 
-console.log(`Media slot warning check passed: ${MEDIA_SLOT_LAYOUTS.length} layout(s).`);
+const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+const missing = MEDIA_SLOT_LAYOUTS.filter((layout, index) => {
+  const slideNumber = index + 1;
+  return !output.includes(`slide ${slideNumber} uses layout "${layout}"`)
+    || !output.includes('with media/image slot(s) but provides no images or charts');
+});
+
+if (missing.length) {
+  console.error(`Missing media slot error for layout(s): ${missing.join(', ')}`);
+  process.exit(1);
+}
+
+console.log(`Media slot error check passed: ${MEDIA_SLOT_LAYOUTS.length} layout(s).`);

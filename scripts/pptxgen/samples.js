@@ -11,7 +11,7 @@ function sampleSpec(style = 'swiss') {
       headY: 1.06,
       slides: [
         { layout: 'cover', kicker: '招商银行 / 2026', title: '招商银行业务增长与数字化经营汇报', subtitle: '围绕客户经营、风险控制与效率提升的阶段性复盘' },
-        { layout: 'statement', allowEmptyMediaSlots: true, kicker: '核心摘要', title: '以客户价值为核心，形成增长、风控与效率的闭环。', body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。', callout: '稳健经营\n价值增长\n风险可控' },
+        { layout: 'statement', image: 'assets/logos/cmb-logo-lockup.png', kicker: '核心摘要', title: '以客户价值为核心，形成增长、风控与效率的闭环。', body: '本页用于放置全篇核心判断。建议用一句明确结论加一行依据，不要写成普通目录。', callout: '稳健经营\n价值增长\n风险可控' },
         { layout: 'kpiTower', kicker: '经营表现', title: '关键经营指标保持稳健改善', items: [
           { label: '零售客户增长', value: '+18%', valueNum: 18, note: '同比保持双位数增长。' },
           { label: '活跃客户提升', value: '+32%', valueNum: 32, note: '数字渠道贡献主要增量。' },
@@ -79,12 +79,11 @@ function sampleSpec(style = 'swiss') {
         },
         {
           layout: 'quoteImage',
-          allowEmptyMediaSlots: true,
           kicker: 'But',
           title: '我不是程序员。',
           body: '过去十年做的是 UI 设计和 AI 特效。新的工具链让能力边界被重新折叠。',
           callout: '这东西在三年前，需要一个十人团队做一年。',
-          image: { caption: 'Image slot · 16:10' },
+          image: { path: 'example/magazine/magazine-example.png', caption: 'Image slot · 16:10' },
         },
         {
           layout: 'pipeline',
@@ -123,10 +122,10 @@ function sampleSpec(style = 'swiss') {
       },
       {
         layout: 'statement',
-        allowEmptyMediaSlots: true,
         kicker: 'Thesis · 01',
         title: '组织正在从人数问题，变成接口问题。',
         body: '当个体能调用足够厚的技能层，公司边界会重新定义。',
+        image: { path: 'example/swiss/swiss-example.png', caption: 'Swiss example · 16:9' },
       },
       {
         layout: 'kpiTower',
@@ -176,4 +175,3 @@ function sampleSpec(style = 'swiss') {
 }
 
 module.exports = { sampleSpec };
-

@@ -213,16 +213,17 @@ module.exports = function createValidationTools(deps) {
     if (layout !== 'statement' && Math.max(images.length, charts.length) > slotCount) {
       errors.push(`slide ${index + 1} has ${Math.max(images.length, charts.length)} media assets but only ${slotCount} slot(s).`);
     }
-    if (explicitCount && images.length && explicitCount !== images.length && charts.length <= images.length && !slide.allowEmptyMediaSlots) {
-      errors.push(`slide ${index + 1} declares mediaCount=${explicitCount} but provides ${images.length} image(s). Remove mediaCount or set it to ${images.length}; set allowEmptyMediaSlots:true only when blank image placeholders are intentional.`);
+    const assetCount = Math.max(images.length, charts.length);
+    if (explicitCount && explicitCount !== assetCount) {
+      errors.push(`slide ${index + 1} declares mediaCount/imageSlots/slotCount=${explicitCount} but provides ${assetCount} image/chart asset(s). Remove the explicit slot count or provide matching media assets; blank placeholders are not allowed.`);
     }
     images.forEach((image, imageIndex) => {
       if (!resolveImage(specDir, image)) {
-        errors.push(`slide ${index + 1} image ${imageIndex + 1} path is missing or unsupported; provide a valid image path, remove the image entry, or set allowEmptyMediaSlots:true with no image path when a blank placeholder is intentional.`);
+        errors.push(`slide ${index + 1} image ${imageIndex + 1} path is missing or unsupported; provide a valid image path or remove the image entry.`);
       }
     });
-    if (isVisualMediaLayout(layout) && !images.length && !charts.length && !slide.allowEmptyMediaSlots) {
-      errors.push(`slide ${index + 1} uses layout "${layout}" with media/image slot(s) but provides no images or charts. Use a text-only layout such as textGrid/article/fourCards/agenda/radial, provide image/chart data, or set allowEmptyMediaSlots:true only when a blank placeholder is intentional.`);
+    if (isVisualMediaLayout(layout) && !images.length && !charts.length) {
+      errors.push(`slide ${index + 1} uses layout "${layout}" with media/image slot(s) but provides no images or charts. Use a text-only layout such as textGrid/article/fourCards/agenda/radial, or provide image/chart data. Blank media placeholders are not allowed.`);
     }
   }
 

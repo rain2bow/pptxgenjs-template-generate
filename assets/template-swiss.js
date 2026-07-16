@@ -41,7 +41,7 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
    - chart       Native PPT chart page
    - dashboard   KPI strip + chart dashboard
    - blocks/charts/tables can be inserted only when x/y/w/h are explicit; unpositioned data blocks are skipped
-   - shared media layouts: media, mediaGrid, gallery; user images determine slot count, explicit charts render as charts, otherwise IMAGE SLOT placeholders are shown
+   - shared media layouts: media, mediaGrid, gallery; user images determine slot count, explicit charts render as charts, otherwise use a text-only layout
    - shared rich layouts: agenda, caseStudy, pyramid, radial, roadmap, swimlane
    - multi-item pages auto-adapts column count; set columnsCount only when fixed columns are required
    - avoid long runs of the same layout; rotate page types for visual variety
