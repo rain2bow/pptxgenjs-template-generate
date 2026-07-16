@@ -602,7 +602,7 @@ module.exports = function createValidationTools(deps) {
     if (explicit) return clamp(explicit, 1, 6);
     const images = normalizeMediaImages(data);
     const charts = normalizeMediaCharts(data);
-    const captions = normalizeSlotItemsForValidation(data.captions || []);
+    const captions = normalizeSlotItemsForValidation(data.captions || data.items || data.sections || []);
     const declaredMedia = Array.isArray(data.media) ? data.media.length : 0;
     return clamp(Math.max(images.length, charts.length, captions ? captions.length : 0, declaredMedia, 1), 1, 6);
   }

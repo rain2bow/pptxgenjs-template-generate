@@ -314,15 +314,15 @@ module.exports = function createMediaTools(deps) {
     const charts = normalizeMediaCharts(data);
     const captions = normalizeSections(data.captions || data.items || data.sections || []);
     boxes.forEach((box, i) => {
+      const caption = imageCaption(images[i]) || charts[i]?.caption || captions[i]?.caption || captions[i]?.title || captions[i]?.label;
       if (images[i]) {
         addImageOrPlaceholder(slide, ctx, images[i], box.x, box.y, box.w, box.h, s.fg, '图片占位');
       } else if (charts[i]) {
         addChartBlock(slide, ctx, { ...charts[i], x: box.x, y: box.y, w: box.w, h: box.h }, box, s, mode);
-      } else {
+      } else if (!caption) {
         addImagePlaceholder(slide, box.x, box.y, box.w, box.h, s.fg, '图片占位');
       }
-      const caption = imageCaption(images[i]) || charts[i]?.caption || captions[i]?.caption || captions[i]?.title || captions[i]?.label;
-      addCaption(slide, caption, box.x, box.y + box.h + 0.08, box.w, s.fg, mode);
+      addCaption(slide, caption, box.x, box.y + box.h + 0.09, box.w, s.fg, mode, { h: 0.62, lineSpacingMultiple: 1.16 });
     });
   }
 
@@ -348,9 +348,9 @@ module.exports = function createMediaTools(deps) {
     }) || null;
   }
 
-  function addCaption(slide, text, x, y, w, color, mode) {
+  function addCaption(slide, text, x, y, w, color, mode, options = {}) {
     if (!text) return;
-    slide.addText(text, { x, y, w, h: 0.25, fontFace: mode === 'swiss' ? FONTS.mono : FONTS.mono, fontSize: 7.5, charSpace: 1.2, color, transparency: 35, margin: 0, fit: 'shrink' });
+    slide.addText(text, { x, y, w, h: options.h || 0.25, fontFace: mode === 'swiss' ? FONTS.mono : FONTS.mono, fontSize: 7.5, charSpace: 1.2, color, transparency: 35, margin: 0, fit: 'shrink', valign: 'top', lineSpacingMultiple: options.lineSpacingMultiple });
   }
 
   function addSwissBars(slide, x, y, w, h, color, transparency = 35) {

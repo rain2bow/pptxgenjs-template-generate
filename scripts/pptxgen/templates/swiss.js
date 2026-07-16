@@ -720,7 +720,7 @@ module.exports = function createSwissTemplate(api) {
     const cols = count <= 2 ? count : 3;
     const rows = Math.ceil(count / cols);
     const gapX = 0.24;
-    const gapY = rows > 1 ? 0.52 : 0.3;
+    const gapY = rows > 1 ? 0.82 : 0.3;
     const gridW = 11.45;
     const w = (gridW - gapX * (cols - 1)) / cols;
     const h = rows > 1 ? 1.5 : 2.45;

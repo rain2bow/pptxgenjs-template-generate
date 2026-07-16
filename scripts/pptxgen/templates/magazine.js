@@ -333,7 +333,7 @@ module.exports = function createMagazineTemplate(api) {
     const cols = count <= 2 ? count : 3;
     const rows = Math.ceil(count / cols);
     const gapX = 0.38;
-    const gapY = rows > 1 ? 0.55 : 0.3;
+    const gapY = rows > 1 ? 0.84 : 0.3;
     const gridW = 11.15;
     const w = (gridW - gapX * (cols - 1)) / cols;
     const h = rows > 1 ? 1.55 : 2.45;
