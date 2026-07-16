@@ -97,6 +97,14 @@ npm install
 
 ## 生成 PPTX
 
+推荐先写标题级 `deck.plan.json`，再生成该 deck 专属的容量指南：
+
+```bash
+node scripts/generate-pptx.js --capacity-guide --spec outputs/deck.plan.json --out outputs/deck-capacity-guide.md
+```
+
+`deck.plan.json` 只写结构，不写正文。每页必须先确定 `layout` 和实际元素数量：卡片、分点、步骤、指标、图片说明等应写成标题级数组，例如 `items`、`sections`、`steps`、`metrics`、`captions`；暂时只有数量时可写 `itemCount` 或 `count`。该阶段会提前校验元素数量、媒体数量、图表数量、表格存在性和字段是否匹配，失败后先修 plan，再扩写完整 JSON。
+
 使用 JSON spec 生成：
 
 ```bash

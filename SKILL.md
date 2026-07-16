@@ -43,14 +43,14 @@ description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 Powe
 ## 工作流程
 
 1. 选择样式和主题。如果用户没有指定样式，招商银行或银行类需求使用 `cmb`，数据/产品/战略类演示使用 `swiss`，编辑叙事类演示使用 `magazine`。
-2. 先根据用户输入创建标题级规划文件 `deck.plan.json`。该文件只写结构，不写正文：顶层写 `style`、`theme`、`title`、`slides`；每页写 `layout`、`title`；有分点、卡片、步骤或节点时，只写对应集合项的 `title` 或 `label`，不要写 `body` 正文。如果选择媒体槽位 layout，必须在 plan 中已经提供 `image`、`images`、`media`、`gallery`、`chart` 或 `charts`，只写 `mediaCount`、`imageSlots` 或 `allowEmptyMediaSlots` 不算有效素材。
+2. 先根据用户输入创建标题级规划文件 `deck.plan.json`。该文件只写结构，不写正文：顶层写 `style`、`theme`、`title`、`slides`；每页写 `layout`、`title`；有分点、卡片、步骤、节点、指标、图片说明时，必须在 plan 中写出真实数量的标题级数组，例如 `items`、`sections`、`steps`、`metrics`、`captions`，每项只写 `title`、`label`、`caption` 或 `value`，不要写 `body` 正文。如果暂时只有数量，也必须写 `itemCount` 或 `count`；不要让容量指南使用默认占位数量。如果选择媒体槽位 layout，必须在 plan 中已经提供 `image`、`images`、`media`、`gallery`、`chart` 或 `charts`，只写 `mediaCount`、`imageSlots` 或 `allowEmptyMediaSlots` 不算有效素材。
 3. 根据 `deck.plan.json` 生成真实容量指南。该指南只包含已规划页面，并按每页 layout、卡片数量、分点数量估算每个可填字段的容量：
 
    ```bash
    node scripts/generate-pptx.js --capacity-guide --spec outputs/deck.plan.json --out outputs/deck-capacity-guide.md
    ```
 
-   该命令会先校验 `deck.plan.json`。如果页面 layout 不存在、集合字段与 layout 不匹配、集合项缺少标题字段、或标题级 plan 中提前写入正文类字段，会直接失败，先修正 plan 再继续。
+   该命令会先校验 `deck.plan.json`。如果页面 layout 不存在、集合字段与 layout 不匹配、集合项缺少标题字段、元素数量超出或低于该 layout 支持范围、媒体/图表/表格槽位数量不匹配，或标题级 plan 中提前写入正文类字段，会直接失败，先修正 plan 再继续。
 
 4. 按 `deck-capacity-guide.md` 扩写完整 JSON 正文。容量指南会在每页表格后给出 `Example slide JSON` 作为字段结构参考。不要新增 guide 中没有列出的正文槽位；如果需要更换 layout 或改变分点数量，先更新 `deck.plan.json` 并重新生成容量指南。
 5. 在最终生成前，将完整 JSON 规格转换为用户友好的 Markdown 大纲：

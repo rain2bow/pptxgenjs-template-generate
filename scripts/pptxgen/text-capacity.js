@@ -287,6 +287,7 @@ function validatePlannedSlide(style, slide, index, errors) {
     return;
   }
   validatePlanCollections(style, layout, layoutGuide, slide, index, errors);
+  validatePlanElementCounts(style, layout, layoutGuide, slide, index, errors);
   validatePlanScalars(layout, layoutGuide, slide, index, errors);
 }
 
@@ -378,7 +379,7 @@ function validatePlanScalars(layout, layoutGuide, slide, index, errors) {
   } else if (!planHasMediaOrChart(slide)) {
     errors.push('slide ' + (index + 1) + ' layout "' + layout + '" requires image/images/media/gallery or chart/charts in deck.plan.json. mediaCount/imageSlots/allowEmptyMediaSlots are not enough because the page would start with an unfilled media slot.');
   }
-  const allowed = new Set(['layout', 'title', 'kicker', 'subtitle', 'theme', 'style', 'mediaCount', 'imageSlots', 'slotCount', 'allowEmptyMediaSlots', 'allowSparseContent', 'allowMissingChart', 'allowMissingTable']);
+  const allowed = new Set(['layout', 'title', 'kicker', 'subtitle', 'theme', 'style', 'itemCount', 'count', 'mediaCount', 'imageSlots', 'slotCount', 'allowEmptyMediaSlots', 'allowSparseContent', 'allowMissingChart', 'allowMissingTable']);
   ['image', 'images', 'gallery', 'media', 'chart', 'charts', 'table', 'before', 'after', 'left', 'right'].forEach((key) => allowed.add(key));
   ['summaryTitle', 'leadTitle', 'focusTitle', 'conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle', 'agendaTitle', 'agendaSubtitle'].forEach((key) => allowed.add(key));
   (layoutGuide.slots || []).forEach((slot) => {
@@ -395,6 +396,154 @@ function validatePlanScalars(layout, layoutGuide, slide, index, errors) {
   });
 }
 
+function validatePlanElementCounts(style, layout, layoutGuide, slide, index, errors) {
+  planCountRules(style, layout, layoutGuide).forEach((rule) => validatePlanCountRule(slide, index, layout, rule, errors));
+  if (['compare', 'duoCompare', 'splitCompare'].includes(layout)) {
+    validatePlanCountRule(slide.before || {}, index, layout, { keys: ['items'], min: 1, max: 6, label: 'before items', prefix: 'before.' }, errors);
+    validatePlanCountRule(slide.after || {}, index, layout, { keys: ['items'], min: 1, max: 6, label: 'after items', prefix: 'after.' }, errors);
+  }
+  validatePlanMediaAssetCounts(layout, slide, index, errors);
+  validatePlanDataCounts(style, layout, slide, index, errors);
+  validatePlanCmbBriefingCounts(style, layout, slide, index, errors);
+}
+
+function planCountRules(style, layout, layoutGuide) {
+  const sideMax = style === 'swiss' ? 5 : style === 'cmb' ? 4 : 3;
+  const cmbTextGridMax = style === 'cmb' ? 6 : 9;
+  const rules = {
+    bigNumbers: [{ keys: ['items'], min: 1, max: 6, label: 'number cards' }],
+    kpiTower: [{ keys: ['items'], min: 1, max: 4, label: 'KPI cards' }],
+    pipeline: [{ keys: ['steps', 'items'], min: 3, max: 6, label: 'pipeline steps' }],
+    timeline: [{ keys: ['items', 'steps'], min: 3, max: 6, label: 'timeline steps' }],
+    matrix: [{ keys: ['items'], min: 1, max: 12, label: 'matrix cells' }],
+    fourCards: [{ keys: ['items'], min: style === 'cmb' ? 2 : 1, max: style === 'cmb' ? 6 : 8, label: style === 'cmb' ? 'CMB text weave cards' : 'cards' }],
+    article: [{ keys: style === 'cmb' ? ['sections', 'items', 'columns', 'points', 'agenda'] : ['sections', 'items', 'columns'], min: style === 'cmb' ? 2 : 2, max: 6, label: style === 'cmb' ? 'briefing text blocks' : 'article sections' }],
+    sectionList: [{ keys: style === 'cmb' ? ['sections', 'items', 'columns', 'points', 'agenda'] : ['sections', 'items', 'columns'], min: style === 'cmb' ? 2 : 3, max: style === 'cmb' ? 6 : 7, label: style === 'cmb' ? 'briefing text blocks' : 'section list items' }],
+    briefing: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], min: 2, max: 6, label: 'briefing text blocks' }],
+    executiveBrief: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], min: 2, max: 6, label: 'briefing text blocks' }],
+    contentBrief: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], min: 2, max: 6, label: 'briefing text blocks' }],
+    textGrid: [{ keys: ['sections', 'items', 'columns'], min: style === 'cmb' ? 2 : 4, max: cmbTextGridMax, label: style === 'cmb' ? 'CMB text weave cards' : 'text grid cells' }],
+    textWeave: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], min: 2, max: 6, label: 'CMB text weave cards' }],
+    contentSynthesis: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], min: 2, max: 6, label: 'CMB text weave cards' }],
+    denseText: [{ keys: ['sections', 'items', 'columns', 'points', 'agenda'], min: 2, max: 6, label: 'dense text blocks' }],
+    agenda: [{ keys: style === 'cmb' ? ['items', 'sections', 'agenda'] : ['items'], min: 3, max: 8, label: 'agenda items' }],
+    pyramid: [{ keys: ['layers', 'items', 'sections'], min: 3, max: 5, label: 'pyramid layers' }],
+    radial: [{ keys: ['items', 'nodes', 'sections'], min: 4, max: 8, label: 'radial nodes' }],
+    roadmap: [{ keys: ['steps', 'items'], min: 3, max: 6, label: 'roadmap steps' }],
+    swimlane: [{ keys: ['lanes', 'sections'], min: 2, max: 4, label: 'swimlanes' }],
+    media: [{ keys: ['items', 'insights', 'points'], min: 1, max: sideMax, label: 'side points' }],
+    mediaGrid: [{ keys: ['captions', 'items', 'sections'], min: 1, max: 6, label: 'media captions' }],
+    gallery: [{ keys: ['captions', 'items', 'sections'], min: 1, max: 6, label: 'media captions' }],
+    imageGrid: [{ keys: ['captions', 'items', 'sections'], min: 1, max: 6, label: 'media captions' }],
+    imageHero: [{ keys: ['items'], min: 1, max: 3, label: 'image hero metrics' }],
+    caseStudy: [{ keys: ['metrics', 'items'], min: 1, max: 3, label: 'case metrics' }],
+    dataSheet: [{ keys: ['notes', 'insights'], min: 0, max: style === 'swiss' ? 4 : 3, label: 'side notes' }],
+    chart: [{ keys: ['insights', 'notes'], min: 0, max: style === 'swiss' ? 3 : 4, label: 'chart insights' }],
+    dashboard: [{ keys: ['metrics', 'items'], min: 1, max: style === 'swiss' ? 5 : 4, label: 'dashboard metrics' }],
+  };
+  if (rules[layout]) return rules[layout];
+  if (layoutGuide.collection?.keys?.length) {
+    const collection = layoutGuide.collection;
+    return [{ keys: collection.keys, min: collection.minItems || 0, max: collection.maxItems || 0, label: collection.label || 'items' }];
+  }
+  return [];
+}
+
+function validatePlanCountRule(source, index, layout, rule, errors) {
+  const present = rule.keys.filter((key) => source[key] !== undefined && source[key] !== null);
+  const label = `${rule.prefix || ''}${rule.label}`;
+  if (present.length > 1) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json provides multiple fields for ' + label + ': ' + present.map((key) => (rule.prefix || '') + key).join(', ') + '. Keep only one field so the planned element count is unambiguous.');
+  }
+  const key = present[0];
+  const count = key ? planCollectionCount(source[key]) : planExplicitItemCount(source);
+  if (!key && count === null && rule.min > 0) {
+    errors.push('slide ' + (index + 1) + ' layout "' + layout + '" must declare planned ' + label + ' count before capacity-guide. Add a title-only array such as ' + rule.keys[0] + ': [{ "title": "..." }], or set itemCount/count to the intended number.');
+    return;
+  }
+  if (count === null) return;
+  if (rule.max && count > rule.max) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json declares ' + count + ' ' + label + ', but layout "' + layout + '" supports at most ' + rule.max + '. Reduce the count, split into another slide, or choose a different layout before generating capacity-guide.');
+  }
+  if (rule.min && count < rule.min) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json declares ' + count + ' ' + label + ', but layout "' + layout + '" expects at least ' + rule.min + '. Add elements or choose a simpler layout before generating capacity-guide.');
+  }
+}
+
+function planCollectionCount(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value === 'string' || typeof value === 'number') return 1;
+  if (Array.isArray(value)) return value.length;
+  if (typeof value === 'object') return Object.keys(value).length;
+  return null;
+}
+
+function planExplicitItemCount(source) {
+  const raw = source.itemCount ?? source.count;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const count = Number(raw);
+  return Number.isFinite(count) ? count : null;
+}
+
+function validatePlanMediaAssetCounts(layout, slide, index, errors) {
+  if (!planLayoutHasMediaSlot(layout)) return;
+  const imageCount = planAssetCount(slide.image) + planAssetCount(slide.images) + planAssetCount(slide.media) + planAssetCount(slide.gallery);
+  const chartCount = planAssetCount(slide.chart) + planAssetCount(slide.charts);
+  const assetCount = Math.max(imageCount, chartCount);
+  const explicitCount = Number(slide.mediaCount || slide.imageSlots || slide.slotCount || 0);
+  if (layout === 'statement' && imageCount > 1) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json uses statement with ' + imageCount + ' image asset(s), but statement supports exactly one image slot. Use mediaGrid/imageGrid or split into another slide.');
+  }
+  if (layout === 'statement' && chartCount) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json uses statement with chart data, but statement reserves the media area for one image. Use chart/media layout instead.');
+  }
+  if (layout !== 'statement' && imageCount > 6) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json declares ' + imageCount + ' image asset(s), but media layouts support at most 6. Split images across slides.');
+  }
+  if (layout !== 'statement' && chartCount > 6) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json declares ' + chartCount + ' chart asset(s), but media layouts support at most 6. Split charts across slides.');
+  }
+  if (explicitCount && explicitCount !== assetCount) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json declares mediaCount/imageSlots/slotCount=' + explicitCount + ' but provides ' + assetCount + ' image/chart asset(s). Make the media count match before generating capacity-guide.');
+  }
+}
+
+function validatePlanDataCounts(style, layout, slide, index, errors) {
+  if (layout === 'dashboard') {
+    const charts = planAssetCount(slide.charts);
+    if (!charts && !slide.allowMissingChart) errors.push('slide ' + (index + 1) + ' deck.plan.json uses dashboard but has no charts[]. Provide 1-2 planned charts before generating capacity-guide.');
+    if (charts > 2) errors.push('slide ' + (index + 1) + ' deck.plan.json declares ' + charts + ' dashboard charts, but dashboard supports at most 2.');
+  }
+  if (layout === 'chart' && !hasPlanAssetValue(slide.chart) && !slide.allowMissingChart) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json uses chart layout but has no chart. Provide chart data before generating capacity-guide.');
+  }
+  if (layout === 'dataSheet' && !hasPlanAssetValue(slide.table) && !slide.allowMissingTable) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json uses dataSheet but has no table. Provide table.headers/table.rows before generating capacity-guide.');
+  }
+}
+
+function validatePlanCmbBriefingCounts(style, layout, slide, index, errors) {
+  if (style !== 'cmb' || !isCmbBriefingLayout(layout)) return;
+  const sourceKey = firstCollectionKey(slide, ['sections', 'items', 'columns', 'points', 'agenda']);
+  const itemCount = sourceKey ? planCollectionCount(slide[sourceKey]) : (planExplicitItemCount(slide) || 0);
+  const hasLead = hasAnyKey(slide, ['summaryTitle', 'leadTitle', 'focusTitle']);
+  const hasConclusion = hasAnyKey(slide, ['conclusionTitle', 'takeawayTitle', 'footerSummaryTitle', 'nextStepTitle']);
+  const restCount = hasLead ? itemCount : Math.max(0, itemCount - 1);
+  const maxRest = hasConclusion ? 4 : 5;
+  if (restCount > maxRest) {
+    errors.push('slide ' + (index + 1) + ' deck.plan.json declares ' + restCount + ' middle briefing text block(s), but layout "' + layout + '" supports at most ' + maxRest + (hasConclusion ? ' when conclusion/takeaway is present.' : '.') + ' Reduce item count or use textWeave/denseText before generating capacity-guide.');
+  }
+}
+
+function planAssetCount(value) {
+  if (value === undefined || value === null) return 0;
+  if (typeof value === 'string') return value.trim() ? 1 : 0;
+  if (typeof value === 'number' || typeof value === 'boolean') return 1;
+  if (Array.isArray(value)) return value.filter((item) => hasPlanAssetValue(item)).length;
+  if (typeof value === 'object') return 1;
+  return 0;
+}
+
 function planLayoutHasMediaSlot(layout) {
   return ['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy'].includes(layout || '');
 }
@@ -408,7 +557,7 @@ function hasPlanAssetValue(value) {
   if (typeof value === 'string') return value.trim().length > 0;
   if (typeof value === 'number' || typeof value === 'boolean') return true;
   if (Array.isArray(value)) return value.some((item) => hasPlanAssetValue(item));
-  if (typeof value === 'object') return Object.keys(value).length > 0;
+  if (typeof value === 'object') return true;
   return false;
 }
 
