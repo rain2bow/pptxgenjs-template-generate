@@ -262,7 +262,7 @@ module.exports = function createMediaTools(deps) {
       addImageAsset(slide, imgPath, { x, y, w, h });
       return;
     }
-    addImagePlaceholder(slide, x, y, w, h, color, label || '图片占位');
+    fail('Image path is missing or unsupported for layout "' + (ctx.slideSpec?.layout || 'default') + '". Provide a valid local image path, remove the image entry, or change to a text-only layout.');
   }
 
   function addStatementImageSlot(slide, ctx, box, color, label = '图片占位') {
@@ -271,8 +271,7 @@ module.exports = function createMediaTools(deps) {
       addImageOrPlaceholder(slide, ctx, images[0], box.x, box.y, box.w, box.h, color, label);
       return 'image';
     }
-    addImagePlaceholder(slide, box.x, box.y, box.w, box.h, color, label);
-    return 'placeholder';
+    fail('Statement layout requires one valid image. Provide image/images[0], or change slide.layout to a text-only layout such as textGrid/article/fourCards/agenda/radial.');
   }
 
   function normalizeMediaImages(data) {

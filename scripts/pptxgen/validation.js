@@ -87,10 +87,10 @@ module.exports = function createValidationTools(deps) {
       validateTextFieldTypes(slide, index, errors);
       validateSlideScalarFields(slide, index, spec.style, errors);
       validateRequiredSlideFields(slide, index, spec.style, errors);
-      validateMediaSlots(slide, index, errors, warnings, options.specDir || process.cwd());
+      validateMediaSlots(slide, index, spec.style, errors, warnings, options.specDir || process.cwd());
       validateTextSlots(slide, index, spec.style, errors, warnings);
-      validateRenderableDataBlocks(slide, index, errors);
-      validateThinContent(slide, index, errors);
+      validateRenderableDataBlocks(slide, index, spec.style, errors);
+      validateThinContent(slide, index, spec.style, errors);
     });
     if (errors.length) {
       fail(`Spec slot validation failed:\n- ${errors.join('\n- ')}\n\n${VALIDATION_FORMAT_HINT}`);
@@ -193,8 +193,8 @@ module.exports = function createValidationTools(deps) {
     return groups;
   }
 
-  function validateMediaSlots(slide, index, errors, warnings, specDir) {
-    const layout = slide.layout || '';
+  function validateMediaSlots(slide, index, style, errors, warnings, specDir) {
+    const layout = slide.layout || defaultLayoutForStyle(style);
     if (!MEDIA_SLOT_LAYOUTS.has(layout)) {
       const imageFields = unsupportedImageFields(slide);
       if (imageFields.length) {
@@ -208,7 +208,7 @@ module.exports = function createValidationTools(deps) {
     const explicitCount = explicitMediaCount(slide);
     if (layout === 'statement' && images.length > 1) errors.push(`slide ${index + 1} uses statement layout with ${images.length} images, but statement supports exactly one image slot; use mediaGrid/imageGrid or split into another slide.`);
     if (layout !== 'statement' && images.length > 6) errors.push(`slide ${index + 1} has ${images.length} images, but media layouts support at most 6 image slots; split into another slide.`);
-    if (layout === 'statement' && charts.length) errors.push(`slide ${index + 1} uses statement layout with chart data, but statement reserves the media area for one image or image placeholder; use chart/media layout instead.`);
+    if (layout === 'statement' && charts.length) errors.push(`slide ${index + 1} uses statement layout with chart data, but statement reserves the media area for one image; use chart/media layout instead.`);
     if (layout !== 'statement' && charts.length > 6) errors.push(`slide ${index + 1} has ${charts.length} charts, but media layouts support at most 6 media slots; split into another slide.`);
     if (layout !== 'statement' && Math.max(images.length, charts.length) > slotCount) {
       errors.push(`slide ${index + 1} has ${Math.max(images.length, charts.length)} media assets but only ${slotCount} slot(s).`);
@@ -228,7 +228,7 @@ module.exports = function createValidationTools(deps) {
   }
 
   function validateTextSlots(slide, index, style, errors, warnings) {
-    const layout = slide.layout || '';
+    const layout = slide.layout || defaultLayoutForStyle(style);
     const sideMax = style === 'swiss' ? 5 : style === 'cmb' ? 4 : 3;
     const cmbTextWeaveMin = style === 'cmb' ? 0 : 1;
     const cmbTextGridMax = style === 'cmb' ? 6 : 9;
@@ -608,8 +608,8 @@ module.exports = function createValidationTools(deps) {
     return clamp(Math.max(images.length, charts.length, captions ? captions.length : 0, declaredMedia, 1), 1, 6);
   }
 
-  function validateRenderableDataBlocks(slide, index, errors) {
-    const layout = slide.layout || '';
+  function validateRenderableDataBlocks(slide, index, style, errors) {
+    const layout = slide.layout || defaultLayoutForStyle(style);
     const chartLayouts = ['chart', 'dashboard', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy'];
     const blocks = [...(slide.blocks || [])];
     if (!chartLayouts.includes(layout)) {
@@ -624,9 +624,9 @@ module.exports = function createValidationTools(deps) {
     });
   }
 
-  function validateThinContent(slide, index, errors) {
+  function validateThinContent(slide, index, style, errors) {
     if (slide.allowSparseContent) return;
-    const layout = slide.layout || '';
+    const layout = slide.layout || defaultLayoutForStyle(style);
     if (['matrix', 'bigNumbers', 'kpiTower', 'dashboard', 'imageHero', 'caseStudy'].includes(layout)) return;
     const candidates = normalizeSections(slide.sections || slide.items || slide.columns || slide.nodes || slide.layers || slide.steps || slide.milestones || slide.agenda || []);
     if (candidates.length < 3) return;
