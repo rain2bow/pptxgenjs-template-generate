@@ -271,7 +271,7 @@ module.exports = function createMediaTools(deps) {
       addImageOrPlaceholder(slide, ctx, images[0], box.x, box.y, box.w, box.h, color, label);
       return 'image';
     }
-    fail('Statement layout requires one valid image. Provide image/images[0], or change slide.layout to a text-only layout such as textGrid/article/fourCards/agenda/radial.');
+    fail(`slide ${(ctx.index ?? 0) + 1} statement renderer requires one valid image. Provide images[0], or change slide.layout to a text-* layout.`);
   }
 
   function normalizeMediaImages(data) {

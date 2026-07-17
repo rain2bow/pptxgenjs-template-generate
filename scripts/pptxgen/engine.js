@@ -25,6 +25,7 @@ const createIconTools = require('./icons');
 const createBlockTools = require('./blocks');
 const createMediaTools = require('./media');
 const createValidationTools = require('./validation');
+const { validateCanonicalSpec, createRendererSpec, createRendererSlide } = require('./layout-schema');
 
 const pptx = new pptxgen();
 const CHART_TYPES = {
@@ -96,10 +97,12 @@ function normalizeSpec(spec, options = {}) {
   if (spec.diversifyLayouts === true) {
     fail('diversifyLayouts is no longer supported. Edit each slide.layout in JSON manually; the generator never changes layout automatically.');
   }
-  normalizeLayoutCompatibility(spec);
-  validateSpecSlots(spec, { specDir: options.specDir || process.cwd() });
-  warnSpecTextCapacity(spec);
-  warnLayoutVariety(spec);
+  validateCanonicalSpec(spec, fail);
+  const rendererSpec = createRendererSpec(spec);
+  normalizeLayoutCompatibility(rendererSpec);
+  validateSpecSlots(rendererSpec, { specDir: options.specDir || process.cwd() });
+  warnSpecTextCapacity(rendererSpec);
+  warnLayoutVariety(rendererSpec);
   spec.__normalized = true;
 }
 
@@ -126,7 +129,8 @@ async function buildDeck(spec, specDir, outPath) {
   spec.slides.forEach((slideSpec, index) => {
     const slide = pptx.addSlide();
     enforceReadableSlideText(slide);
-    const ctx = { spec, slideSpec, theme, specDir, index, total: spec.slides.length };
+    const rendererSlideSpec = createRendererSlide(slideSpec);
+    const ctx = { spec, slideSpec: rendererSlideSpec, sourceSlideSpec: slideSpec, theme, specDir, index, total: spec.slides.length };
     renderByStyle(spec.style, slide, ctx);
     addSpeakerNotes(slide, slideSpec, ctx);
   });

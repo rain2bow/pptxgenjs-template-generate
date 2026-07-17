@@ -333,12 +333,12 @@ module.exports = function createMagazineTemplate(api) {
     const cols = count <= 2 ? count : 3;
     const rows = Math.ceil(count / cols);
     const gapX = 0.38;
-    const gapY = rows > 1 ? 0.84 : 0.3;
+    const gapY = rows > 1 ? 0.72 : 0.3;
     const gridW = 11.15;
     const w = (gridW - gapX * (cols - 1)) / cols;
-    const h = rows > 1 ? 1.55 : 2.45;
+    const h = rows > 1 ? 1.42 : 2.45;
     const startX = 0.78;
-    const startY = rows > 1 ? 2.55 : 3.0;
+    const startY = rows > 1 ? 2.35 : 3.0;
     const boxes = Array.from({ length: count }, (_, i) => ({ x: startX + (i % cols) * (w + gapX), y: startY + Math.floor(i / cols) * (h + gapY), w, h }));
     addMediaGrid(slide, ctx, data, boxes, s, 'magazine');
     addFoot(slide, ctx, s.fg, 'magazine');
@@ -668,7 +668,8 @@ module.exports = function createMagazineTemplate(api) {
         const cell = cells[c] || {};
         const x = x0 + c * colW;
         slide.addShape(pptx.ShapeType.rect, { x, y, w: colW - 0.18, h: laneH, fill: { color: ctx.theme.paperTint, transparency: 15 }, line: { color: s.fg, transparency: 72, width: 0.4 } });
-        slide.addText(cellText(cell), { x: x + 0.12, y: y + 0.16, w: colW - 0.42, h: 0.46, fontFace: FONTS.sansZh, fontSize: 9.6, color: s.fg, margin: 0, fit: 'shrink', valign: 'mid' });
+        const text = typeof cell === 'object' ? (cell.title || cell.label || cell.body || cell.text || '') : String(cell || '');
+        slide.addText(text, { x: x + 0.12, y: y + 0.16, w: colW - 0.42, h: 0.46, fontFace: FONTS.sansZh, fontSize: 9.6, color: s.fg, margin: 0, fit: 'shrink', valign: 'mid' });
       });
     });
     addFoot(slide, ctx, s.fg, 'magazine');

@@ -92,7 +92,7 @@ module.exports = function createBlockTools(deps) {
       common.lineDataSymbolSize = chart.lineDataSymbolSize || 4;
     }
     slide.addChart(chartType, data, { ...common, ...(chart.options || {}) });
-    if (chart.caption) addCaption(slide, chart.caption, box.x, box.y + box.h + 0.08, box.w, s.fg, mode);
+    if (chart.caption) addBlockCaption(slide, chart.caption, box.x, box.y + box.h + 0.08, box.w, s.fg, mode);
   }
 
   function addTableBlock(slide, ctx, table, defaults, s, mode) {
@@ -128,7 +128,23 @@ module.exports = function createBlockTools(deps) {
       fontSize: Math.max(Number(table.fontSize) || READABILITY.minTableFontSize, READABILITY.minTableFontSize),
       fit: 'shrink',
     });
-    if (table.caption) addCaption(slide, table.caption, box.x, box.y + box.h + 0.08, box.w, s.fg, mode);
+    if (table.caption) addBlockCaption(slide, table.caption, box.x, box.y + box.h + 0.08, box.w, s.fg, mode);
+  }
+
+  function addBlockCaption(slide, text, x, y, w, color, mode) {
+    if (!text) return;
+    slide.addText(String(text), {
+      x,
+      y,
+      w,
+      h: 0.42,
+      fontFace: mode === 'swiss' ? FONTS.sansZh : FONTS.sansZh,
+      fontSize: TYPOGRAPHY.dense,
+      color,
+      transparency: 20,
+      margin: 0,
+      valign: 'top',
+    });
   }
 
   function normalizeChartData(chart) {

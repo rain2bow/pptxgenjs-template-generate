@@ -140,80 +140,53 @@ node scripts/docx-to-pptx.js \
 最小规格字段：
 
 - 顶层字段：`style`、`theme`、`title`、`subtitle`、`author`、`company`、`slides`。
-- 幻灯片级字段：`layout`、`kicker`、`title`、`subtitle`、`body`、`summary`、`conclusion`。
-- `summary` 在 `media`、`caseStudy` 和 CMB `briefing` 中会作为正文/摘要显示；如果同页同时写 `body` 和 `summary`，优先渲染 `body`。
-- 集合字段：`sections`、`items`、`columns`、`steps`、`nodes`、`layers`、`lanes`、`metrics`。
-- 媒体和数据字段：`image`、`images`、`media`、`captions`、`chart`、`charts`、`table`。
+- 幻灯片级通用字段：`layout`、`kicker`、`title`、`subtitle`、`body`、`items`。
+- 所有卡片、步骤、节点、指标、图片说明和侧边说明统一写入 `items`；不要再使用 `sections`、`columns`、`steps`、`nodes`、`layers`、`lanes`、`metrics`、`captions` 等旧顶层集合字段。
+- 图片统一写入 `images` 数组，即使只有一张图片；不要使用旧字段 `image`、`gallery` 或 `media`。
+- 图表统一写入 `charts` 数组，即使只有一张图表；不要使用旧字段 `chart`。
+- 表格使用 `table`。对比页使用 `before.items` 和 `after.items`。
 - 备注字段：`speakerNotes`、`speaker_notes`、`presenterNotes`、`presenter_notes`。
-- 草稿放行：只有在明确接受草稿输出时，才使用 `allowSparseContent`、`allowMissingChart`、`allowMissingTable`。媒体槽位 layout 必须提供真实图片或图表；不要用 `allowEmptyMediaSlots` 生成空图片占位符。
+- 旧 layout 名称和旧顶层内容字段会直接报错，并提示对应 canonical 名称，不会静默兼容。
 
 ## 布局选择
 
-先按 `style` 选择布局。同名 layout 在不同 style 下会尽量兼容字段，但视觉结构和容量不一定完全相同；不要假设直接切换 style 后仍适合原来的文本密度。写 JSON 前始终运行对应 style 的 `--capacity-guide`。
+三种 style 使用完全相同的 canonical layout 名称和顶层字段。切换 `style` 只改变视觉实现，不改变 JSON 结构。
 
-生成器会按 layout 校验已填写字段是否实际渲染，也会校验主要内容字段是否缺失。不要向某个 layout 填写容量指南或样例中没有的正文槽位；如果确实需要这些字段，应改 `layout` 或按样例字段名重写。
+名称前缀直接表示页面类型：`deck-*` 为演示结构页，`text-*` 为纯文本页，`image-*` 必须提供图片，`data-*` 使用图表或表格数据。
 
 通用基础页面：
 
-- `cover`：封面页。
-- `section`：章节分隔页。
-- `closing`：结尾页。
+- `deck-cover`、`deck-section`、`deck-closing`
 
-### CMB 样式
+纯文本页面：
 
-`cmb` 适合招商银行、银行、金融经营汇报和正式商务汇报。优先使用这些布局：
+- `text-quote`、`text-article`、`text-briefing`、`text-list`
+- `text-grid`、`text-cards`、`text-weave`、`text-agenda`
+- `text-timeline`、`text-pipeline`、`text-roadmap`
+- `text-matrix`、`text-radial`、`text-pyramid`、`text-swimlane`
 
-- `briefing`、`executiveBrief`、`contentBrief`：高密度文本摘要页，包含顶部摘要、中部分析卡片和底部结论/要点。
-- `textWeave`、`contentSynthesis`、`denseText`：非对称文本卡片页，支持 2 到 6 个要点，左侧 1 个主卡片，右侧至少 1 个卡片，适合长文本拆块。
-- `article`、`sectionList`：在 CMB 下渲染为 briefing 变体，适合正文型内容，不要当成杂志式长文章排版。
-- `textGrid`、`fourCards`：在 CMB 下渲染为 textWeave 变体，卡片数量会自适应；`fourCards` 是兼容旧 JSON 的历史名称，不表示固定 4 个卡片，CMB 下需要至少 2 个文本卡片、最多渲染 6 个文本卡片。
-- `agenda`：CMB 专用目录页，支持 1 到 8 条目录；1 到 4 条为单列，5 到 8 条为双列。目录项正文应简短，不要用来承载正文段落。
-- `dashboard`、`chart`、`dataSheet`、`bigNumbers`、`kpiTower`：经营数据、图表、表格和指标页。
-- `media`、`mediaGrid`、`gallery`、`imageGrid`、`imageHero`、`caseStudy`：图片、证据材料或图表区域页。
+图片页面：
 
-CMB 兼容但应谨慎使用：
+- `image-statement`、`image-quote`、`image-text`
+- `image-feature`、`image-grid`、`image-hero`、`image-case-study`
 
-- `matrix`：标题型矩阵，只保留标题/标签，不适合带长 body 的条目。
-- `radial`、`pyramid`、`roadmap`、`timeline`、`pipeline`、`swimlane`：结构关系、路径、流程和分层页面，适合短文本节点。
-- `statement`：一个图片槽位加大型陈述，不是纯文本页；没有图片或图表时不要默认选择。
+数据页面：
 
-CMB `briefing` 规则：
+- `data-numbers`、`data-kpis`、`data-compare`
+- `data-chart`、`data-dashboard`、`data-table`
 
-- 带有 `conclusion`、`takeaway`、`footerSummary` 或 `nextStep` 时，最多支持 4 个中部文本块。
-- 没有底部要点区时，最多支持 5 个中部文本块。
-- 更多要点请使用 `textWeave` 或拆分为多页。
+### Style 使用建议
 
-### Swiss 样式
-
-`swiss` 适合网格化商务汇报、产品方案、战略分析和偏理性的图表页。优先使用这些布局：
-
-- `statement`、`kpiTower`、`bigNumbers`、`dashboard`：核心结论、KPI 和数据看板。
-- `textGrid`、`article`、`sectionList`、`fourCards`：中等密度文本页；字段兼容 CMB，但容量通常低于 CMB 高密度文本布局。
-- `compare`、`duoCompare`、`splitCompare`：左右对比页。
-- `timeline`、`pipeline`、`roadmap`、`swimlane`：时间线、流程、路线和执行矩阵。
-- `media`、`mediaGrid`、`imageGrid`、`imageHero`、`caseStudy`：图文和案例页。
-- `chart`、`dataSheet`：单图洞察和表格页。
-
-Swiss 中的 `agenda`、`radial`、`pyramid`、`matrix` 更适合短标题或短说明，不适合替代 CMB 的高密度正文页。
-
-### Magazine 样式
-
-`magazine` 适合编辑叙事、视觉化展示、图片材料较多的汇报。优先使用这些布局：
-
-- `section`、`bigQuote`、`quoteImage`、`textImage`：章节、引用、大图和图文叙事页。
-- `article`：杂志式多栏正文页，适合中等长度段落；不要塞入过多卡片式要点。
-- `compare`、`pipeline`、`imageGrid`、`mediaGrid`、`gallery`：视觉化对比、流程和图片网格。
-- `agenda`、`caseStudy`、`pyramid`、`radial`、`roadmap`、`swimlane`：可用作叙事结构页，但保持短文本。
-
-Magazine 不适合大量密集正文；如果每页有很多文字，优先切到 `cmb` 的 `briefing` / `textWeave`，或拆分更多页面。
+- `cmb`：银行、金融经营和正式商务汇报；高密度正文优先 `text-briefing` / `text-weave`。
+- `swiss`：结构化商务、产品、战略和数据汇报；优先 `text-grid` / `data-dashboard`。
+- `magazine`：编辑叙事、观点和图片材料；优先 `text-article` / `image-quote` / `image-grid`。
 
 ### 媒体规则
 
-- 如果用户没有提供图片，不要选择包含媒体槽位的布局，包括 `statement`；除非图表数据会填充媒体区域。
-- 只有媒体布局可以填写图片字段 `image`、`images`、`gallery`，或 `media` 中的图片路径；纯文本布局带这些字段会报错，因为它们不会被渲染。
-- 媒体槽位 layout 必须提供图片或图表；缺少图片、图表或媒体内容会阻断生成。不要用空白图片占位符替代真实素材。
-- 如果已知用户图片数量，应选择槽位数量匹配的布局。
-- `mediaGrid`、`gallery`、`imageGrid` 的 `captions` / `items` / `sections` 只渲染 `caption` / `title` / `label`；如果需要每张图配正文，改用 `media`、`textImage`、`caseStudy` 或拆成图文页。
+- `image-*` 必须提供 `images`；纯文本或数据布局带 `images` 会报错。
+- `image-statement`、`image-quote`、`image-text`、`image-feature`、`image-hero`、`image-case-study` 支持 1 张图片。
+- `image-grid` 支持 1 到 6 张图片，`items` 数量应与图片说明数量一致。
+- 图片 layout 不接受 `charts`；图表请使用 `data-chart` 或 `data-dashboard`。
 
 ### 分点规则
 

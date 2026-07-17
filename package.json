@@ -13,6 +13,7 @@
     "validate:layout": "node scripts/validate-pptx-layout.js",
     "spec:md": "node scripts/spec-to-md.js",
     "check:media-slots": "node scripts/check-media-slot-warnings.js",
+    "check:layout-schema": "node scripts/check-layout-schema.js",
     "capacity:cmb": "node scripts/generate-pptx.js --capacity-guide cmb --out outputs/cmb-capacity-guide.md",
     "capacity:swiss": "node scripts/generate-pptx.js --capacity-guide swiss --out outputs/swiss-capacity-guide.md",
     "capacity:magazine": "node scripts/generate-pptx.js --capacity-guide magazine --out outputs/magazine-capacity-guide.md",

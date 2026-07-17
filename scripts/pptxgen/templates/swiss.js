@@ -319,7 +319,7 @@ module.exports = function createSwissTemplate(api) {
 
   function swissImageHero(slide, ctx, s) {
     const data = ctx.slideSpec;
-    addMediaOrChart(slide, ctx, data, { x: 0, y: 0, w: SLIDE.w, h: 4.15 }, s, 'swiss', '21:9');
+    addMediaOrChart(slide, ctx, data, { x: 0, y: 0.82, w: SLIDE.w, h: 3.33 }, s, 'swiss', '21:9');
     slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: 1.05, w: 4.65, h: 1.35, fill: { color: ctx.theme.paper }, line: { color: ctx.theme.paper, transparency: 100 } });
     slide.addText(data.title || '', { x: 1.08, y: 1.32, w: 4.0, h: 0.78, fontFace: FONTS.sans, fontSize: 29, color: ctx.theme.ink, margin: 0, fit: 'shrink' });
     slide.addShape(pptx.ShapeType.rect, { x: 0, y: 4.15, w: SLIDE.w, h: 3.35, fill: { color: ctx.theme.paper }, line: { color: ctx.theme.paper, transparency: 100 } });
@@ -425,7 +425,7 @@ module.exports = function createSwissTemplate(api) {
   function swissDataSheet(slide, ctx, s) {
     const data = ctx.slideSpec;
     addPageHead(slide, data, s.fg, 'swiss', 0.82);
-    addTableBlock(slide, ctx, data.table || data, { x: 0.78, y: 2.35, w: 8.15, h: 4.1 }, s, 'swiss');
+    addTableBlock(slide, ctx, data.table || data, { x: 0.78, y: 2.35, w: 8.15, h: 3.9 }, s, 'swiss');
     const notes = normalizeSections(data.notes || data.insights || []).slice(0, 4);
     notes.forEach((note, i) => {
       const y = 2.43 + i * 0.92;
@@ -530,7 +530,7 @@ module.exports = function createSwissTemplate(api) {
 
   function swissCaseStudy(slide, ctx, s) {
     const data = ctx.slideSpec;
-    addMediaOrChart(slide, ctx, data, { x: 0, y: 0, w: SLIDE.w, h: 3.25 }, s, 'swiss', 'CASE');
+    addMediaOrChart(slide, ctx, data, { x: 0, y: 0.82, w: SLIDE.w, h: 2.43 }, s, 'swiss', 'CASE');
     slide.addShape(pptx.ShapeType.rect, { x: 0.78, y: 0.92, w: 4.8, h: 1.24, fill: { color: ctx.theme.paper }, line: { color: ctx.theme.paper, transparency: 100 } });
     slide.addText(data.title || '', { x: 1.06, y: 1.15, w: 4.25, h: 0.55, fontFace: FONTS.sans, fontSize: 24, color: ctx.theme.ink, margin: 0, fit: 'shrink' });
     slide.addShape(pptx.ShapeType.rect, { x: 0, y: 3.25, w: SLIDE.w, h: 4.25, fill: { color: ctx.theme.paper }, line: { color: ctx.theme.paper, transparency: 100 } });
@@ -631,7 +631,8 @@ module.exports = function createSwissTemplate(api) {
         const x = x0 + c * colW;
         const hot = r === data.highlightRow || c === data.highlightColumn;
         slide.addShape(pptx.ShapeType.rect, { x, y, w: colW - 0.16, h: laneH, fill: { color: hot ? ctx.theme.accent : ctx.theme.grey1 }, line: { color: hot ? ctx.theme.accent : ctx.theme.grey1, transparency: 100 } });
-        slide.addText(cellText(cell), { x: x + 0.12, y: y + 0.16, w: colW - 0.4, h: 0.46, fontFace: FONTS.sansZh, fontSize: 9.8, color: hot ? ctx.theme.accentOn : s.fg, margin: 0, fit: 'shrink', valign: 'mid' });
+        const text = typeof cell === 'object' ? (cell.title || cell.label || cell.body || cell.text || '') : String(cell || '');
+        slide.addText(text, { x: x + 0.12, y: y + 0.16, w: colW - 0.4, h: 0.46, fontFace: FONTS.sansZh, fontSize: 9.8, color: hot ? ctx.theme.accentOn : s.fg, margin: 0, fit: 'shrink', valign: 'mid' });
       });
     });
     addFoot(slide, ctx, s.fg, 'swiss');
@@ -644,7 +645,12 @@ module.exports = function createSwissTemplate(api) {
 
   function swissBigQuoteCompat(slide, ctx, s) {
     const data = ctx.slideSpec;
-    swissStatement(slide, { ...ctx, slideSpec: { ...data, title: data.quote || data.title, body: data.body || data.cite || data.source || data.subtitle || '' } }, s);
+    const quote = data.quote || data.title || '';
+    addPageHead(slide, { ...data, title: data.kicker || '核心观点' }, s.fg, 'swiss', 0.78);
+    slide.addText(quote, { x: 0.92, y: 2.15, w: 11.35, h: 2.15, fontFace: FONTS.sansZh, fontSize: fitTitle(quote, 36, 28), bold: true, color: s.fg, margin: 0, fit: 'shrink', valign: 'mid', align: 'center', typographyRole: 'contentTitle' });
+    slide.addShape(pptx.ShapeType.line, { x: 4.85, y: 4.62, w: 3.65, h: 0, line: { color: ctx.theme.accent, width: 2 } });
+    slide.addText(data.body || data.cite || data.source || data.subtitle || '', { x: 2.1, y: 4.95, w: 9.1, h: 0.75, fontFace: FONTS.sansZh, fontSize: 14, color: s.fg, transparency: 18, margin: 0, fit: 'shrink', align: 'center', valign: 'top' });
+    addFoot(slide, ctx, s.fg, 'swiss');
   }
 
   function swissQuoteImageCompat(slide, ctx, s) {
@@ -720,12 +726,12 @@ module.exports = function createSwissTemplate(api) {
     const cols = count <= 2 ? count : 3;
     const rows = Math.ceil(count / cols);
     const gapX = 0.24;
-    const gapY = rows > 1 ? 0.82 : 0.3;
+    const gapY = rows > 1 ? 0.72 : 0.3;
     const gridW = 11.45;
     const w = (gridW - gapX * (cols - 1)) / cols;
-    const h = rows > 1 ? 1.5 : 2.45;
+    const h = rows > 1 ? 1.42 : 2.45;
     const x0 = 0.78;
-    const y0 = rows > 1 ? 2.58 : 3.0;
+    const y0 = rows > 1 ? 2.35 : 3.0;
     const boxes = Array.from({ length: count }, (_, i) => ({ x: x0 + (i % cols) * (w + gapX), y: y0 + Math.floor(i / cols) * (h + gapY), w, h }));
     addMediaGrid(slide, ctx, data, boxes, s, 'swiss');
     addFoot(slide, ctx, s.fg, 'swiss');

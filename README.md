@@ -230,35 +230,34 @@ CMB 风格使用技能内置 logo 资源：
   "logoMark": "logos/cmb-logo-mark.svg",
   "slides": [
     {
-      "layout": "cover",
+      "layout": "deck-cover",
       "kicker": "招商银行 / 2026",
       "title": "业务增长与数字化经营汇报",
       "subtitle": "围绕客户经营、风险控制与效率提升"
     },
     {
-      "layout": "media",
+      "layout": "data-chart",
       "kicker": "客户经营",
-      "title": "客户经营从单点触达转向分层运营",
-      "body": "通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。",
-      "chart": {
+      "title": "客户活跃度保持增长",
+      "charts": [{
         "chartType": "line",
         "title": "客户活跃趋势",
         "labels": ["一季度", "二季度", "三季度", "四季度"],
         "values": [42, 51, 63, 78]
-      },
+      }],
       "items": [
-        { "icon": "users", "title": "客户分层", "body": "按资产、行为与生命周期拆分运营策略。" },
-        { "icon": "workflow", "title": "渠道协同", "body": "联动手机银行、网点、远程服务与客户经理。" }
+        { "title": "活跃提升", "body": "分层运营带动活跃客户持续增长。" },
+        { "title": "渠道协同", "body": "手机银行与客户经理协同贡献主要增量。" }
       ]
     }
   ]
 }
 ```
 
-字段兼容规则：
+字段协议：
 
-- `summary` 在 `media`、`caseStudy` 和 CMB `briefing` 中作为正文/摘要别名显示；同页同时有 `body` 和 `summary` 时优先使用 `body`。
-- 生成器会按 layout 校验顶层正文/说明字段；如果 JSON 填写了该 layout 不渲染的字段，或缺少该 layout 的主内容字段，会直接报错并提示查看样例格式/容量指南。
+- 所有页面集合统一为 `items`；图片统一为 `images[]`；图表统一为 `charts[]`；表格使用 `table`。
+- 三种 style 使用完全相同的 layout 名称和字段。旧名称或旧字段会报错并给出迁移目标，不会静默兼容。
 
 JSON 引号与编码规则：
 
@@ -270,25 +269,21 @@ JSON 引号与编码规则：
 
 ## 常用 Layout
 
-三套风格支持统一的常用 layout 名称，切换模板时优先只修改顶层 `style` / `theme`。
+三套风格支持完全一致的 canonical layout 名称，切换模板时只需修改顶层 `style` / `theme`。
 
-- 封面与章节：`cover`、`section`、`closing`
-- 结论页：`statement`、`bigQuote`
-- 数据页：`kpiTower`、`bigNumbers`、`dashboard`、`chart`、`dataSheet`
-- 图文页：`media`、`mediaGrid`、`gallery`、`imageGrid`、`imageHero`、`quoteImage`、`textImage`
-- 结构页：`compare`、`duoCompare`、`timeline`、`pipeline`、`roadmap`、`textGrid`、`article`、`briefing`、`textWeave`、`fourCards`、`matrix`、`agenda`、`caseStudy`、`pyramid`、`radial`、`swimlane`
+- 演示结构：`deck-cover`、`deck-section`、`deck-closing`
+- 纯文本：`text-quote`、`text-article`、`text-briefing`、`text-list`、`text-grid`、`text-cards`、`text-weave`、`text-agenda`、`text-timeline`、`text-pipeline`、`text-roadmap`、`text-matrix`、`text-radial`、`text-pyramid`、`text-swimlane`
+- 图片：`image-statement`、`image-quote`、`image-text`、`image-feature`、`image-grid`、`image-hero`、`image-case-study`
+- 数据：`data-numbers`、`data-kpis`、`data-compare`、`data-chart`、`data-dashboard`、`data-table`
 
 Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/engine.js`; style/theme design configuration is centralized in `scripts/pptxgen/config.js`; text capacity ranges and title-only plan capacity generation are maintained in `scripts/pptxgen/text-capacity.js`. The generator checks text, image, chart, and table slots before output to avoid missing or mismatched content.
 
 ## 图片、图表和占位符
 
-- 用户提供 `image` / `images` / `gallery` 时优先插入用户图片。
-- `mediaGrid` / `gallery` / `imageGrid` 未显式设置 `mediaCount` 时，槽位数自动等于图片数、显式图表数或 caption 数。
-- `mediaGrid` / `gallery` / `imageGrid` 中的 `captions` / `items` / `sections` 只作为短图片说明，渲染字段是 `caption` / `title` / `label`；不要写 `body`，否则会报错。
-- 显式设置 `mediaCount` 时必须与图片或图表素材数量匹配，不允许用空槽补齐。
-- 没有用户图片但提供 `chart` / `charts` 时，使用 PowerPoint 原生图表。
-- 没有图片和显式图表时，媒体槽位 layout 会报错；应提供素材或改用纯文本 layout。
-- `statement` 只支持 1 个图片槽位，不支持 chart；多图请使用 `mediaGrid` / `imageGrid`。
+- `image-*` 页面必须使用 `images[]`，即使只有一张图片。
+- `image-grid` 支持 1 到 6 张图；图片说明统一放在 `items`。
+- `data-chart` 使用一个 `charts[]` 项，`data-dashboard` 使用两个 `charts[]` 项。
+- 图片布局不接受图表，数据布局不接受图片；类型不匹配会在生成前报错。
 
 图表类型支持：
 

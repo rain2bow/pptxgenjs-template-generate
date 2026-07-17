@@ -5,15 +5,13 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const MEDIA_SLOT_LAYOUTS = [
-  'statement',
-  'media',
-  'mediaGrid',
-  'gallery',
-  'imageGrid',
-  'imageHero',
-  'quoteImage',
-  'textImage',
-  'caseStudy',
+  'image-statement',
+  'image-quote',
+  'image-text',
+  'image-feature',
+  'image-grid',
+  'image-hero',
+  'image-case-study',
 ];
 
 const spec = {
@@ -24,8 +22,8 @@ const spec = {
     layout,
     title: `${layout} without media`,
     body: 'This slide intentionally omits images and charts.',
-    caseTitle: layout === 'caseStudy' ? 'Case without media' : undefined,
-    items: layout === 'imageHero' || layout === 'caseStudy'
+    caseTitle: layout === 'image-case-study' ? 'Case without media' : undefined,
+    items: ['image-feature', 'image-grid', 'image-hero', 'image-case-study'].includes(layout)
       ? [{ label: 'Metric', value: '1', note: 'No media asset' }]
       : undefined,
   })),
@@ -61,8 +59,7 @@ if (result.status === 0) {
 const output = `${result.stdout || ''}\n${result.stderr || ''}`;
 const missing = MEDIA_SLOT_LAYOUTS.filter((layout, index) => {
   const slideNumber = index + 1;
-  return !output.includes(`slide ${slideNumber} uses layout "${layout}"`)
-    || !output.includes('with media/image slot(s) but provides no images or charts');
+  return !output.includes(`slide ${slideNumber} layout "${layout}" requires at least 1 images entry; got 0`);
 });
 
 if (missing.length) {
