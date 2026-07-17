@@ -61,7 +61,7 @@ const deckSpec = {
 
   slides: [
     {
-      layout: 'cover',
+      layout: 'deck-cover',
       chromeLeft: 'Magazine Note / [必填] 主题',
       chromeRight: 'MG / 01 / NN',
       kicker: 'A Talk / 2026',
@@ -71,14 +71,14 @@ const deckSpec = {
       foot: '[必填] 场景 / 日期 / 来源',
     },
     {
-      layout: 'section',
+      layout: 'deck-section',
       chromeLeft: 'Act I / Context',
       kicker: 'Act I',
       title: '[必填] 章节标题',
       subtitle: '[必填] 章节转场短句',
     },
     {
-      layout: 'bigNumbers',
+      layout: 'data-numbers',
       chromeLeft: 'Proof / Numbers',
       kicker: 'Proof',
       title: '[必填] 先看数字',
@@ -93,31 +93,32 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'quoteImage',
+      layout: 'image-quote',
       chromeLeft: 'Story / Contrast',
       kicker: 'But',
       title: '[必填] 反差标题',
       body: '[必填] 1-2 句叙事正文，适合身份反差、案例背景或关键判断。',
       callout: '[选填] 一句强调判断，像杂志里的引文框。',
-      image: { path: 'images/04-story-16x10.png', caption: 'Story visual / 16:10' },
+      images: [{ path: 'logos/cmb-logo-lockup.png', caption: 'Story visual / 16:10' }],
     },
     {
-      layout: 'imageGrid',
+      layout: 'image-grid',
       chromeLeft: 'Evidence / Gallery',
       kicker: 'Evidence',
       title: '[必填] 证据网格',
       images: [
-        { path: 'images/evidence-01.png', caption: '[必填] 图注 01' },
-        { path: 'images/evidence-02.png', caption: '[必填] 图注 02' },
-        { path: 'images/evidence-03.png', caption: '[必填] 图注 03' },
+        'logos/cmb-logo-lockup.png',
+        'logos/cmb-logo-lockup.png',
+        'logos/cmb-logo-lockup.png',
       ],
+      items: [{ caption: '[必填] 图注 01' }, { caption: '[必填] 图注 02' }, { caption: '[必填] 图注 03' }],
     },
     {
-      layout: 'pipeline',
+      layout: 'text-pipeline',
       chromeLeft: 'Workflow / Steps',
       kicker: 'Workflow',
       title: '[必填] 一条流水线',
-      steps: [
+      items: [
         { title: 'Draft', desc: '[必填] 起草' },
         { title: 'Polish', desc: '[必填] 润色' },
         { title: 'Morph', desc: '[必填] 改写' },
@@ -126,7 +127,7 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'compare',
+      layout: 'data-compare',
       chromeLeft: 'Before / After',
       kicker: 'Compare',
       title: '[必填] 两种状态的对比',
@@ -150,12 +151,12 @@ const deckSpec = {
       },
     },
     {
-      layout: 'article',
+      layout: 'text-article',
       chromeLeft: 'Dense / Article',
       kicker: 'Analysis',
       title: '[Required] Dense information page',
       subtitle: '[Optional] Use this when normal pages are too sparse.',
-      sections: [
+      items: [
         { title: 'Context', body: '[Required] 2-3 sentences. Keep each section compact.' },
         { title: 'Finding', body: '[Required] Evidence, mechanism, or conclusion.' },
         { title: 'Risk', body: '[Required] State what changes if this is ignored.' },
@@ -163,7 +164,7 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'dataSheet',
+      layout: 'data-table',
       chromeLeft: 'Data / Table',
       kicker: 'Data Sheet',
       title: '[Required] Editable table page',
@@ -178,17 +179,17 @@ const deckSpec = {
         ],
         caption: 'Native PPT table / editable cells',
       },
-      notes: [
+      items: [
         { title: 'Read first', body: 'Highlight the row that drives the decision.' },
         { title: 'Then compare', body: 'Use target gap instead of raw values.' },
       ],
     },
     {
-      layout: 'chart',
+      layout: 'data-chart',
       chromeLeft: 'Data / Chart',
       kicker: 'Trend',
       title: '[Required] Native chart page',
-      chart: {
+      charts: [{
         type: 'line',
         title: 'Monthly trend',
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
@@ -196,18 +197,18 @@ const deckSpec = {
           { name: 'Actual', values: [12, 18, 21, 25, 31, 38] },
           { name: 'Target', values: [15, 18, 22, 28, 34, 40] },
         ],
-      },
-      insights: [
+      }],
+      items: [
         { title: 'Inflection', body: 'Growth accelerated after March.' },
         { title: 'Gap', body: 'Target is close but not yet stable.' },
       ],
     },
     {
-      layout: 'dashboard',
+      layout: 'data-dashboard',
       chromeLeft: 'Data / Dashboard',
       kicker: 'Dashboard',
       title: '[Required] KPI dashboard with charts',
-      metrics: [
+      items: [
         { label: 'Revenue', value: '$2.4M', note: '+18% QoQ' },
         { label: 'Users', value: '128K', note: '+9% MoM' },
         { label: 'Cost', value: '$18', note: '-12%' },
@@ -218,7 +219,7 @@ const deckSpec = {
         { type: 'pie', title: 'Channel mix', labels: ['Direct', 'Partner', 'Paid'], values: [46, 31, 23], showLegend: true },
       ],
     },    {
-      layout: 'bigQuote',
+      layout: 'text-quote',
       chromeLeft: 'Takeaway',
       kicker: 'Takeaway',
       quote: '[必填] 一句可被记住的结论。',

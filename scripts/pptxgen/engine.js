@@ -17,7 +17,6 @@ const {
 } = require('./config');
 const { fail } = require('./errors');
 const { speakerNotesText } = require('./speaker-notes');
-const { warnSpecTextCapacity } = require('./text-capacity');
 const createMagazineTemplate = require('./templates/magazine');
 const createSwissTemplate = require('./templates/swiss');
 const createCmbTemplate = require('./templates/cmb');
@@ -101,7 +100,6 @@ function normalizeSpec(spec, options = {}) {
   const rendererSpec = createRendererSpec(spec);
   normalizeLayoutCompatibility(rendererSpec);
   validateSpecSlots(rendererSpec, { specDir: options.specDir || process.cwd() });
-  warnSpecTextCapacity(rendererSpec);
   warnLayoutVariety(rendererSpec);
   spec.__normalized = true;
 }

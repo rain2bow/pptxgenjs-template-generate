@@ -42,24 +42,31 @@ description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 Powe
 
 ## 工作流程
 
-1. 选择样式和主题。如果用户没有指定样式，招商银行或银行类需求使用 `cmb`，数据/产品/战略类演示使用 `swiss`，编辑叙事类演示使用 `magazine`。
-2. 先根据用户输入创建标题级规划文件 `deck.plan.json`。该文件只写结构，不写正文：顶层写 `style`、`theme`、`title`、`slides`；每页写 `layout`、`title`；有分点、卡片、步骤、节点、指标、图片说明时，必须在 plan 中写出真实数量的标题级数组，例如 `items`、`sections`、`steps`、`metrics`、`captions`，每项只写 `title`、`label`、`caption` 或 `value`，不要写 `body` 正文。如果暂时只有数量，也必须写 `itemCount` 或 `count`；不要让容量指南使用默认占位数量。如果选择媒体槽位 layout，必须在 plan 中已经提供 `image`、`images`、`media`、`gallery`、`chart` 或 `charts`，只写 `mediaCount`、`imageSlots` 或 `allowEmptyMediaSlots` 不算有效素材。
-3. 根据 `deck.plan.json` 生成真实容量指南。该指南只包含已规划页面，并按每页 layout、卡片数量、分点数量估算每个可填字段的容量：
+1. 必须先选择 style。运行以下命令读取三种模板说明：
 
    ```bash
-   node scripts/generate-pptx.js --capacity-guide --spec outputs/deck.plan.json --out outputs/deck-capacity-guide.md
+   node scripts/generate-pptx.js --style-guide
    ```
 
-   该命令会先校验 `deck.plan.json`。如果页面 layout 不存在、集合字段与 layout 不匹配、集合项缺少标题字段、元素数量超出或低于该 layout 支持范围、媒体/图表/表格槽位数量不匹配，或标题级 plan 中提前写入正文类字段，会直接失败，先修正 plan 再继续。
+   如果用户尚未明确指定 style，使用 `askUserQuestion` 展示 `cmb`、`swiss`、`magazine` 的介绍并让用户选择。只有当运行环境没有该交互工具时，才用普通文本提问；不要自行跳过选择阶段。
 
-4. 按 `deck-capacity-guide.md` 扩写完整 JSON 正文。容量指南会在每页表格后给出 `Example slide JSON` 作为字段结构参考。不要新增 guide 中没有列出的正文槽位；如果需要更换 layout 或改变分点数量，先更新 `deck.plan.json` 并重新生成容量指南。
-5. 在最终生成前，将完整 JSON 规格转换为用户友好的 Markdown 大纲：
+2. 选择 style 后，生成该 style 的全布局 JSON 示例 Markdown。该文件包含 31 种 canonical layout 的完整字段示例，不包含字数限制：
+
+   ```bash
+   node scripts/generate-pptx.js --layout-examples cmb --out outputs/cmb-layout-examples.md
+   ```
+
+   将 `cmb` 替换为用户选择的 `swiss` 或 `magazine`。只需读取这份 Markdown，不要读取模板 JS 源码。
+
+3. 阅读用户内容和布局示例，直接编写完整 `deck.json`。不再创建 `deck.plan.json`，也不再生成 capacity-guide。生成前检查每页 layout、`items` 数量、`images` 数量、`charts` 数量和 `table` 是否匹配。
+
+4. 将完整 JSON 规格转换为用户友好的 Markdown 大纲：
 
    ```bash
    node scripts/spec-to-md.js --spec path/to/deck.json --out path/to/deck-outline.md
    ```
 
-6. 生成 PPTX：
+5. 生成 PPTX：
 
    ```bash
    node scripts/generate-pptx.js --spec path/to/deck.json --out outputs/deck.pptx
@@ -67,8 +74,8 @@ description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 Powe
 
    最终生成也会再次校验槽位完整性；例如正文卡片类 layout 的集合项不能只有 `body` 而没有 `title`，也不能只有 `title` 而没有正文说明。
 
-7. 如果生成失败，优先修复缺图、缺表、缺 chart data、必需集合缺失、字段冲突、标题过多正文不足等问题；如果 warning 提到文本容量或重复布局，也应尽量更新 JSON 并重新生成。
-8. 验证原生/可编辑结构和布局安全性：
+6. 如果生成失败，优先修复缺图、缺表、缺 chart data、必需集合缺失、字段冲突、标题过多正文不足等问题；如果最终文本框 warning 提到实际内容可能溢出，应缩短、拆页或更换 layout 后重新生成。
+7. 验证原生/可编辑结构和布局安全性：
 
    ```bash
    node scripts/validate-pptx-native.js outputs/deck.pptx
@@ -98,11 +105,20 @@ node scripts/generate-pptx.js --sample --sample-style swiss --out outputs/sample
 node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sample-magazine.pptx
 ```
 
-生成 CMB 全布局检查文件和最大文本容量检查文件：
+生成三种 style 的布局 JSON 示例：
 
 ```bash
-npm run sample:cmb:layouts
-npm run sample:cmb:max-text
+npm run layouts:cmb
+npm run layouts:swiss
+npm run layouts:magazine
+```
+
+生成三种 style 共用的全布局排版检查文件：
+
+```bash
+node assets/template-cmb-all-layouts.js --style cmb
+node assets/template-cmb-all-layouts.js --style swiss
+node assets/template-cmb-all-layouts.js --style magazine
 ```
 
 布局只能通过 JSON 中每页的 `layout` 字段手动修改；生成器不会自动改写 layout。
@@ -195,38 +211,11 @@ node scripts/docx-to-pptx.js \
 - 不要要求生成器把一段长正文自动切成多个分点；应在生成 JSON 前由模型按语义拆分。
 - CMB 卡片中的 `points`、`bullets`、`list` 会按实际估算行数检查容量：每个分点至少占 1 行，较长分点会按卡片宽度换行；因此不能只看总字数是否低于上限。
 
-## 文本容量
+## 文本溢出检查
 
-为演示文稿编写完整 JSON 正文前，始终先创建 `deck.plan.json`，再运行 `--capacity-guide --spec deck.plan.json`。不要只按 style 生成全量容量指南，因为全量指南会列出大量本次不使用的 layout，且无法知道每页实际卡片数量。
+本流程不再生成字数容量指南。最终生成时，`engine.js` 会根据实际文本框宽高、字号、换行和项目符号行数估算文本是否可能溢出。
 
-`deck.plan.json` 示例：
-
-```json
-{
-  "style": "cmb",
-  "theme": "classic",
-  "slides": [
-    {
-      "layout": "textWeave",
-      "title": "客户经营能力拆解",
-      "sections": [
-        { "title": "客户分层" },
-        { "title": "渠道协同" },
-        { "title": "风险预警" }
-      ]
-    }
-  ]
-}
-```
-
-容量范围基于 Microsoft YaHei / Times New Roman 以及 36、28、16、14、12 pt 字号层级校准。plan-specific guide 会按实际 layout 和集合项数量输出 `sections[0].body`、`items[2].points[]` 等可填写字段。容量下限按 `max * 60%` 给出，只表示建议内容密度；低于下限不会 warning，只有超过上限才需要缩短或拆分。
-
-生成过程会执行两类检查：
-
-- 来自 `scripts/pptxgen/text-capacity.js` 的 JSON 字段级容量警告。
-- 来自 `scripts/pptxgen/engine.js` 的最终文本框容量警告。
-
-如果检查发出文本容量 warning，应缩短相关 JSON 字段、拆分内容、扩大布局空间或选择其他布局。缺图、缺表、缺 chart data、必需集合缺失、字段冲突、标题过多正文不足会作为错误阻断生成；生成器不会静默重写或截断用户文本。
+如果出现溢出 warning，应缩短相关字段、减少同页条目、拆分页面或手动更换 layout。生成器不会静默截断、改写正文或自动修改 layout。
 ## 演讲者备注
 
 每页幻灯片使用 `speakerNotes` 写入显式备注。接受的别名包括 `speaker_notes`、`presenterNotes` 和 `presenter_notes`。

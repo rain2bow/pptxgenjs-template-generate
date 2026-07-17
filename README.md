@@ -63,7 +63,8 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/spec-io.js`: JSON spec loading, loose JSON repair, quote/comment/trailing-comma handling, and normalized spec output.
 - `scripts/pptxgen/docx-import.js`：DOCX 解析模块，提取段落文本、图片 block 顺序、inline/anchor 信息、`wp:extent` 显示尺寸、`a:srcRect` 裁剪参数。无裁剪图片保留原始文件，带裁剪图片用 `sharp` 按源像素裁剪为 PNG。
 - `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, media notes, and speaker notes.
-- `scripts/pptxgen/text-capacity.js`: emits plan-specific text capacity guides from title-only JSON plans, keeps legacy per-style guides, and warns when generated JSON fields exceed recommended ranges.
+- `scripts/pptxgen/layout-schema.js`：定义跨 style 的 canonical layout 和统一字段协议，并负责内部 renderer 适配。
+- `scripts/pptxgen/layout-examples.js`：输出 style 介绍和 31 种 JSON 布局示例 Markdown。
 - `scripts/pptxgen/speaker-notes.js`: normalizes explicit `speakerNotes` fields and can derive basic speaker notes from slide content when `generateSpeakerNotes` is enabled.
 - `scripts/spec-to-md.js`: CLI entry for writing that Markdown outline from a JSON spec.
 - `scripts/pptxgen/samples.js`: built-in sample specs used by `--sample`. Add a sample here when adding a new style.
@@ -97,13 +98,19 @@ npm install
 
 ## 生成 PPTX
 
-推荐先写标题级 `deck.plan.json`，再生成该 deck 专属的容量指南：
+先查看 style 介绍并选择模板：
 
 ```bash
-node scripts/generate-pptx.js --capacity-guide --spec outputs/deck.plan.json --out outputs/deck-capacity-guide.md
+node scripts/generate-pptx.js --style-guide
 ```
 
-`deck.plan.json` 只写结构，不写正文。每页必须先确定 `layout` 和实际元素数量：卡片、分点、步骤、指标、图片说明等应写成标题级数组，例如 `items`、`sections`、`steps`、`metrics`、`captions`；暂时只有数量时可写 `itemCount` 或 `count`。该阶段会提前校验元素数量、媒体数量、图表数量、表格存在性和字段是否匹配，失败后先修 plan，再扩写完整 JSON。
+选择后生成该 style 的 31 种布局 JSON 示例 Markdown：
+
+```bash
+node scripts/generate-pptx.js --layout-examples cmb --out outputs/cmb-layout-examples.md
+```
+
+将 `cmb` 替换为 `swiss` 或 `magazine`。直接参考该 Markdown 编写完整 JSON；当前流程不再创建 `deck.plan.json`，也不再生成字数容量指南。
 
 使用 JSON spec 生成：
 
@@ -167,7 +174,7 @@ npm run check:media-slots
 
 - `validate-pptx-native.js`：检查是否为 PowerPoint 原生结构，避免整页截图伪装成 PPTX。
 - `validate-pptx-layout.js`：检查明显布局风险，例如文本覆盖、元素冲突和底部安全区问题。
-- `check:media-slots`：检查 `statement`、`media`、`imageHero` 等带媒体槽位的 layout 缺少图片/图表时不会静默通过。
+- `check:media-slots`：检查全部 `image-*` layout 缺少图片时不会静默通过。
 
 修改技能结构后可运行：
 
@@ -276,7 +283,7 @@ JSON 引号与编码规则：
 - 图片：`image-statement`、`image-quote`、`image-text`、`image-feature`、`image-grid`、`image-hero`、`image-case-study`
 - 数据：`data-numbers`、`data-kpis`、`data-compare`、`data-chart`、`data-dashboard`、`data-table`
 
-Layout slot limits and renderer behavior are now maintained in `scripts/pptxgen/engine.js`; style/theme design configuration is centralized in `scripts/pptxgen/config.js`; text capacity ranges and title-only plan capacity generation are maintained in `scripts/pptxgen/text-capacity.js`. The generator checks text, image, chart, and table slots before output to avoid missing or mismatched content.
+Canonical layout names and public fields are maintained in `scripts/pptxgen/layout-schema.js`; renderer behavior remains in the template modules; style/theme design configuration is centralized in `scripts/pptxgen/config.js`. The generator checks text, image, chart, and table slots before output to avoid missing or mismatched content.
 
 ## 图片、图表和占位符
 

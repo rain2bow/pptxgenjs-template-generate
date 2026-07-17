@@ -8,11 +8,15 @@ const {
   validateCanonicalSpec,
   createRendererSlide,
 } = require('./pptxgen/layout-schema');
+const { exampleSlide } = require('./pptxgen/layout-examples');
 
 const names = canonicalLayoutNames();
 assert.equal(names.length, 31, 'canonical layout count changed; update schema tests and all-layout samples');
 assert(names.every((name) => /^(deck|text|image|data)-/.test(name)), 'every layout must have a category prefix');
 assert(names.every((name) => layoutDefinition(name)), 'every canonical name must resolve to a definition');
+validateCanonicalSpec({ slides: names.map(exampleSlide) }, (message) => {
+  throw new Error(message);
+});
 
 const timeline = createRendererSlide({ layout: 'text-timeline', title: 'T', items: [{ title: 'A', body: 'B' }] });
 assert.equal(timeline.layout, 'timeline');

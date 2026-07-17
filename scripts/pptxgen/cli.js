@@ -4,7 +4,7 @@ const { buildDeck, normalizeSpec } = require('./engine');
 const { sampleSpec } = require('./samples');
 const { parseArgs, loadSpecFile, writeNormalizedSpec } = require('./spec-io');
 const { fail } = require('./errors');
-const { layoutCapacityMarkdown, layoutCapacityMarkdownForSpec, writeLayoutCapacityGuide, writePlannedCapacityGuide, validateCapacityPlan } = require('./text-capacity');
+const { styleGuideMarkdown, layoutExamplesMarkdown, writeLayoutExamples } = require('./layout-examples');
 
 async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
@@ -12,28 +12,29 @@ async function main(argv = process.argv.slice(2)) {
     fail(args.unsupportedFlags.join(', ') + ' is no longer supported. Edit slide.layout in the JSON manually; the generator never changes layout automatically.');
   }
 
-  if (args.capacityGuide) {
-    if (args.spec) {
-      const planPath = path.resolve(args.spec);
-      const plan = loadSpecFile(planPath);
-      if (!plan.style && typeof args.capacityGuide === 'string') plan.style = args.capacityGuide;
-      try {
-        validateCapacityPlan(plan);
-      } catch (error) {
-        fail(error.message);
-      }
-      if (args.out) writePlannedCapacityGuide(plan, args.out);
-      else process.stdout.write(layoutCapacityMarkdownForSpec(plan));
-      return;
+  if (args.removedCapacityGuide) {
+    fail('--capacity-guide has been removed. Choose a style first, then run --layout-examples <style> to generate complete JSON examples without word-count limits.');
+  }
+
+  if (args.styleGuide) {
+    process.stdout.write(styleGuideMarkdown());
+    return;
+  }
+
+  if (args.layoutExamples) {
+    const style = typeof args.layoutExamples === 'string' ? args.layoutExamples : args.sampleStyle;
+    if (!style) fail('Missing style. Use --layout-examples cmb|swiss|magazine.');
+    try {
+      if (args.out) writeLayoutExamples(style, args.out);
+      else process.stdout.write(layoutExamplesMarkdown(style));
+    } catch (error) {
+      fail(error.message);
     }
-    const style = typeof args.capacityGuide === 'string' ? args.capacityGuide : (args.sampleStyle || 'swiss');
-    if (args.out) writeLayoutCapacityGuide(style, args.out);
-    else process.stdout.write(layoutCapacityMarkdown(style));
     return;
   }
 
   if (!args.sample && !args.spec) {
-    fail('Usage: node scripts/generate-pptx.js --spec deck.json --out deck.pptx\n       node scripts/generate-pptx.js --capacity-guide --spec deck.plan.json --out outputs/deck-capacity.md\n       node scripts/generate-pptx.js --capacity-guide cmb --out outputs/cmb-capacity.md\n       node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx');
+    fail('Usage: node scripts/generate-pptx.js --style-guide\n       node scripts/generate-pptx.js --layout-examples cmb --out outputs/cmb-layout-examples.md\n       node scripts/generate-pptx.js --spec deck.json --out deck.pptx\n       node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx');
   }
 
   const specPath = args.spec ? path.resolve(args.spec) : null;

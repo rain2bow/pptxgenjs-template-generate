@@ -36,3 +36,12 @@
 - `text-briefing` 不再暴露 CMB 专属的 `summary/conclusion` 组合；三种 style 统一只接收 `items`，CMB 在无独立 lead 时把首项作为总领内容。
 - Swiss/CMB 的 image hero、quote 和 case study 原先从页面顶边铺图，会覆盖统一页眉；媒体框现从 `y=0.82` 开始。
 - 双行 `image-grid` 的图片与 caption 区域已整体上移并保留 `0.72in` 行间距；`data-table` 高度缩短，caption 不再进入页脚安全区。
+
+## 阶段 2 流程决策
+
+- style 选择前置为独立步骤：`--style-guide` 输出三套风格的适用场景和视觉说明；SKILL 明确要求用户未指定风格时通过 `askUserQuestion` 选择。
+- 删除 `deck.plan.json -> capacity-guide -> 完整 JSON` 的多阶段主流程，改为选择 style 后生成对应的全布局 JSON 示例 Markdown，再直接编写完整 deck JSON。
+- 新增 `layout-examples.js` 作为样例单一来源，三种 style 使用同一组 31 个 canonical layout 示例；示例展示完整字段结构，不包含字数上下限表。
+- `--capacity-guide` 保留为显式失败入口，避免旧命令被静默解释为其他行为。
+- 删除旧 `text-capacity.js` 和最大字数样例脚本；最终生成阶段的真实文本框溢出警告仍保留。
+- 三个 `assets/template-*.js` 已迁移到 canonical layout/field 协议，证明直接生成完整 JSON 的路径可运行。

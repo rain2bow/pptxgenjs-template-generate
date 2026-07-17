@@ -59,7 +59,7 @@ const deckSpec = {
 
   slides: [
     {
-      layout: 'cover',
+      layout: 'deck-cover',
       chromeLeft: 'Swiss Field Note / [必填] 主题',
       chromeRight: 'SS / 01 / NN',
       kicker: 'Swiss Field Note / 2026',
@@ -68,14 +68,15 @@ const deckSpec = {
       foot: '[必填] 作者 / 日期 / 场景',
     },
     {
-      layout: 'statement',
+      layout: 'image-statement',
+      images: ['logos/cmb-logo-lockup.png'],
       chromeLeft: 'Thesis / 01',
       kicker: 'Thesis / 01',
       title: '[必填] 一个强论点。',
       body: '[必填] 1-2 行解释，不要居中，不要变成普通正文页。',
     },
     {
-      layout: 'kpiTower',
+      layout: 'data-kpis',
       chromeLeft: 'Proof / Numbers',
       kicker: 'Proof / Numbers',
       title: '[必填] 用真实数字支撑',
@@ -87,7 +88,7 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'duoCompare',
+      layout: 'data-compare',
       chromeLeft: 'Before / After',
       kicker: 'Before / After',
       title: '[必填] 从旧模式到新模式',
@@ -111,7 +112,7 @@ const deckSpec = {
       },
     },
     {
-      layout: 'timeline',
+      layout: 'text-timeline',
       chromeLeft: 'Timeline / Process',
       kicker: 'Process / Timeline',
       title: '[必填] 一条清晰时间线',
@@ -123,7 +124,7 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'matrix',
+      layout: 'text-matrix',
       chromeLeft: 'Matrix / System',
       kicker: 'Matrix / 12 Cells',
       title: '[必填] 一个系统被拆成若干模块',
@@ -136,7 +137,7 @@ const deckSpec = {
       heroStat: { value: '12', label: 'registered modules / native PPTX cells' },
     },
     {
-      layout: 'fourCards',
+      layout: 'text-cards',
       chromeLeft: 'Mechanism / 04',
       kicker: 'Mechanism / 04',
       title: '[必填] 四个等权模块',
@@ -148,11 +149,11 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'imageHero',
+      layout: 'image-hero',
       chromeLeft: 'Case / Image Hero',
       title: '[必填] 图像证据',
       body: '[必填] 1-2 行解释这张图为什么重要，不要重复标题。',
-      image: { path: 'images/08-hero-21x9.png', caption: 'Hero visual / 21:9' },
+      images: [{ path: 'logos/cmb-logo-lockup.png', caption: 'Hero visual / 21:9' }],
       items: [
         { label: 'Metric 01', value: '12x', note: '[必填] 解释' },
         { label: 'Metric 02', value: '3.4h', note: '[必填] 解释' },
@@ -160,13 +161,13 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'textGrid',
+      layout: 'text-grid',
       chromeLeft: 'System / Dense Grid',
       kicker: 'System / Dense Grid',
       title: '[Required] Dense Swiss text grid',
       subtitle: '[Optional] For 6-9 compact points without turning into tiny body text.',
       highlightIndex: 0,
-      sections: [
+      items: [
         { label: '01', title: 'Signal', body: 'Most important fact or decision.' },
         { label: '02', title: 'Constraint', body: 'Boundary condition or hard limit.' },
         { label: '03', title: 'Dependency', body: 'What must be ready first.' },
@@ -176,7 +177,7 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'dataSheet',
+      layout: 'data-table',
       chromeLeft: 'Data / Table',
       kicker: 'Data / Table',
       title: '[Required] Swiss editable table',
@@ -190,34 +191,34 @@ const deckSpec = {
         ],
         caption: 'Native PPT table / editable cells',
       },
-      notes: [
-        { title: 'Decision', body: 'Use the status column to drive discussion.' },
-        { title: 'Scope', body: 'Keep columns short; split page if needed.' },
+      items: [
+        { title: 'Decision', body: 'Use status to drive decisions.' },
+        { title: 'Scope', body: 'Keep table columns concise.' },
       ],
     },
     {
-      layout: 'chart',
+      layout: 'data-chart',
       chromeLeft: 'Data / Chart',
       kicker: 'Data / Chart',
       title: '[Required] Swiss native chart',
-      chart: {
+      charts: [{
         type: 'column',
         title: 'Adoption by quarter',
         labels: ['Q1', 'Q2', 'Q3', 'Q4'],
         values: [18, 31, 47, 66],
         showValue: true,
-      },
-      insights: [
+      }],
+      items: [
         { value: '+35', title: 'Growth', body: 'Q2 to Q4 adoption lift.' },
         { value: '66%', title: 'Latest', body: 'Latest quarter level.' },
       ],
     },
     {
-      layout: 'dashboard',
+      layout: 'data-dashboard',
       chromeLeft: 'Data / Dashboard',
       kicker: 'Data / Dashboard',
       title: '[Required] Swiss KPI dashboard',
-      metrics: [
+      items: [
         { label: 'QUALITY', value: '92%' },
         { label: 'COST', value: '-18%' },
         { label: 'CYCLE', value: '5d' },
@@ -229,7 +230,7 @@ const deckSpec = {
         { type: 'doughnut', title: 'Work mix', labels: ['Build', 'Review', 'Ops'], values: [52, 28, 20], showLegend: true },
       ],
     },    {
-      layout: 'closing',
+      layout: 'deck-closing',
       chromeLeft: 'Closing',
       kicker: 'Takeaway',
       title: '[必填] 收束金句。',

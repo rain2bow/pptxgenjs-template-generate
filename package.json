@@ -8,15 +8,14 @@
     "sample:magazine": "node scripts/generate-pptx.js --sample --sample-style magazine --out outputs/sample-magazine.pptx",
     "sample:cmb": "node scripts/generate-pptx.js --sample --sample-style cmb --out outputs/sample-cmb.pptx",
     "sample:cmb:layouts": "node assets/template-cmb-all-layouts.js",
-    "sample:cmb:max-text": "node assets/make-cmb-all-layouts-max-text.js",
     "validate:native": "node scripts/validate-pptx-native.js",
     "validate:layout": "node scripts/validate-pptx-layout.js",
     "spec:md": "node scripts/spec-to-md.js",
     "check:media-slots": "node scripts/check-media-slot-warnings.js",
     "check:layout-schema": "node scripts/check-layout-schema.js",
-    "capacity:cmb": "node scripts/generate-pptx.js --capacity-guide cmb --out outputs/cmb-capacity-guide.md",
-    "capacity:swiss": "node scripts/generate-pptx.js --capacity-guide swiss --out outputs/swiss-capacity-guide.md",
-    "capacity:magazine": "node scripts/generate-pptx.js --capacity-guide magazine --out outputs/magazine-capacity-guide.md",
+    "layouts:cmb": "node scripts/generate-pptx.js --layout-examples cmb --out outputs/cmb-layout-examples.md",
+    "layouts:swiss": "node scripts/generate-pptx.js --layout-examples swiss --out outputs/swiss-layout-examples.md",
+    "layouts:magazine": "node scripts/generate-pptx.js --layout-examples magazine --out outputs/magazine-layout-examples.md",
     "docx:extract": "node scripts/docx-to-pptx.js"
   },
   "dependencies": {

@@ -12,7 +12,7 @@ module.exports = function createValidationTools(deps) {
     clamp,
   } = deps;
 
-  const VALIDATION_FORMAT_HINT = 'Check the sample JSON format in SKILL.md / README.md / assets/template-cmb-all-layouts.js, or run: node scripts/generate-pptx.js --capacity-guide --spec path/to/plan.json --out outputs/capacity.md';
+  const VALIDATION_FORMAT_HINT = 'Check the JSON examples in SKILL.md / README.md, or run: node scripts/generate-pptx.js --layout-examples <style> --out outputs/layout-examples.md';
 
   const SCALAR_TEXT_FIELD_NAMES = new Set([
     'kicker', 'title', 'subtitle', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'story',

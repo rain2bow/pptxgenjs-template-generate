@@ -49,7 +49,8 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 
 - 导出 `buildDeck`、`normalizeSpec`、`sampleSpec`。
 - 展开导出 `spec-io.js` 中的 JSON 解析和写出工具。
-- 展开导出 `text-capacity.js` 中的字数容量指南工具。
+- 展开导出 `layout-schema.js` 的 canonical layout 协议工具。
+- 展开导出 `layout-examples.js` 的 style 介绍和 JSON 示例工具。
 - 保持外部模板脚本只依赖一个稳定入口。
 
 ### `cli.js`
@@ -59,13 +60,14 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 核心逻辑：
 
 1. `parseArgs(argv)` 读取命令参数。
-2. 如果传入 `--capacity-guide --spec deck.plan.json`，读取标题级 plan 并输出仅包含已规划页面的真实容量指南；如果传入 `--capacity-guide <style>`，保留旧行为，输出对应 style 的全量 layout 字数容量指南。
-3. 判断是 `--sample` 还是 `--spec`。
-4. 解析 `specDir` 和 `outPath`。
-5. 从 `samples.sampleSpec()` 或 `spec-io.loadSpecFile()` 得到 spec 对象。
-6. 调用 `engine.normalizeSpec()` 做 style/theme、槽位、文本容量、布局多样性校验。
-7. 如果传入 `--write-normalized-spec`，调用 `writeNormalizedSpec()`。
-8. 调用 `buildDeck()` 输出 PPTX。
+2. 如果传入 `--style-guide`，输出 style 介绍供交互选择。
+3. 如果传入 `--layout-examples <style>`，输出该 style 的 31 种 canonical JSON 示例 Markdown。
+4. 判断是 `--sample` 还是 `--spec`。
+5. 解析 `specDir` 和 `outPath`。
+6. 从 `samples.sampleSpec()` 或 `spec-io.loadSpecFile()` 得到 spec 对象。
+7. 调用 `engine.normalizeSpec()` 做 canonical schema、style/theme、槽位和布局多样性校验。
+8. 如果传入 `--write-normalized-spec`，调用 `writeNormalizedSpec()`。
+9. 调用 `buildDeck()` 输出 PPTX。
 
 这里不直接碰 PowerPoint 渲染细节。
 
@@ -118,18 +120,21 @@ JSON spec 输入输出。
 - 该模块不支持未加引号的 JSON key，例如 `{slides: []}` 仍应报错。
 - 宽松修复只处理常见生成器/LLM 输出问题，不替代严格 JSON 生成。
 
-### `text-capacity.js`
+### `layout-schema.js`
 
-Layout 字数容量指南和 JSON 预检 warning。
+跨 style 的 canonical layout 与字段协议。
 
-核心能力：
+- `LAYOUTS`：31 个 `deck-*`、`text-*`、`image-*`、`data-*` 布局定义。
+- `validateCanonicalSpec()`：拒绝旧 layout、旧集合字段和媒体/数据类型不匹配。
+- `createRendererSpec()` / `createRendererSlide()`：只在内部把 canonical spec 适配给成熟 renderer；外部 JSON 不暴露旧字段。
 
-- `layoutCapacityGuide(style)`：返回机器可读的 style/layout/field 建议字数范围。
-- `layoutCapacityMarkdown(style)`：返回用户/模型可读的 Markdown 表格，用于生成 JSON 前参考。
-- `writeLayoutCapacityGuide(style, outPath)`：根据后缀写出 `.md` 或 `.json`。
-- `warnSpecTextCapacity(spec)`：在 `normalizeSpec()` 阶段检查 JSON 字段是否超过建议范围；超出时 warning，要求修改 JSON 后重新生成。
+### `layout-examples.js`
 
-修改 layout 文本框尺寸、字段名或数量时，应同步更新这里的范围，否则模型生成 JSON 前拿到的容量提示会失真。
+style 选择说明和全布局 JSON 示例生成器。
+
+- `styleGuideMarkdown()`：输出三种 style 的用途说明。
+- `layoutExamplesMarkdown(style)`：输出指定 style 的 31 个完整 slide JSON 示例，不包含字数限制。
+- `writeLayoutExamples(style, outPath)`：以 UTF-8 写入 Markdown。
 
 ### `samples.js`
 
@@ -231,7 +236,7 @@ Lucide 图标和项目符号图标模块。
 - 校验 `slides` 非空。
 - 保持用户 JSON 中的 `slide.layout` 不变；页面类型只由 JSON 字段决定。
 - 调用 `validateSpecSlots()`。
-- 调用 `warnThinContent()`、`warnSpecTextCapacity()` 和 `warnLayoutVariety()`。
+- 调用 canonical schema、槽位完整性、内容完整性和 `warnLayoutVariety()` 检查。
 - 标记 `spec.__normalized = true`。
 
 `buildDeck()` 做这些事：
@@ -514,7 +519,7 @@ CMB 继续复用 Swiss renderer 的 layout：
 
 - 在真正渲染前检查字段和槽位数量。
 - 防止传入 5 个 item，但 layout 只渲染 4 个导致内容丢失。
-- 防止字段名不匹配，例如 layout 只读 `sections`，用户却填了会被忽略的字段。
+- 防止字段名不匹配；canonical JSON 的顶层集合统一为 `items`，内部适配字段不会暴露给用户。
 - 防止媒体数量和 `mediaCount` 不匹配。
 - `validateTextSlots()` 中的 `rules` 是每个 layout 支持数量和字段名的核心规则表。
 

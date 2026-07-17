@@ -21,3 +21,10 @@
 - `npm run check:layout-schema` 通过，覆盖 31 个布局、内部适配、旧 layout 和旧字段迁移错误。
 - `check-media-slot-warnings.js` 已迁移到 7 个 `image-*` 布局并通过。
 - 阶段 1 已完成，下一步进入 style 选择和全布局 JSON 示例 Markdown 流程。
+- 新增 `--style-guide`，输出 CMB、Swiss、Magazine 三套风格说明；SKILL 要求未指定风格时调用 `askUserQuestion`。
+- 新增 `--layout-examples <style>`，每种 style 均生成 31 个完整 canonical layout JSON 示例且不输出容量区间。
+- 删除 plan/capacity 主流程及 `text-capacity.js`，旧 `--capacity-guide` 会明确报错并提示新命令。
+- README、SKILL、架构文档和三个模板样例脚本均已迁移到“选风格 -> 布局示例 -> 完整 JSON -> 生成”的新流程。
+- `check:layout-schema` 通过 31 个布局，媒体槽位回归通过 7 个图片布局，相关 JS 均通过语法检查。
+- CMB、Swiss、Magazine 示例分别生成 8、13、12 页，三份文件均通过原生 PPTX 与版面校验。
+- 阶段 2 已完成，下一步建立图文布局配对矩阵和跨 style 对应 renderer。

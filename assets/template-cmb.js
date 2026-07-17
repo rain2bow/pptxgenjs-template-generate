@@ -26,7 +26,7 @@ const deckSpec = {
 
   slides: [
     {
-      layout: 'cover',
+      layout: 'deck-cover',
       chromeLeft: '招商银行 / 经营汇报',
       kicker: '招商银行 / 2026',
       title: '招商银行业务增长与数字化经营汇报',
@@ -34,7 +34,8 @@ const deckSpec = {
       foot: '招商银行 / 内部汇报 / 2026',
     },
     {
-      layout: 'statement',
+      layout: 'image-statement',
+      images: ['logos/cmb-logo-lockup.png'],
       chromeLeft: '核心摘要 / 01',
       kicker: '核心摘要',
       title: '以客户价值为核心，形成增长、风控与效率的闭环。',
@@ -42,7 +43,7 @@ const deckSpec = {
       callout: '稳健经营\n价值增长\n风险可控',
     },
     {
-      layout: 'kpiTower',
+      layout: 'data-kpis',
       chromeLeft: '经营指标 / KPI',
       kicker: '经营表现',
       title: '关键经营指标保持稳健改善',
@@ -54,18 +55,17 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'media',
+      layout: 'data-chart',
       chromeLeft: '客户经营 / 洞察',
       kicker: '客户经营',
       title: '客户经营从单点触达转向分层运营',
-      body: '通过客群分层、权益匹配与渠道协同，提升客户转化与长期价值。没有用户图片且显式提供 chart 时，媒体区会插入可编辑图表；没有图片或图表时应改用纯文本布局。',
-      chart: {
+      charts: [{
         chartType: 'line',
         title: '客户活跃趋势',
         labels: ['一季度', '二季度', '三季度', '四季度'],
         values: [42, 51, 63, 78],
         showValue: true,
-      },
+      }],
       items: [
         { icon: 'users', title: '客群分层', body: '按资产、行为与生命周期拆分运营策略。' },
         { icon: 'scan-search', title: '信号识别', body: '捕捉高价值触点与潜在流失风险。' },
@@ -73,11 +73,11 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'dashboard',
+      layout: 'data-dashboard',
       chromeLeft: '数据看板 / 监控',
       kicker: '风险与效率看板',
       title: '风险与效率指标联动监控',
-      metrics: [
+      items: [
         { label: '风险命中', value: '87%' },
         { label: '处置时效', value: '2.4h' },
         { label: '自动化率', value: '68%' },
@@ -89,11 +89,11 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'roadmap',
+      layout: 'text-roadmap',
       chromeLeft: '推进路径 / 下一步',
       kicker: '推进路径',
       title: '下一阶段推进路径',
-      steps: [
+      items: [
         { label: '01', title: '统一指标', body: '明确经营、风险和体验的核心口径。' },
         { label: '02', title: '试点验证', body: '选择重点客群和重点分行进行闭环验证。' },
         { label: '03', title: '规模推广', body: '沉淀可复制流程并接入自动化运营。' },
@@ -101,7 +101,7 @@ const deckSpec = {
       ],
     },
     {
-      layout: 'dataSheet',
+      layout: 'data-table',
       chromeLeft: 'Table / Governance',
       kicker: 'Governance Table',
       title: '重点事项跟踪表',
@@ -115,13 +115,13 @@ const deckSpec = {
         ],
         caption: 'Native PPT table / editable cells',
       },
-      notes: [
-        { title: '口径一致', body: '所有事项应绑定统一指标和责任人。' },
+      items: [
+        { title: '口径一致', body: '事项绑定指标与责任人。' },
         { title: '节奏明确', body: '周跟踪、月复盘、季度校准。' },
       ],
     },
     {
-      layout: 'closing',
+      layout: 'deck-closing',
       chromeLeft: '结束页 / 招商银行',
       kicker: '谢谢',
       title: '稳健经营，持续创造客户价值。',
