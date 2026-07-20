@@ -1,5 +1,7 @@
 'use strict';
 
+const createPairedLayoutRenderers = require('./paired-layouts');
+
 module.exports = function createMagazineTemplate(api) {
   const {
     pptx,
@@ -64,6 +66,7 @@ module.exports = function createMagazineTemplate(api) {
     compareBulletItems,
     textVisualLength,
   } = api;
+  const { renderPairedText, renderPairedMedia } = createPairedLayoutRenderers(api, 'magazine');
 
 
   function renderMagazine(slide, ctx) {
@@ -76,6 +79,8 @@ module.exports = function createMagazineTemplate(api) {
     addChrome(slide, ctx, fg, 'magazine');
 
     const renderers = {
+      pairedText: renderPairedText,
+      pairedMedia: renderPairedMedia,
       cover: magazineCover,
       section: magazineSection,
       bigNumbers: magazineBigNumbers,

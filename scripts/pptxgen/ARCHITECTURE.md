@@ -61,7 +61,7 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 
 1. `parseArgs(argv)` 读取命令参数。
 2. 如果传入 `--style-guide`，输出 style 介绍供交互选择。
-3. 如果传入 `--layout-examples <style>`，输出该 style 的 31 种 canonical JSON 示例 Markdown。
+3. 如果传入 `--layout-examples <style>`，输出该 style 的 47 种 canonical JSON 示例 Markdown。
 4. 判断是 `--sample` 还是 `--spec`。
 5. 解析 `specDir` 和 `outPath`。
 6. 从 `samples.sampleSpec()` 或 `spec-io.loadSpecFile()` 得到 spec 对象。
@@ -124,7 +124,7 @@ JSON spec 输入输出。
 
 跨 style 的 canonical layout 与字段协议。
 
-- `LAYOUTS`：31 个 `deck-*`、`text-*`、`image-*`、`data-*` 布局定义。
+- `LAYOUTS`：47 个 `deck-*`、`text-*`、`image-*`、`data-*` 布局定义，其中 19 组 `text-*` / `image-*` 一一配对。
 - `validateCanonicalSpec()`：拒绝旧 layout、旧集合字段和媒体/数据类型不匹配。
 - `createRendererSpec()` / `createRendererSlide()`：只在内部把 canonical spec 适配给成熟 renderer；外部 JSON 不暴露旧字段。
 
@@ -133,7 +133,7 @@ JSON spec 输入输出。
 style 选择说明和全布局 JSON 示例生成器。
 
 - `styleGuideMarkdown()`：输出三种 style 的用途说明。
-- `layoutExamplesMarkdown(style)`：输出指定 style 的 31 个完整 slide JSON 示例，不包含字数限制。
+- `layoutExamplesMarkdown(style)`：输出指定 style 的 47 个完整 slide JSON 示例，不包含字数限制。
 - `writeLayoutExamples(style, outPath)`：以 UTF-8 写入 Markdown。
 
 ### `samples.js`
@@ -257,6 +257,7 @@ Lucide 图标和项目符号图标模块。
 - `templates/magazine.js`
 - `templates/swiss.js`
 - `templates/cmb.js`
+- `templates/paired-layouts.js`：三种 style 共用的 text/image 对应布局绘制骨架；只依赖注入的公共绘图 API，不依赖任何具体模板文件。
 
 `renderByStyle()` 是 style 分发入口。新增 style 时，要新增 `templates/<style>.js`，并在 `getTemplateRenderers()` 注册 renderer。
 

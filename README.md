@@ -64,7 +64,7 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/docx-import.js`：DOCX 解析模块，提取段落文本、图片 block 顺序、inline/anchor 信息、`wp:extent` 显示尺寸、`a:srcRect` 裁剪参数。无裁剪图片保留原始文件，带裁剪图片用 `sharp` 按源像素裁剪为 PNG。
 - `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, media notes, and speaker notes.
 - `scripts/pptxgen/layout-schema.js`：定义跨 style 的 canonical layout 和统一字段协议，并负责内部 renderer 适配。
-- `scripts/pptxgen/layout-examples.js`：输出 style 介绍和 31 种 JSON 布局示例 Markdown。
+- `scripts/pptxgen/layout-examples.js`：输出 style 介绍和 47 种 JSON 布局示例 Markdown。
 - `scripts/pptxgen/speaker-notes.js`: normalizes explicit `speakerNotes` fields and can derive basic speaker notes from slide content when `generateSpeakerNotes` is enabled.
 - `scripts/spec-to-md.js`: CLI entry for writing that Markdown outline from a JSON spec.
 - `scripts/pptxgen/samples.js`: built-in sample specs used by `--sample`. Add a sample here when adding a new style.
@@ -104,7 +104,7 @@ npm install
 node scripts/generate-pptx.js --style-guide
 ```
 
-选择后生成该 style 的 31 种布局 JSON 示例 Markdown：
+选择后生成该 style 的 47 种布局 JSON 示例 Markdown：
 
 ```bash
 node scripts/generate-pptx.js --layout-examples cmb --out outputs/cmb-layout-examples.md
@@ -279,8 +279,8 @@ JSON 引号与编码规则：
 三套风格支持完全一致的 canonical layout 名称，切换模板时只需修改顶层 `style` / `theme`。
 
 - 演示结构：`deck-cover`、`deck-section`、`deck-closing`
-- 纯文本：`text-quote`、`text-article`、`text-briefing`、`text-list`、`text-grid`、`text-cards`、`text-weave`、`text-agenda`、`text-timeline`、`text-pipeline`、`text-roadmap`、`text-matrix`、`text-radial`、`text-pyramid`、`text-swimlane`
-- 图片：`image-statement`、`image-quote`、`image-text`、`image-feature`、`image-grid`、`image-hero`、`image-case-study`
+- 纯文本：`text-statement`、`text-quote`、`text-article`、`text-briefing`、`text-feature`、`text-list`、`text-grid`、`text-cards`、`text-weave`、`text-agenda`、`text-timeline`、`text-pipeline`、`text-roadmap`、`text-matrix`、`text-radial`、`text-pyramid`、`text-swimlane`、`text-hero`、`text-case-study`
+- 图片：每个 `text-<name>` 都有同字段的 `image-<name>` 对应布局；只额外增加 `images[]`
 - 数据：`data-numbers`、`data-kpis`、`data-compare`、`data-chart`、`data-dashboard`、`data-table`
 
 Canonical layout names and public fields are maintained in `scripts/pptxgen/layout-schema.js`; renderer behavior remains in the template modules; style/theme design configuration is centralized in `scripts/pptxgen/config.js`. The generator checks text, image, chart, and table slots before output to avoid missing or mismatched content.
@@ -288,7 +288,8 @@ Canonical layout names and public fields are maintained in `scripts/pptxgen/layo
 ## 图片、图表和占位符
 
 - `image-*` 页面必须使用 `images[]`，即使只有一张图片。
-- `image-grid` 支持 1 到 6 张图；图片说明统一放在 `items`。
+- `image-statement` 和 `image-quote` 使用 1 张图；其他 `image-*` 对应布局支持 1 到 6 张图。
+- `text-<name>` 与 `image-<name>` 除 `images` 外字段完全一致；缺图或在纯文本页传图时，生成器会提示准确的对应 layout。
 - `data-chart` 使用一个 `charts[]` 项，`data-dashboard` 使用两个 `charts[]` 项。
 - 图片布局不接受图表，数据布局不接受图片；类型不匹配会在生成前报错。
 

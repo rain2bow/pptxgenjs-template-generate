@@ -26,9 +26,11 @@ const LAYOUT_PURPOSES = Object.freeze({
   'deck-cover': '封面',
   'deck-section': '章节分隔',
   'deck-closing': '结束页',
+  'text-statement': '纯文本核心陈述',
   'text-quote': '全宽核心观点或引用',
   'text-article': '结构化正文',
   'text-briefing': '总领加多项分析的简报',
+  'text-feature': '重点说明与多项解释',
   'text-list': '分组列表',
   'text-grid': '紧凑文本网格',
   'text-cards': '自适应文本卡片',
@@ -41,11 +43,25 @@ const LAYOUT_PURPOSES = Object.freeze({
   'text-radial': '中心辐射关系',
   'text-pyramid': '分层金字塔',
   'text-swimlane': '多角色泳道',
+  'text-hero': '主观点加关键结果',
+  'text-case-study': '纯文本案例复盘',
   'image-statement': '单图加核心陈述',
   'image-quote': '单图加引用',
-  'image-text': '单图加正文',
+  'image-article': '图片加结构化正文',
+  'image-briefing': '图片加分析简报',
   'image-feature': '单图加多项解释',
-  'image-grid': '一至六图网格',
+  'image-list': '图片加分组列表',
+  'image-grid': '图片加紧凑内容网格',
+  'image-cards': '图片加自适应卡片',
+  'image-weave': '图片加非对称文本编织',
+  'image-agenda': '图片加目录或议程',
+  'image-timeline': '图片加时间节点',
+  'image-pipeline': '图片加流程管道',
+  'image-roadmap': '图片加阶段路线图',
+  'image-matrix': '图片加标题型矩阵',
+  'image-radial': '图片加中心辐射关系',
+  'image-pyramid': '图片加分层金字塔',
+  'image-swimlane': '图片加多角色泳道',
   'image-hero': '主视觉图片加指标',
   'image-case-study': '案例图片加量化结果',
   'data-numbers': '大数字指标',
@@ -99,10 +115,15 @@ function writeLayoutExamples(style, outPath) {
 
 function exampleSlide(layoutName) {
   const base = { layout: layoutName, kicker: '页面标签', title: LAYOUT_PURPOSES[layoutName] || '页面标题' };
+  const definition = layoutDefinition(layoutName);
   if (layoutName === 'deck-cover') return { ...base, title: '演示文稿标题', subtitle: '副标题与汇报信息' };
   if (layoutName === 'deck-section') return { ...base, title: '章节标题', subtitle: '本章节关注的问题' };
   if (layoutName === 'deck-closing') return { ...base, title: '谢谢', subtitle: '联系人或结束语' };
-  if (layoutName === 'text-quote') return { ...base, title: '一句明确、可复述的核心判断', body: '补充这项判断成立的背景或依据。' };
+  if (definition?.pairKey) {
+    const paired = pairedContentExample(definition.pairKey, base);
+    if (definition.category === 'image') paired.images = imageExamples(definition.pairKey);
+    return paired;
+  }
   if (layoutName === 'data-compare') return {
     ...base,
     before: { title: '改造前', items: textItems(3, '现状') },
@@ -117,19 +138,14 @@ function exampleSlide(layoutName) {
   };
   if (layoutName === 'data-numbers') return { ...base, items: metricItems(6) };
   if (layoutName === 'data-kpis') return { ...base, items: metricItems(4) };
-  if (layoutName === 'image-grid') return {
-    ...base,
-    images: ['/path/to/image-1.jpg', '/path/to/image-2.jpg', '/path/to/image-3.jpg'],
-    items: [{ caption: '图片说明一' }, { caption: '图片说明二' }, { caption: '图片说明三' }],
-  };
-  if (layoutName === 'image-hero') return { ...base, body: '解释主视觉所代表的关键证据。', images: ['/path/to/hero.jpg'], items: metricItems(3) };
-  if (layoutName === 'image-case-study') return { ...base, caseTitle: '案例名称', body: '案例背景、做法与结果。', images: ['/path/to/case.jpg'], items: metricItems(3) };
-  if (layoutName === 'image-feature') return { ...base, body: '图片对应的总体说明。', images: ['/path/to/feature.jpg'], items: textItems(3, '要点') };
-  if (layoutName === 'image-statement') return { ...base, title: '图片支持的一句核心判断', body: '补充判断依据。', images: ['/path/to/statement.jpg'] };
-  if (layoutName === 'image-quote') return { ...base, title: '图片与观点共同构成叙事重点', body: '引用来源或解释。', images: ['/path/to/quote.jpg'] };
-  if (layoutName === 'image-text') return { ...base, body: '与图片并列呈现的完整正文。', images: ['/path/to/text-image.jpg'] };
-  if (layoutName === 'text-matrix') return { ...base, items: Array.from({ length: 6 }, (_, index) => ({ label: String(index + 1).padStart(2, '0'), title: `矩阵项 ${index + 1}` })) };
-  if (layoutName === 'text-swimlane') return {
+  return base;
+}
+
+function pairedContentExample(pairKey, base) {
+  if (pairKey === 'statement') return { ...base, title: '一句明确、可复述的核心判断', body: '补充这项判断成立的背景或依据。' };
+  if (pairKey === 'quote') return { ...base, title: '一句明确、可复述的核心观点', body: '补充引用来源或解释。' };
+  if (pairKey === 'matrix') return { ...base, items: Array.from({ length: 6 }, (_, index) => ({ label: String(index + 1).padStart(2, '0'), title: `矩阵项 ${index + 1}` })) };
+  if (pairKey === 'swimlane') return {
     ...base,
     stages: ['现在', '下一步', '后续'],
     items: [
@@ -138,16 +154,19 @@ function exampleSlide(layoutName) {
       { title: '治理', body: '治理推进路径', items: ['规则', '监控', '复盘'] },
     ],
   };
-  if (layoutName === 'text-briefing') return { ...base, items: textItems(4, '简报') };
-  if (layoutName === 'text-grid') return { ...base, items: textItems(6, '网格') };
-  if (layoutName === 'text-cards') return { ...base, items: textItems(5, '卡片') };
-  if (layoutName === 'text-weave') return { ...base, items: textItems(3, '主题') };
-  if (layoutName === 'text-agenda') return { ...base, items: textItems(5, '章节') };
-  if (layoutName === 'text-pyramid') return { ...base, items: textItems(5, '层级') };
-  if (layoutName === 'text-radial') return { ...base, center: '中心主题', items: textItems(6, '节点') };
-  if (layoutName === 'text-list') return { ...base, items: textItems(5, '列表') };
-  if (layoutName === 'text-article') return { ...base, items: textItems(4, '正文') };
-  return { ...base, items: textItems(layoutName === 'text-pipeline' ? 5 : 4, '步骤') };
+  if (pairKey === 'radial') return { ...base, center: '中心主题', items: textItems(6, '节点') };
+  if (pairKey === 'feature') return { ...base, body: '概括这一页的重点判断。', items: textItems(3, '要点') };
+  if (pairKey === 'hero') return { ...base, body: '概括主视觉或主观点代表的关键结果。', items: textItems(3, '结果') };
+  if (pairKey === 'case-study') return { ...base, body: '说明案例背景、做法与结果。', items: textItems(3, '结果') };
+  const counts = { article: 4, briefing: 4, list: 5, grid: 6, cards: 5, weave: 3, agenda: 5, timeline: 4, pipeline: 5, roadmap: 4, pyramid: 5 };
+  return { ...base, items: textItems(counts[pairKey] || 4, pairKey === 'agenda' ? '章节' : pairKey === 'pipeline' ? '步骤' : '要点') };
+}
+
+function imageExamples(pairKey) {
+  if (pairKey === 'grid' || pairKey === 'cards') {
+    return ['/path/to/image-1.jpg', '/path/to/image-2.jpg', '/path/to/image-3.jpg'];
+  }
+  return [`/path/to/${pairKey}.jpg`];
 }
 
 function textItems(count, prefix) {

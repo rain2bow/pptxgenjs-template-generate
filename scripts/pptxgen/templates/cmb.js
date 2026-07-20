@@ -1,5 +1,7 @@
 'use strict';
 
+const createPairedLayoutRenderers = require('./paired-layouts');
+
 module.exports = function createCmbTemplate(api) {
   const {
     pptx,
@@ -64,6 +66,7 @@ module.exports = function createCmbTemplate(api) {
     compareBulletItems,
     textVisualLength,
   } = api;
+  const { renderPairedText, renderPairedMedia } = createPairedLayoutRenderers(api, 'cmb');
 
 
   function renderSwiss(slide, ctx) {
@@ -78,6 +81,8 @@ module.exports = function createCmbTemplate(api) {
     addChrome(slide, ctx, fg, 'swiss');
 
     const renderers = {
+      pairedText: renderPairedText,
+      pairedMedia: renderPairedMedia,
       cover: swissCover,
       section: swissSectionCompat,
       bigNumbers: swissKpiTower,
@@ -756,6 +761,8 @@ module.exports = function createCmbTemplate(api) {
 
     const state = { accent, dark: accent, bg, fg };
     const renderers = {
+      pairedText: renderPairedText,
+      pairedMedia: renderPairedMedia,
       cover: cmbCover,
       section: cmbSection,
       statement: cmbStatement,

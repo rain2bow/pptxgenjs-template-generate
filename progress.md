@@ -28,3 +28,10 @@
 - `check:layout-schema` 通过 31 个布局，媒体槽位回归通过 7 个图片布局，相关 JS 均通过语法检查。
 - CMB、Swiss、Magazine 示例分别生成 8、13、12 页，三份文件均通过原生 PPTX 与版面校验。
 - 阶段 2 已完成，下一步建立图文布局配对矩阵和跨 style 对应 renderer。
+- 建立 19 组 text/image 双向配对，canonical layout 总数从 31 扩展为 47。
+- 新增 `templates/paired-layouts.js`，图文对应页支持 1-6 张图片和最多 8 个文本项，所有三种 style 均已接入。
+- JSON 示例生成器改为从 pairKey 生成同字段的 text/image 示例；schema 测试会逐对比较字段集合。
+- 缺图和文本页误带图片的回归脚本覆盖 19 个 image layout 与 19 个 text layout，全部通过并验证准确 counterpart 提示。
+- CMB、Swiss、Magazine 三份 47 页全布局 PPTX 均成功生成并通过原生结构及布局校验。
+- 修复内部 `pairedMedia` / `pairedText` 别名导致的错误重复布局 warning。
+- 阶段 3 已完成，下一步进入纯新增 style 注册和模板创建指南。

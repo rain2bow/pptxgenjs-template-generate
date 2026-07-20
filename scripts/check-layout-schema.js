@@ -11,11 +11,20 @@ const {
 const { exampleSlide } = require('./pptxgen/layout-examples');
 
 const names = canonicalLayoutNames();
-assert.equal(names.length, 31, 'canonical layout count changed; update schema tests and all-layout samples');
+assert.equal(names.length, 47, 'canonical layout count changed; update schema tests and all-layout samples');
 assert(names.every((name) => /^(deck|text|image|data)-/.test(name)), 'every layout must have a category prefix');
 assert(names.every((name) => layoutDefinition(name)), 'every canonical name must resolve to a definition');
 validateCanonicalSpec({ slides: names.map(exampleSlide) }, (message) => {
   throw new Error(message);
+});
+
+names.filter((name) => name.startsWith('text-')).forEach((textName) => {
+  const textDefinition = layoutDefinition(textName);
+  const imageName = textDefinition.counterpart;
+  const imageDefinition = layoutDefinition(imageName);
+  assert(imageDefinition, `${textName} is missing image counterpart ${imageName}`);
+  assert.equal(imageDefinition.counterpart, textName, `${imageName} must point back to ${textName}`);
+  assert.deepEqual(exampleKeys(exampleSlide(textName)), exampleKeys(exampleSlide(imageName)), `${textName} and ${imageName} must expose identical fields except layout/images`);
 });
 
 const timeline = createRendererSlide({ layout: 'text-timeline', title: 'T', items: [{ title: 'A', body: 'B' }] });
@@ -44,6 +53,14 @@ expectFailure(
   { slides: [{ layout: 'data-chart', title: 'Old chart', chart: { values: [1], labels: ['A'] }, items: [{ title: 'A', body: 'B' }] }] },
   'Use "charts"'
 );
+expectFailure(
+  { slides: [{ layout: 'text-grid', title: 'Wrong media', items: [{ title: 'A', body: 'B' }], images: ['a.png'] }] },
+  'field-compatible image counterpart "image-grid"'
+);
+expectFailure(
+  { slides: [{ layout: 'image-grid', title: 'Missing media', items: [{ title: 'A', body: 'B' }] }] },
+  'field-compatible text counterpart "text-grid"'
+);
 
 console.log(`Canonical layout schema check passed: ${names.length} layout(s).`);
 
@@ -60,4 +77,8 @@ function expectFailure(spec, expected) {
     return;
   }
   throw new Error(`expected schema validation to fail with: ${expected}`);
+}
+
+function exampleKeys(slide) {
+  return Object.keys(slide).filter((key) => !['layout', 'images'].includes(key)).sort();
 }

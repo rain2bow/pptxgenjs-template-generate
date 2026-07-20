@@ -50,7 +50,7 @@ description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 Powe
 
    如果用户尚未明确指定 style，使用 `askUserQuestion` 展示 `cmb`、`swiss`、`magazine` 的介绍并让用户选择。只有当运行环境没有该交互工具时，才用普通文本提问；不要自行跳过选择阶段。
 
-2. 选择 style 后，生成该 style 的全布局 JSON 示例 Markdown。该文件包含 31 种 canonical layout 的完整字段示例，不包含字数限制：
+2. 选择 style 后，生成该 style 的全布局 JSON 示例 Markdown。该文件包含 47 种 canonical layout 的完整字段示例，不包含字数限制：
 
    ```bash
    node scripts/generate-pptx.js --layout-examples cmb --out outputs/cmb-layout-examples.md
@@ -176,15 +176,15 @@ node scripts/docx-to-pptx.js \
 
 纯文本页面：
 
-- `text-quote`、`text-article`、`text-briefing`、`text-list`
+- `text-statement`、`text-quote`、`text-article`、`text-briefing`、`text-feature`、`text-list`
 - `text-grid`、`text-cards`、`text-weave`、`text-agenda`
 - `text-timeline`、`text-pipeline`、`text-roadmap`
 - `text-matrix`、`text-radial`、`text-pyramid`、`text-swimlane`
+- `text-hero`、`text-case-study`
 
 图片页面：
 
-- `image-statement`、`image-quote`、`image-text`
-- `image-feature`、`image-grid`、`image-hero`、`image-case-study`
+- 每个 `text-<name>` 都有字段兼容的 `image-<name>`：`statement`、`quote`、`article`、`briefing`、`feature`、`list`、`grid`、`cards`、`weave`、`agenda`、`timeline`、`pipeline`、`roadmap`、`matrix`、`radial`、`pyramid`、`swimlane`、`hero`、`case-study`
 
 数据页面：
 
@@ -199,9 +199,9 @@ node scripts/docx-to-pptx.js \
 
 ### 媒体规则
 
-- `image-*` 必须提供 `images`；纯文本或数据布局带 `images` 会报错。
-- `image-statement`、`image-quote`、`image-text`、`image-feature`、`image-hero`、`image-case-study` 支持 1 张图片。
-- `image-grid` 支持 1 到 6 张图片，`items` 数量应与图片说明数量一致。
+- `image-*` 必须提供 `images`；`text-*` 带 `images` 或 `image-*` 缺少图片时，错误会直接给出字段兼容的对应 layout 名称。
+- `image-statement`、`image-quote` 支持 1 张图片；其他 `image-*` 对应布局支持 1 到 6 张图片。
+- `text-<name>` 与 `image-<name>` 除 `images` 外字段完全一致，可通过修改 `layout` 并添加或删除 `images` 直接切换。
 - 图片 layout 不接受 `charts`；图表请使用 `data-chart` 或 `data-dashboard`。
 
 ### 分点规则

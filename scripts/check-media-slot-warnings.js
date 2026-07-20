@@ -3,30 +3,24 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { canonicalLayoutNames, layoutDefinition } = require('./pptxgen/layout-schema');
+const { exampleSlide } = require('./pptxgen/layout-examples');
 
-const MEDIA_SLOT_LAYOUTS = [
-  'image-statement',
-  'image-quote',
-  'image-text',
-  'image-feature',
-  'image-grid',
-  'image-hero',
-  'image-case-study',
-];
+const MEDIA_SLOT_LAYOUTS = canonicalLayoutNames().filter((name) => name.startsWith('image-'));
+const TEXT_LAYOUTS = canonicalLayoutNames().filter((name) => name.startsWith('text-'));
 
 const spec = {
   title: 'Media slot error check',
   style: 'magazine',
   theme: 'ink',
-  slides: MEDIA_SLOT_LAYOUTS.map((layout) => ({
-    layout,
-    title: `${layout} without media`,
-    body: 'This slide intentionally omits images and charts.',
-    caseTitle: layout === 'image-case-study' ? 'Case without media' : undefined,
-    items: ['image-feature', 'image-grid', 'image-hero', 'image-case-study'].includes(layout)
-      ? [{ label: 'Metric', value: '1', note: 'No media asset' }]
-      : undefined,
-  })),
+  slides: [
+    ...MEDIA_SLOT_LAYOUTS.map((layout) => {
+      const slide = exampleSlide(layout);
+      delete slide.images;
+      return slide;
+    }),
+    ...TEXT_LAYOUTS.map((layout) => ({ ...exampleSlide(layout), images: ['missing-image.png'] })),
+  ],
 };
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pptx-media-slot-check-'));
@@ -59,12 +53,18 @@ if (result.status === 0) {
 const output = `${result.stdout || ''}\n${result.stderr || ''}`;
 const missing = MEDIA_SLOT_LAYOUTS.filter((layout, index) => {
   const slideNumber = index + 1;
-  return !output.includes(`slide ${slideNumber} layout "${layout}" requires at least 1 images entry; got 0`);
+  return !output.includes(`slide ${slideNumber} layout "${layout}" requires image content. Provide "images", or change layout to its field-compatible text counterpart "${layoutDefinition(layout).counterpart}"`);
 });
 
-if (missing.length) {
-  console.error(`Missing media slot error for layout(s): ${missing.join(', ')}`);
+const wrongTextLayouts = TEXT_LAYOUTS.filter((layout, index) => {
+  const slideNumber = MEDIA_SLOT_LAYOUTS.length + index + 1;
+  return !output.includes(`slide ${slideNumber} layout "${layout}" does not accept images. Change layout to its field-compatible image counterpart "${layoutDefinition(layout).counterpart}"`);
+});
+
+if (missing.length || wrongTextLayouts.length) {
+  if (missing.length) console.error(`Missing media slot error for layout(s): ${missing.join(', ')}`);
+  if (wrongTextLayouts.length) console.error(`Missing text-to-image counterpart error for layout(s): ${wrongTextLayouts.join(', ')}`);
   process.exit(1);
 }
 
-console.log(`Media slot error check passed: ${MEDIA_SLOT_LAYOUTS.length} layout(s).`);
+console.log(`Media counterpart error check passed: ${MEDIA_SLOT_LAYOUTS.length} image layout(s), ${TEXT_LAYOUTS.length} text layout(s).`);

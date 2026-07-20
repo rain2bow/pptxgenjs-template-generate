@@ -32,7 +32,7 @@ module.exports = function createValidationTools(deps) {
 
   const DISPLAY_ITEM_TEXT_KEYS = ['text', 'title', 'label', 'body', 'desc', 'note', 'summary', 'detail', 'value', 'unit', 'metric', 'name'];
 
-  const MEDIA_SLOT_LAYOUTS = new Set(['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy']);
+  const MEDIA_SLOT_LAYOUTS = new Set(['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy', 'pairedMedia']);
 
   const VISUAL_MEDIA_LAYOUTS = MEDIA_SLOT_LAYOUTS;
 
@@ -169,6 +169,7 @@ module.exports = function createValidationTools(deps) {
     else if (layout === 'quoteImage') add('quote', 'body', 'cite', 'source', 'callout', 'caption');
     else if (layout === 'textImage') add('body', 'callout', 'caption');
     else if (layout === 'media') add('body', 'summary', 'story', 'note', 'caption');
+    else if (layout === 'pairedMedia' || layout === 'pairedText') add('body', 'summary', 'story', 'note', 'callout', 'caseTitle', 'caption');
     else if (layout === 'caseStudy') add('caseTitle', 'label', 'body', 'summary', 'story', 'caption');
     else if (layout === 'imageHero') add('body');
     else if (layout === 'dataSheet' && style === 'magazine') add('body');
@@ -269,6 +270,8 @@ module.exports = function createValidationTools(deps) {
       duoCompare: [],
       splitCompare: [],
       textImage: [],
+      pairedText: [{ keys: ['items'], max: 8, min: 1, label: 'paired text items', itemTextKeys: ['title', 'label', 'name', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'value', 'items'] }],
+      pairedMedia: [{ keys: ['items'], max: 8, min: 1, label: 'paired media text items', itemTextKeys: ['title', 'label', 'name', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'value', 'items'] }],
       statement: [],
       closing: [],
       bigNumbers: [numberMetricRule],
@@ -595,7 +598,7 @@ module.exports = function createValidationTools(deps) {
   }
 
   function isMediaGridLayout(layout) {
-    return ['mediaGrid', 'gallery', 'imageGrid'].includes(layout || '');
+    return ['mediaGrid', 'gallery', 'imageGrid', 'pairedMedia'].includes(layout || '');
   }
 
   function resolveMediaSlotCount(data) {
@@ -627,7 +630,7 @@ module.exports = function createValidationTools(deps) {
   function validateThinContent(slide, index, style, errors) {
     if (slide.allowSparseContent) return;
     const layout = slide.layout || defaultLayoutForStyle(style);
-    if (['matrix', 'bigNumbers', 'kpiTower', 'dashboard', 'imageHero', 'caseStudy'].includes(layout)) return;
+    if (['matrix', 'bigNumbers', 'kpiTower', 'dashboard', 'imageHero', 'caseStudy'].includes(layout) || slide.__canonicalLayout === 'image-matrix') return;
     const candidates = normalizeSections(slide.sections || slide.items || slide.columns || slide.nodes || slide.layers || slide.steps || slide.milestones || slide.agenda || []);
     if (candidates.length < 3) return;
     const titleOnly = candidates.filter((item) => {
@@ -661,7 +664,7 @@ module.exports = function createValidationTools(deps) {
       }
     };
     spec.slides.forEach((slide, index) => {
-      const layout = slide.layout || (spec.style === 'magazine' ? 'textImage' : 'statement');
+      const layout = slide.__canonicalLayout || slide.layout || (spec.style === 'magazine' ? 'textImage' : 'statement');
       if (layout === runLayout) {
         runLength += 1;
       } else {

@@ -5,29 +5,45 @@ const LAYOUTS = Object.freeze({
   'deck-section': layout('deck', 'section'),
   'deck-closing': layout('deck', 'closing'),
 
-  'text-quote': layout('text', 'bigQuote'),
-  'text-article': layout('text', 'article', 'items'),
-  'text-briefing': layout('text', 'briefing', 'items'),
-  'text-list': layout('text', 'sectionList', 'items'),
-  'text-grid': layout('text', 'textGrid', 'items'),
-  'text-cards': layout('text', 'fourCards', 'items'),
-  'text-weave': layout('text', 'textWeave', 'items'),
-  'text-agenda': layout('text', 'agenda', 'items'),
-  'text-timeline': layout('text', 'timeline', 'items', 'steps'),
-  'text-pipeline': layout('text', 'pipeline', 'items', 'steps'),
-  'text-roadmap': layout('text', 'roadmap', 'items', 'steps'),
-  'text-matrix': layout('text', 'matrix', 'items'),
-  'text-radial': layout('text', 'radial', 'items'),
-  'text-pyramid': layout('text', 'pyramid', 'items', 'layers'),
-  'text-swimlane': layout('text', 'swimlane', 'items', 'lanes'),
+  'text-statement': pairedLayout('text', 'statement', 'bigQuote'),
+  'text-quote': pairedLayout('text', 'quote', 'bigQuote'),
+  'text-article': pairedLayout('text', 'article', 'article', 'items'),
+  'text-briefing': pairedLayout('text', 'briefing', 'briefing', 'items'),
+  'text-feature': pairedLayout('text', 'feature', 'pairedText', 'items'),
+  'text-list': pairedLayout('text', 'list', 'sectionList', 'items'),
+  'text-grid': pairedLayout('text', 'grid', 'textGrid', 'items'),
+  'text-cards': pairedLayout('text', 'cards', 'fourCards', 'items'),
+  'text-weave': pairedLayout('text', 'weave', 'textWeave', 'items'),
+  'text-agenda': pairedLayout('text', 'agenda', 'agenda', 'items'),
+  'text-timeline': pairedLayout('text', 'timeline', 'timeline', 'items', 'steps'),
+  'text-pipeline': pairedLayout('text', 'pipeline', 'pipeline', 'items', 'steps'),
+  'text-roadmap': pairedLayout('text', 'roadmap', 'roadmap', 'items', 'steps'),
+  'text-matrix': pairedLayout('text', 'matrix', 'matrix', 'items'),
+  'text-radial': pairedLayout('text', 'radial', 'radial', 'items'),
+  'text-pyramid': pairedLayout('text', 'pyramid', 'pyramid', 'items', 'layers'),
+  'text-swimlane': pairedLayout('text', 'swimlane', 'swimlane', 'items', 'lanes'),
+  'text-hero': pairedLayout('text', 'hero', 'pairedText', 'items'),
+  'text-case-study': pairedLayout('text', 'case-study', 'pairedText', 'items'),
 
-  'image-statement': layout('image', 'statement', null, null, { minImages: 1, maxImages: 1 }),
-  'image-quote': layout('image', 'quoteImage', null, null, { minImages: 1, maxImages: 1 }),
-  'image-text': layout('image', 'textImage', null, null, { minImages: 1, maxImages: 1 }),
-  'image-feature': layout('image', 'media', 'items', null, { minImages: 1, maxImages: 1 }),
-  'image-grid': layout('image', 'mediaGrid', 'items', 'captions', { minImages: 1, maxImages: 6 }),
-  'image-hero': layout('image', 'imageHero', 'items', null, { minImages: 1, maxImages: 1 }),
-  'image-case-study': layout('image', 'caseStudy', 'items', 'metrics', { minImages: 1, maxImages: 1 }),
+  'image-statement': pairedLayout('image', 'statement', 'statement', null, null, { minImages: 1, maxImages: 1 }),
+  'image-quote': pairedLayout('image', 'quote', 'quoteImage', null, null, { minImages: 1, maxImages: 1 }),
+  'image-article': pairedLayout('image', 'article', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-briefing': pairedLayout('image', 'briefing', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-feature': pairedLayout('image', 'feature', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-list': pairedLayout('image', 'list', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-grid': pairedLayout('image', 'grid', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-cards': pairedLayout('image', 'cards', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-weave': pairedLayout('image', 'weave', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-agenda': pairedLayout('image', 'agenda', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-timeline': pairedLayout('image', 'timeline', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-pipeline': pairedLayout('image', 'pipeline', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-roadmap': pairedLayout('image', 'roadmap', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-matrix': pairedLayout('image', 'matrix', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-radial': pairedLayout('image', 'radial', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-pyramid': pairedLayout('image', 'pyramid', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-swimlane': pairedLayout('image', 'swimlane', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-hero': pairedLayout('image', 'hero', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
+  'image-case-study': pairedLayout('image', 'case-study', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
 
   'data-numbers': layout('data', 'bigNumbers', 'items'),
   'data-kpis': layout('data', 'kpiTower', 'items'),
@@ -61,8 +77,9 @@ const LEGACY_LAYOUTS = Object.freeze({
   pyramid: 'text-pyramid',
   swimlane: 'text-swimlane',
   statement: 'image-statement',
+  'image-text': 'image-article',
   quoteImage: 'image-quote',
-  textImage: 'image-text',
+  textImage: 'image-article',
   media: 'image-feature',
   mediaGrid: 'image-grid',
   gallery: 'image-grid',
@@ -87,6 +104,11 @@ const DEPRECATED_CHART_FIELDS = Object.freeze(['chart']);
 
 function layout(category, renderer, collection = null, rendererCollection = null, extra = {}) {
   return Object.freeze({ category, renderer, collection, rendererCollection: rendererCollection || collection, ...extra });
+}
+
+function pairedLayout(category, pairKey, renderer, collection = null, rendererCollection = null, extra = {}) {
+  const counterpart = `${category === 'text' ? 'image' : 'text'}-${pairKey}`;
+  return layout(category, renderer, collection, rendererCollection, { pairKey, counterpart, ...extra });
 }
 
 function canonicalLayoutNames() {
@@ -142,8 +164,9 @@ function validateCanonicalSlide(slide, index, errors) {
 
   const images = Array.isArray(slide.images) ? slide.images : [];
   if (slide.images !== undefined && !Array.isArray(slide.images)) errors.push(`slide ${page} field "images" must be an array.`);
-  if (definition.category !== 'image' && images.length) errors.push(`slide ${page} layout "${name}" does not accept images. Choose an image-* layout.`);
-  if (definition.category === 'image') validateCount(page, name, 'images', images.length, definition.minImages, definition.maxImages, errors);
+  if (definition.category !== 'image' && images.length) errors.push(`slide ${page} layout "${name}" does not accept images. Change layout to its field-compatible image counterpart "${definition.counterpart}".`);
+  if (definition.category === 'image' && images.length) validateCount(page, name, 'images', images.length, definition.minImages, definition.maxImages, errors);
+  if (definition.category === 'image' && !images.length) errors.push(`slide ${page} layout "${name}" requires image content. Provide "images", or change layout to its field-compatible text counterpart "${definition.counterpart}".`);
 
   const charts = Array.isArray(slide.charts) ? slide.charts : [];
   if (slide.charts !== undefined && !Array.isArray(slide.charts)) errors.push(`slide ${page} field "charts" must be an array.`);
