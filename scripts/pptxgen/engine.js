@@ -5,21 +5,22 @@ const pptxgen = require('pptxgenjs');
 const JSZip = require('jszip');
 const {
   SLIDE,
-  THEMES,
   FONTS,
   TYPOGRAPHY,
   READABILITY,
   BASIC_ICON_NAMES,
   ICON_ALIASES,
   LUCIDE_STATIC_ICON_DIR,
-  isSupportedStyle,
-  defaultThemeForStyle,
 } = require('./config');
+const {
+  isRegisteredStyle,
+  defaultThemeForRegisteredStyle,
+  themesForStyle,
+  allRegisteredThemes,
+  createRegisteredTemplate,
+} = require('./style-registry');
 const { fail } = require('./errors');
 const { speakerNotesText } = require('./speaker-notes');
-const createMagazineTemplate = require('./templates/magazine');
-const createSwissTemplate = require('./templates/swiss');
-const createCmbTemplate = require('./templates/cmb');
 const createIconTools = require('./icons');
 const createBlockTools = require('./blocks');
 const createMediaTools = require('./media');
@@ -89,9 +90,10 @@ const {
 } = validationTools;
 function normalizeSpec(spec, options = {}) {
   spec.style = spec.style || 'magazine';
-  if (!isSupportedStyle(spec.style)) fail(`Unsupported style: ${spec.style}`);
-  spec.theme = spec.theme || defaultThemeForStyle(spec.style);
-  if (!THEMES[spec.style][spec.theme]) fail(`Unsupported theme "${spec.theme}" for style "${spec.style}"`);
+  if (!isRegisteredStyle(spec.style)) fail(`Unsupported style: ${spec.style}`);
+  spec.theme = spec.theme || defaultThemeForRegisteredStyle(spec.style);
+  const styleThemes = themesForStyle(spec.style);
+  if (!styleThemes?.[spec.theme]) fail(`Unsupported theme "${spec.theme}" for style "${spec.style}"`);
   if (!Array.isArray(spec.slides) || spec.slides.length === 0) fail('Spec must include a non-empty slides array.');
   if (spec.diversifyLayouts === true) {
     fail('diversifyLayouts is no longer supported. Edit each slide.layout in JSON manually; the generator never changes layout automatically.');
@@ -120,7 +122,7 @@ async function buildDeck(spec, specDir, outPath) {
   pptx.defineLayout({ name: 'CUSTOM_WIDE', width: SLIDE.w, height: SLIDE.h });
   pptx.layout = 'CUSTOM_WIDE';
 
-  const theme = THEMES[spec.style][spec.theme];
+  const theme = themesForStyle(spec.style)[spec.theme];
   await prepareIconAssets(spec, theme);
   await prepareImageAspectAssets(spec, specDir);
   await prepareSvgImageAssets(spec, specDir);
@@ -341,32 +343,27 @@ function warnTextOverCapacity(original, actualVisual, maxVisual, options = {}) {
   console.warn('Warning: text may overflow box (' + Number(options.w || 0).toFixed(2) + 'x' + Number(options.h || 0).toFixed(2) + '); estimated capacity ' + Math.floor(maxVisual) + ', got ' + Math.ceil(actualVisual) + '. Shorten this text in JSON and regenerate the PPTX, or split/enlarge the card: ' + preview);
 }
 function renderByStyle(style, slide, ctx) {
-  const renderer = getTemplateRenderers()[style];
+  const renderer = getTemplateRenderer(style);
   if (!renderer) fail(`Unsupported style renderer: ${style}`);
   renderer(slide, ctx);
 }
 
-let TEMPLATE_RENDERERS = null;
+const TEMPLATE_RENDERERS = new Map();
 
-function getTemplateRenderers() {
-  if (TEMPLATE_RENDERERS) return TEMPLATE_RENDERERS;
+function getTemplateRenderer(style) {
+  if (TEMPLATE_RENDERERS.has(style)) return TEMPLATE_RENDERERS.get(style);
   const api = createTemplateApi();
-  const magazineTemplate = createMagazineTemplate(api);
-  const swissTemplate = createSwissTemplate(api);
-  const cmbTemplate = createCmbTemplate(api);
-  TEMPLATE_RENDERERS = {
-    magazine: magazineTemplate.render,
-    swiss: swissTemplate.render,
-    cmb: cmbTemplate.render,
-  };
-  return TEMPLATE_RENDERERS;
+  const template = createRegisteredTemplate(style, api);
+  const renderer = template?.render || null;
+  if (renderer) TEMPLATE_RENDERERS.set(style, renderer);
+  return renderer;
 }
 
 function createTemplateApi() {
   return {
     pptx,
     SLIDE,
-    THEMES,
+    THEMES: allRegisteredThemes(),
     FONTS,
     TYPOGRAPHY,
     READABILITY,

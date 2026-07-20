@@ -6,6 +6,7 @@ const specIo = require('./spec-io');
 const docxImport = require('./docx-import');
 const layoutSchema = require('./layout-schema');
 const layoutExamples = require('./layout-examples');
+const styleRegistry = require('./style-registry');
 
 module.exports = {
   buildDeck,
@@ -16,5 +17,6 @@ module.exports = {
   ...specIo,
   ...layoutSchema,
   ...layoutExamples,
+  ...styleRegistry,
   ...docxImport,
 };

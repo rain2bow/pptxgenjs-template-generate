@@ -35,3 +35,9 @@
 - CMB、Swiss、Magazine 三份 47 页全布局 PPTX 均成功生成并通过原生结构及布局校验。
 - 修复内部 `pairedMedia` / `pairedText` 别名导致的错误重复布局 warning。
 - 阶段 3 已完成，下一步进入纯新增 style 注册和模板创建指南。
+- 新增 `style-registry.js`，将内置模板和自动发现插件统一接入 engine、style guide、layout examples 与 sample。
+- 新 style 现在只需新增 `templates/styles/<id>/index.js`；外部目录可通过 `PPTXGEN_STYLE_PATHS` 加载。
+- 新增中文 `STYLE_PLUGIN_GUIDE.md`，覆盖插件接口、主题、全部 canonical layout 责任和验证步骤。
+- 新增 `check:style-plugin`：验证正常插件发现、47-layout 示例输出、样例 PPTX、原生/版面检查、损坏插件隔离以及默认 registry 不泄漏 fixture。
+- CMB、Swiss、Magazine 通过新 registry 分别生成 8、6、5 页样例，全部通过原生和布局校验。
+- 阶段 4 已完成，下一步进行全量回归和工作区审计。

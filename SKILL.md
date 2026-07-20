@@ -113,6 +113,8 @@ npm run layouts:swiss
 npm run layouts:magazine
 ```
 
+新增自定义 style 时，不要修改现有模板或引擎文件。按 `scripts/pptxgen/STYLE_PLUGIN_GUIDE.md` 新增 `templates/styles/<style-id>/index.js`；生成器会自动发现并把它加入 `--style-guide`、`--layout-examples` 和正常生成流程。
+
 生成三种 style 共用的全布局排版检查文件：
 
 ```bash

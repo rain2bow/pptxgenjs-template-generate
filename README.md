@@ -65,11 +65,13 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/spec-md.js`: converts JSON spec into a user-facing Markdown outline with page count, page type, titles, body text, bullets, charts, tables, media notes, and speaker notes.
 - `scripts/pptxgen/layout-schema.js`：定义跨 style 的 canonical layout 和统一字段协议，并负责内部 renderer 适配。
 - `scripts/pptxgen/layout-examples.js`：输出 style 介绍和 47 种 JSON 布局示例 Markdown。
+- `scripts/pptxgen/style-registry.js`：自动发现内置与纯新增 style 插件，并统一提供主题、renderer 和 sample 元数据。
 - `scripts/pptxgen/speaker-notes.js`: normalizes explicit `speakerNotes` fields and can derive basic speaker notes from slide content when `generateSpeakerNotes` is enabled.
 - `scripts/spec-to-md.js`: CLI entry for writing that Markdown outline from a JSON spec.
 - `scripts/pptxgen/samples.js`: built-in sample specs used by `--sample`. Add a sample here when adding a new style.
 - `scripts/pptxgen/errors.js`: shared fail helper.
 - `scripts/pptxgen/ARCHITECTURE.md`: module responsibility, engine section map, and style/layout extension guide.
+- `scripts/pptxgen/STYLE_PLUGIN_GUIDE.md`：纯新增式 style 插件目录、接口、主题和验证指南。
 - `scripts/validate-pptx-native.js`：校验 PPTX 是否包含原生 PowerPoint 结构，避免输出整页截图型文件。
 - `scripts/validate-pptx-layout.js`：扫描生成后的 PPTX 结构，检查明显的布局冲突、文本覆盖和底部安全区风险。
 - `scripts/check-media-slot-warnings.js`：回归检查所有带图片/媒体槽位的 layout 在没有图片或图表时都会阻断生成。

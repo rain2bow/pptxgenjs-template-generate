@@ -1,4 +1,12 @@
+const { styleDefinition } = require('./style-registry');
+
 function sampleSpec(style = 'swiss') {
+  const registered = styleDefinition(style);
+  if (!registered) throw new Error(`Unsupported sample style: ${style}`);
+  if (!registered.builtin) {
+    const sample = registered.sampleSpec ? registered.sampleSpec() : genericPluginSample(registered);
+    return { ...sample, style: registered.id, theme: sample.theme || registered.defaultTheme };
+  }
   if (style === 'cmb') {
     return {
       title: '招商银行经营汇报',
@@ -171,6 +179,21 @@ function sampleSpec(style = 'swiss') {
         title: '技能变厚，组织变薄。',
         subtitle: 'Thin harness, fat skills.',
       },
+    ],
+  };
+}
+
+function genericPluginSample(style) {
+  return {
+    title: `${style.name} 样例`,
+    subtitle: style.description,
+    author: 'PPTXGenJS Template Generator',
+    style: style.id,
+    theme: style.defaultTheme,
+    slides: [
+      { layout: 'deck-cover', kicker: style.name, title: `${style.name} 样例`, subtitle: style.description },
+      { layout: 'text-statement', kicker: '核心观点', title: '自定义 style 已成功加载', body: '此页面用于验证新增模板目录可被自动发现和渲染。' },
+      { layout: 'deck-closing', kicker: '完成', title: '模板注册验证完成', subtitle: style.id },
     ],
   };
 }

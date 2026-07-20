@@ -3,24 +3,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { canonicalLayoutNames, layoutDefinition } = require('./layout-schema');
+const { listStyles, styleDefinition } = require('./style-registry');
 
-const STYLE_GUIDE = Object.freeze({
-  cmb: {
-    name: '招商银行商务风',
-    description: '白色品牌页眉、招商红与灰白金融版式，适合银行经营、管理层汇报和正式商务场景。',
-    theme: 'classic',
-  },
-  swiss: {
-    name: '瑞士国际主义',
-    description: '高亮色、直角网格、清晰信息层级，适合产品、战略、数据分析和方法论汇报。',
-    theme: 'ikb',
-  },
-  magazine: {
-    name: '电子杂志风',
-    description: '衬线标题、编辑式图文节奏和纸感留白，适合叙事、观点、案例和图片材料较多的内容。',
-    theme: 'ink',
-  },
-});
+const STYLE_GUIDE = Object.freeze(Object.fromEntries(listStyles().map((style) => [style.id, {
+  name: style.name,
+  description: style.description,
+  theme: style.defaultTheme,
+}])));
 
 const LAYOUT_PURPOSES = Object.freeze({
   'deck-cover': '封面',
@@ -74,16 +63,17 @@ const LAYOUT_PURPOSES = Object.freeze({
 
 function styleGuideMarkdown() {
   const lines = ['# 模板风格选择', ''];
-  Object.entries(STYLE_GUIDE).forEach(([key, value]) => {
-    lines.push(`- **${key} · ${value.name}**：${value.description}`);
+  listStyles().forEach((style) => {
+    lines.push(`- **${style.id} · ${style.name}**：${style.description}`);
   });
   lines.push('', '请选择一种风格后，再生成该风格的全布局 JSON 示例。');
   return `${lines.join('\n')}\n`;
 }
 
 function layoutExamplesMarkdown(style) {
-  const guide = STYLE_GUIDE[style];
-  if (!guide) throw new Error(`Unsupported style "${style}". Use one of: ${Object.keys(STYLE_GUIDE).join(', ')}.`);
+  const definition = styleDefinition(style);
+  if (!definition) throw new Error(`Unsupported style "${style}". Use one of: ${listStyles().map((entry) => entry.id).join(', ')}.`);
+  const guide = { name: definition.name, description: definition.description, theme: definition.defaultTheme };
   const lines = [
     `# ${guide.name} JSON 布局示例`,
     '',

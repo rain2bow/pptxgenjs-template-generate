@@ -5,6 +5,7 @@ const { sampleSpec } = require('./samples');
 const { parseArgs, loadSpecFile, writeNormalizedSpec } = require('./spec-io');
 const { fail } = require('./errors');
 const { styleGuideMarkdown, layoutExamplesMarkdown, writeLayoutExamples } = require('./layout-examples');
+const { listStyles } = require('./style-registry');
 
 async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
@@ -23,7 +24,7 @@ async function main(argv = process.argv.slice(2)) {
 
   if (args.layoutExamples) {
     const style = typeof args.layoutExamples === 'string' ? args.layoutExamples : args.sampleStyle;
-    if (!style) fail('Missing style. Use --layout-examples cmb|swiss|magazine.');
+    if (!style) fail(`Missing style. Use --layout-examples <style>. Available styles: ${listStyles().map((entry) => entry.id).join(', ')}.`);
     try {
       if (args.out) writeLayoutExamples(style, args.out);
       else process.stdout.write(layoutExamplesMarkdown(style));

@@ -54,3 +54,12 @@
 - 原先只有图片版本的 statement、feature、hero、case-study 已补充纯文本版本；原 `image-text` 迁移为语义更明确的 `image-article`。
 - 文本页带 `images` 时直接提示同后缀 `image-*`，图片页缺图时直接提示同后缀 `text-*`；图表类规则保持不变。
 - 布局多样性检查改用 canonical layout，而不是多个页面共用的内部 renderer 名，避免不同 `image-*` 被误报为连续重复。
+
+## 阶段 4 Style 插件决策
+
+- 新增 `style-registry.js`，集中提供 style 列表、主题、默认主题、模板 factory 和可选 sample；engine、风格说明和样例流程不再各自维护 style 分支。
+- 插件默认放在 `templates/styles/<style-id>/index.js`，也可通过 Linux/Windows 均兼容的 `PPTXGEN_STYLE_PATHS` 引入技能目录外插件。
+- 插件定义自带 `themes` 与 `defaultTheme`，因此新增 style 不需要修改 `config.js`；`createTemplate(api)` 返回标准 renderer。
+- 内置模板仍使用原文件，由 registry 作为 builtin descriptor 加载，没有迁移或改写模板设计代码。
+- registry 对插件 id、主题和 factory 做加载时校验；损坏插件只被跳过并 warning，不会覆盖同名内置 style 或阻断其他模板。
+- `STYLE_PLUGIN_GUIDE.md` 说明目录结构、最小代码、context/API、canonical layout 要求和验证命令。

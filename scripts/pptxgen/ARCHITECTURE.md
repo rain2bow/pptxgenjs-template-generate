@@ -78,26 +78,25 @@ const { buildDeck } = require('../scripts/generate-pptx.js');
 核心内容：
 
 - `SLIDE`：宽屏页面尺寸、默认边距。
-- `THEMES`：所有 style/theme 的颜色配置。
+- `THEMES`：三套内置 style/theme 的颜色配置。
 - `FONTS`：字体名。
 - `READABILITY`：最小可读字号等可读性下限。
 - `BASIC_ICON_NAMES`、`ICON_ALIASES`：图标别名和 fallback 名称。
-- `STYLE_ORDER`：当前支持的 style 列表。
-- `DEFAULT_THEMES`：每个 style 的默认 theme。
+- `STYLE_ORDER`、`DEFAULT_THEMES`：内置 style 的旧兼容元数据；运行时可用 style 以 registry 为准。
 - `LUCIDE_STATIC_ICON_DIR`：兼容旧 `lucide-static` 的 SVG 路径。
-- `isSupportedStyle()`：判断 style 是否可用。
-- `defaultThemeForStyle()`：取默认 theme。
+- `isSupportedStyle()`、`defaultThemeForStyle()`：仅保留给旧调用方；新流程使用 `style-registry.js`。
 
-新增 theme 时，主要改 `THEMES`。
+修改内置 theme 时改 `THEMES`。新增 style 不修改本文件。
 
-新增 style 时，至少改：
+### `style-registry.js`
 
-- `STYLE_ORDER`
-- `DEFAULT_THEMES`
-- `THEMES[style]`
-- `engine.js` 的 `getTemplateRenderers()`
-- `scripts/pptxgen/templates/<style>.js`
-- `samples.js` 的 `sampleSpec(style)`
+统一管理内置 style 和纯新增插件。
+
+- 自动扫描 `templates/styles/<style-id>/index.js`。
+- 通过 `PPTXGEN_STYLE_PATHS` 支持技能目录外的一个或多个插件根目录。
+- 校验 `id`、`themes`、`defaultTheme` 和 `createTemplate(api)`。
+- 向 engine、style guide、layout examples 和 sample 流程提供同一份 style 定义。
+- 无效插件会被跳过并给出 warning，不会覆盖或修改内置 style。
 
 ### `spec-io.js`
 
@@ -132,7 +131,7 @@ JSON spec 输入输出。
 
 style 选择说明和全布局 JSON 示例生成器。
 
-- `styleGuideMarkdown()`：输出三种 style 的用途说明。
+- `styleGuideMarkdown()`：输出 registry 中所有可用 style 的用途说明。
 - `layoutExamplesMarkdown(style)`：输出指定 style 的 47 个完整 slide JSON 示例，不包含字数限制。
 - `writeLayoutExamples(style, outPath)`：以 UTF-8 写入 Markdown。
 
@@ -143,10 +142,10 @@ style 选择说明和全布局 JSON 示例生成器。
 核心能力：
 
 - `sampleSpec(style = 'swiss')` 返回对应 style 的完整示例 spec。
-- 当前支持 `swiss`、`magazine`、`cmb`。
+- 内置支持 `swiss`、`magazine`、`cmb`；插件可选提供自己的 `sampleSpec()`。
 - `cli.js --sample --sample-style xxx` 会走这里。
 
-新增 style 时，应给这里加一个能覆盖核心版式的最小可用 sample。
+插件未提供 `sampleSpec()` 时，自动使用三页通用注册验证样例，不需要修改本文件。
 
 ### `errors.js`
 
@@ -231,7 +230,7 @@ Lucide 图标和项目符号图标模块。
 `normalizeSpec()` 做这些事：
 
 - 填默认 `style`。
-- 校验 style 是否在 `config.STYLE_ORDER` 中。
+- 通过 `style-registry.js` 校验 style 并取得默认 theme。
 - 填默认 theme。
 - 校验 `slides` 非空。
 - 保持用户 JSON 中的 `slide.layout` 不变；页面类型只由 JSON 字段决定。
@@ -259,7 +258,7 @@ Lucide 图标和项目符号图标模块。
 - `templates/cmb.js`
 - `templates/paired-layouts.js`：三种 style 共用的 text/image 对应布局绘制骨架；只依赖注入的公共绘图 API，不依赖任何具体模板文件。
 
-`renderByStyle()` 是 style 分发入口。新增 style 时，要新增 `templates/<style>.js`，并在 `getTemplateRenderers()` 注册 renderer。
+`renderByStyle()` 是 style 分发入口。renderer 由 `style-registry.js` 按需创建并缓存；新增插件不修改 engine。
 
 模板文件之间不互相 `require`。即使某些 layout 代码相似，也应复制到对应模板文件内，避免修改一个模板时影响另一个模板。
 
@@ -574,26 +573,23 @@ CMB 继续复用 Swiss renderer 的 layout：
 
 ## 新增 style 的推荐步骤
 
-1. 在 `config.js` 中新增 `THEMES[newStyle]`。
-2. 把新 style 加入 `STYLE_ORDER`。
-3. 在 `DEFAULT_THEMES` 中设置默认 theme。
-4. 新增 `scripts/pptxgen/templates/newStyle.js`，导出 `createNewStyleTemplate(api)`。
-5. 在 `engine.js` 的 `getTemplateRenderers()` 中 require 并注册新 style。
-6. 复用已有 layout renderer，或新增独立 layout renderer。
-7. 在 `samples.js` 中增加 `sampleSpec(newStyle)` 分支。
-8. 增加或更新 `assets/template-new-style.js`。
-9. 运行：
+完整接口见 `STYLE_PLUGIN_GUIDE.md`。核心步骤：
+
+1. 只新增 `scripts/pptxgen/templates/styles/new-style/index.js`，不要修改现有 JS。
+2. 在该文件中声明 `id`、说明、主题和 `createTemplate(api)`。
+3. 使用 `ctx.sourceSlideSpec.layout` 覆盖全部 canonical layouts。
+4. 可选提供 `sampleSpec()`；不提供时使用通用三页样例。
+5. 运行：
 
 ```bash
 node --check scripts/generate-pptx.js
 node --check scripts/pptxgen/cli.js
-node --check scripts/pptxgen/config.js
-node --check scripts/pptxgen/engine.js
-node --check scripts/pptxgen/spec-io.js
-node --check scripts/pptxgen/samples.js
-node scripts/generate-pptx.js --sample --sample-style newStyle --out outputs/sample-new-style.pptx
+node scripts/generate-pptx.js --style-guide
+node scripts/generate-pptx.js --layout-examples new-style --out outputs/new-style-layouts.md
+node scripts/generate-pptx.js --sample --sample-style new-style --out outputs/sample-new-style.pptx
 node scripts/validate-pptx-native.js outputs/sample-new-style.pptx
 node scripts/validate-pptx-layout.js outputs/sample-new-style.pptx
+npm run check:style-plugin
 ```
 
 ## 新增 layout 的推荐步骤
