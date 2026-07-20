@@ -66,7 +66,7 @@ module.exports = function createCmbTemplate(api) {
     compareBulletItems,
     textVisualLength,
   } = api;
-  const { renderPairedText, renderPairedMedia } = createPairedLayoutRenderers(api, 'cmb');
+  const { renderPairedStatementText, renderPairedStatementMedia, renderPairedQuoteText, renderPairedQuoteMedia, renderPairedText, renderPairedMedia } = createPairedLayoutRenderers(api, 'cmb');
 
 
   function renderSwiss(slide, ctx) {
@@ -81,6 +81,10 @@ module.exports = function createCmbTemplate(api) {
     addChrome(slide, ctx, fg, 'swiss');
 
     const renderers = {
+      pairedStatementText: renderPairedStatementText,
+      pairedStatementMedia: renderPairedStatementMedia,
+      pairedQuoteText: renderPairedQuoteText,
+      pairedQuoteMedia: renderPairedQuoteMedia,
       pairedText: renderPairedText,
       pairedMedia: renderPairedMedia,
       cover: swissCover,
@@ -761,6 +765,10 @@ module.exports = function createCmbTemplate(api) {
 
     const state = { accent, dark: accent, bg, fg };
     const renderers = {
+      pairedStatementText: renderPairedStatementText,
+      pairedStatementMedia: renderPairedStatementMedia,
+      pairedQuoteText: renderPairedQuoteText,
+      pairedQuoteMedia: renderPairedQuoteMedia,
       pairedText: renderPairedText,
       pairedMedia: renderPairedMedia,
       cover: cmbCover,

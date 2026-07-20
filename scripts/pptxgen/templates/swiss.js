@@ -66,7 +66,7 @@ module.exports = function createSwissTemplate(api) {
     compareBulletItems,
     textVisualLength,
   } = api;
-  const { renderPairedText, renderPairedMedia } = createPairedLayoutRenderers(api, 'swiss');
+  const { renderPairedStatementText, renderPairedStatementMedia, renderPairedQuoteText, renderPairedQuoteMedia, renderPairedText, renderPairedMedia } = createPairedLayoutRenderers(api, 'swiss');
 
 
   function renderSwiss(slide, ctx) {
@@ -81,6 +81,10 @@ module.exports = function createSwissTemplate(api) {
     addChrome(slide, ctx, fg, 'swiss');
 
     const renderers = {
+      pairedStatementText: renderPairedStatementText,
+      pairedStatementMedia: renderPairedStatementMedia,
+      pairedQuoteText: renderPairedQuoteText,
+      pairedQuoteMedia: renderPairedQuoteMedia,
       pairedText: renderPairedText,
       pairedMedia: renderPairedMedia,
       cover: swissCover,

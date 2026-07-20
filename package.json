@@ -14,6 +14,7 @@
     "check:media-slots": "node scripts/check-media-slot-warnings.js",
     "check:layout-schema": "node scripts/check-layout-schema.js",
     "check:style-plugin": "node scripts/check-style-plugin.js",
+    "check:paired-fields": "node scripts/check-paired-layout-fields.js",
     "layouts:cmb": "node scripts/generate-pptx.js --layout-examples cmb --out outputs/cmb-layout-examples.md",
     "layouts:swiss": "node scripts/generate-pptx.js --layout-examples swiss --out outputs/swiss-layout-examples.md",
     "layouts:magazine": "node scripts/generate-pptx.js --layout-examples magazine --out outputs/magazine-layout-examples.md",

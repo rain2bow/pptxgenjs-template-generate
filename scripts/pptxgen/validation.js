@@ -32,7 +32,7 @@ module.exports = function createValidationTools(deps) {
 
   const DISPLAY_ITEM_TEXT_KEYS = ['text', 'title', 'label', 'body', 'desc', 'note', 'summary', 'detail', 'value', 'unit', 'metric', 'name'];
 
-  const MEDIA_SLOT_LAYOUTS = new Set(['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy', 'pairedMedia']);
+  const MEDIA_SLOT_LAYOUTS = new Set(['statement', 'media', 'mediaGrid', 'gallery', 'imageGrid', 'imageHero', 'quoteImage', 'textImage', 'caseStudy', 'pairedMedia', 'pairedStatementMedia', 'pairedQuoteMedia']);
 
   const VISUAL_MEDIA_LAYOUTS = MEDIA_SLOT_LAYOUTS;
 
@@ -169,7 +169,9 @@ module.exports = function createValidationTools(deps) {
     else if (layout === 'quoteImage') add('quote', 'body', 'cite', 'source', 'callout', 'caption');
     else if (layout === 'textImage') add('body', 'callout', 'caption');
     else if (layout === 'media') add('body', 'summary', 'story', 'note', 'caption');
-    else if (layout === 'pairedMedia' || layout === 'pairedText') add('body', 'summary', 'story', 'note', 'callout', 'caseTitle', 'caption');
+    else if (layout === 'pairedStatementText' || layout === 'pairedStatementMedia') add('body', 'callout');
+    else if (layout === 'pairedQuoteText' || layout === 'pairedQuoteMedia') add('body', 'quote', 'cite', 'source', 'callout', 'caption');
+    else if (layout === 'pairedMedia' || layout === 'pairedText') add('body', 'note', 'caseTitle');
     else if (layout === 'caseStudy') add('caseTitle', 'label', 'body', 'summary', 'story', 'caption');
     else if (layout === 'imageHero') add('body');
     else if (layout === 'dataSheet' && style === 'magazine') add('body');
@@ -270,6 +272,10 @@ module.exports = function createValidationTools(deps) {
       duoCompare: [],
       splitCompare: [],
       textImage: [],
+      pairedStatementText: [],
+      pairedStatementMedia: [],
+      pairedQuoteText: [],
+      pairedQuoteMedia: [],
       pairedText: [{ keys: ['items'], max: 8, min: 1, label: 'paired text items', itemTextKeys: ['title', 'label', 'name', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'value', 'items'] }],
       pairedMedia: [{ keys: ['items'], max: 8, min: 1, label: 'paired media text items', itemTextKeys: ['title', 'label', 'name', 'body', 'desc', 'note', 'summary', 'detail', 'text', 'value', 'items'] }],
       statement: [],

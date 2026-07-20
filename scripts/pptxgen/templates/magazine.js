@@ -66,7 +66,7 @@ module.exports = function createMagazineTemplate(api) {
     compareBulletItems,
     textVisualLength,
   } = api;
-  const { renderPairedText, renderPairedMedia } = createPairedLayoutRenderers(api, 'magazine');
+  const { renderPairedStatementText, renderPairedStatementMedia, renderPairedQuoteText, renderPairedQuoteMedia, renderPairedText, renderPairedMedia } = createPairedLayoutRenderers(api, 'magazine');
 
 
   function renderMagazine(slide, ctx) {
@@ -79,6 +79,10 @@ module.exports = function createMagazineTemplate(api) {
     addChrome(slide, ctx, fg, 'magazine');
 
     const renderers = {
+      pairedStatementText: renderPairedStatementText,
+      pairedStatementMedia: renderPairedStatementMedia,
+      pairedQuoteText: renderPairedQuoteText,
+      pairedQuoteMedia: renderPairedQuoteMedia,
       pairedText: renderPairedText,
       pairedMedia: renderPairedMedia,
       cover: magazineCover,

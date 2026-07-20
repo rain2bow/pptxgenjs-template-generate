@@ -75,6 +75,7 @@ pptxgenjs-template-generate/
 - `scripts/validate-pptx-native.js`：校验 PPTX 是否包含原生 PowerPoint 结构，避免输出整页截图型文件。
 - `scripts/validate-pptx-layout.js`：扫描生成后的 PPTX 结构，检查明显的布局冲突、文本覆盖和底部安全区风险。
 - `scripts/check-media-slot-warnings.js`：回归检查所有带图片/媒体槽位的 layout 在没有图片或图表时都会阻断生成。
+- `scripts/check-paired-layout-fields.js`：回归检查动态 style 交互说明、text/image 字段契约和三种 style 的实际文本写入。
 - `assets/template-magazine.js`：`magazine` 风格样例 spec，适合作为电子杂志/叙事型页面的输入参考。
 - `assets/template-swiss.js`：`swiss` 风格样例 spec，适合作为数据、科技、方法论页面的输入参考。
 - `assets/template-cmb.js`：招商银行 `cmb` 独立风格样例 spec，内置 CMB logo 配置和金融汇报页面结构。

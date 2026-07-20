@@ -24,8 +24,14 @@ names.filter((name) => name.startsWith('text-')).forEach((textName) => {
   const imageDefinition = layoutDefinition(imageName);
   assert(imageDefinition, `${textName} is missing image counterpart ${imageName}`);
   assert.equal(imageDefinition.counterpart, textName, `${imageName} must point back to ${textName}`);
+  assert.deepEqual(imageDefinition.publicFields, textDefinition.publicFields, `${textName} and ${imageName} must expose the same public content field contract`);
   assert.deepEqual(exampleKeys(exampleSlide(textName)), exampleKeys(exampleSlide(imageName)), `${textName} and ${imageName} must expose identical fields except layout/images`);
 });
+
+expectSuccess({ slides: [{ layout: 'text-statement', title: 'T', body: 'B', callout: 'C' }] });
+expectSuccess({ slides: [{ layout: 'image-statement', title: 'T', body: 'B', callout: 'C', images: ['a.png'] }] });
+expectSuccess({ slides: [{ layout: 'text-quote', title: 'T', body: 'B', caption: 'C' }] });
+expectSuccess({ slides: [{ layout: 'image-quote', title: 'T', body: 'B', caption: 'C', images: ['a.png'] }] });
 
 const timeline = createRendererSlide({ layout: 'text-timeline', title: 'T', items: [{ title: 'A', body: 'B' }] });
 assert.equal(timeline.layout, 'timeline');
@@ -61,6 +67,14 @@ expectFailure(
   { slides: [{ layout: 'image-grid', title: 'Missing media', items: [{ title: 'A', body: 'B' }] }] },
   'field-compatible text counterpart "text-grid"'
 );
+expectFailure(
+  { slides: [{ layout: 'text-article', title: 'Unsupported pair field', conclusion: 'C', items: [{ title: 'A', body: 'B' }] }] },
+  'counterpart "image-article"'
+);
+expectFailure(
+  { slides: [{ layout: 'image-article', title: 'Unsupported pair field', conclusion: 'C', items: [{ title: 'A', body: 'B' }], images: ['a.png'] }] },
+  'counterpart "text-article"'
+);
 
 console.log(`Canonical layout schema check passed: ${names.length} layout(s).`);
 
@@ -77,6 +91,12 @@ function expectFailure(spec, expected) {
     return;
   }
   throw new Error(`expected schema validation to fail with: ${expected}`);
+}
+
+function expectSuccess(spec) {
+  validateCanonicalSpec(spec, (message) => {
+    throw new Error(`expected canonical validation to succeed; got ${message}`);
+  });
 }
 
 function exampleKeys(slide) {

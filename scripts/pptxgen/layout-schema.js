@@ -1,12 +1,40 @@
 'use strict';
 
+const PAIR_FIELDS = Object.freeze({
+  statement: Object.freeze(['body', 'callout']),
+  quote: Object.freeze(['body', 'quote', 'cite', 'source', 'callout', 'caption']),
+  article: Object.freeze([]),
+  briefing: Object.freeze([]),
+  feature: Object.freeze(['body']),
+  list: Object.freeze([]),
+  grid: Object.freeze([]),
+  cards: Object.freeze([]),
+  weave: Object.freeze([]),
+  agenda: Object.freeze([]),
+  timeline: Object.freeze([]),
+  pipeline: Object.freeze([]),
+  roadmap: Object.freeze([]),
+  matrix: Object.freeze([]),
+  radial: Object.freeze(['center']),
+  pyramid: Object.freeze(['body', 'note']),
+  swimlane: Object.freeze(['stages']),
+  hero: Object.freeze(['body']),
+  'case-study': Object.freeze(['body', 'caseTitle']),
+});
+
+const PAIR_CONTENT_FIELD_NAMES = Object.freeze([
+  'body', 'summary', 'detail', 'story', 'note', 'conclusion', 'takeaway', 'footerSummary', 'nextStep', 'lead', 'callout',
+  'quote', 'cite', 'source', 'caseTitle', 'summaryTitle', 'leadTitle', 'focusTitle', 'conclusionTitle', 'takeawayTitle',
+  'footerSummaryTitle', 'nextStepTitle', 'caption', 'center', 'stages',
+]);
+
 const LAYOUTS = Object.freeze({
   'deck-cover': layout('deck', 'cover'),
   'deck-section': layout('deck', 'section'),
   'deck-closing': layout('deck', 'closing'),
 
-  'text-statement': pairedLayout('text', 'statement', 'bigQuote'),
-  'text-quote': pairedLayout('text', 'quote', 'bigQuote'),
+  'text-statement': pairedLayout('text', 'statement', 'pairedStatementText'),
+  'text-quote': pairedLayout('text', 'quote', 'pairedQuoteText'),
   'text-article': pairedLayout('text', 'article', 'article', 'items'),
   'text-briefing': pairedLayout('text', 'briefing', 'briefing', 'items'),
   'text-feature': pairedLayout('text', 'feature', 'pairedText', 'items'),
@@ -25,8 +53,8 @@ const LAYOUTS = Object.freeze({
   'text-hero': pairedLayout('text', 'hero', 'pairedText', 'items'),
   'text-case-study': pairedLayout('text', 'case-study', 'pairedText', 'items'),
 
-  'image-statement': pairedLayout('image', 'statement', 'statement', null, null, { minImages: 1, maxImages: 1 }),
-  'image-quote': pairedLayout('image', 'quote', 'quoteImage', null, null, { minImages: 1, maxImages: 1 }),
+  'image-statement': pairedLayout('image', 'statement', 'pairedStatementMedia', null, null, { minImages: 1, maxImages: 1 }),
+  'image-quote': pairedLayout('image', 'quote', 'pairedQuoteMedia', null, null, { minImages: 1, maxImages: 1 }),
   'image-article': pairedLayout('image', 'article', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
   'image-briefing': pairedLayout('image', 'briefing', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
   'image-feature': pairedLayout('image', 'feature', 'pairedMedia', 'items', null, { minImages: 1, maxImages: 6 }),
@@ -108,7 +136,7 @@ function layout(category, renderer, collection = null, rendererCollection = null
 
 function pairedLayout(category, pairKey, renderer, collection = null, rendererCollection = null, extra = {}) {
   const counterpart = `${category === 'text' ? 'image' : 'text'}-${pairKey}`;
-  return layout(category, renderer, collection, rendererCollection, { pairKey, counterpart, ...extra });
+  return layout(category, renderer, collection, rendererCollection, { pairKey, counterpart, publicFields: PAIR_FIELDS[pairKey], ...extra });
 }
 
 function canonicalLayoutNames() {
@@ -145,6 +173,8 @@ function validateCanonicalSlide(slide, index, errors) {
     return;
   }
 
+  if (definition.pairKey) validatePairedContentFields(slide, page, name, definition, errors);
+
   DEPRECATED_COLLECTION_FIELDS.forEach((field) => {
     if (slide[field] !== undefined) errors.push(`slide ${page} layout "${name}" uses legacy collection field "${field}". Rename it to "items".`);
   });
@@ -175,6 +205,14 @@ function validateCanonicalSlide(slide, index, errors) {
 
   if (definition.requiresTable && !slide.table && !slide.allowMissingTable) errors.push(`slide ${page} layout "${name}" requires "table" data.`);
   if (!definition.requiresTable && slide.table !== undefined) errors.push(`slide ${page} layout "${name}" does not render "table". Choose "data-table".`);
+}
+
+function validatePairedContentFields(slide, page, name, definition, errors) {
+  const allowed = new Set(definition.publicFields || []);
+  const unsupported = PAIR_CONTENT_FIELD_NAMES.filter((field) => hasItems(slide[field]) && !allowed.has(field));
+  if (unsupported.length) {
+    errors.push(`slide ${page} layout "${name}" does not support paired content field(s): ${unsupported.join(', ')}. The same fields are disallowed by counterpart "${definition.counterpart}"; use only: ${definition.publicFields.length ? definition.publicFields.join(', ') : 'title, subtitle, items'}.`);
+  }
 }
 
 function validateCount(page, layoutName, field, count, min, max, errors) {
@@ -215,6 +253,7 @@ function createRendererSlide(slide) {
 
 module.exports = {
   LAYOUTS,
+  PAIR_FIELDS,
   LEGACY_LAYOUTS,
   canonicalLayoutNames,
   layoutDefinition,

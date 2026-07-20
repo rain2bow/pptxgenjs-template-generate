@@ -124,7 +124,7 @@ JSON spec 输入输出。
 跨 style 的 canonical layout 与字段协议。
 
 - `LAYOUTS`：47 个 `deck-*`、`text-*`、`image-*`、`data-*` 布局定义，其中 19 组 `text-*` / `image-*` 一一配对。
-- `validateCanonicalSpec()`：拒绝旧 layout、旧集合字段和媒体/数据类型不匹配。
+- `validateCanonicalSpec()`：拒绝旧 layout、旧集合字段、媒体/数据类型不匹配，并按 `publicFields` 强制 text/image 配对内容字段对称。
 - `createRendererSpec()` / `createRendererSlide()`：只在内部把 canonical spec 适配给成熟 renderer；外部 JSON 不暴露旧字段。
 
 ### `layout-examples.js`
