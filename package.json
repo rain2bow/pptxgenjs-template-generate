@@ -1,6 +1,6 @@
 {
   "name": "pptxgenjs-template-generate",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "sample": "node scripts/generate-pptx.js --sample --out outputs/sample-deck.pptx",
