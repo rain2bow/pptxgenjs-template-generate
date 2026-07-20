@@ -3,8 +3,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { canonicalLayoutNames, layoutDefinition } = require('./pptxgen/layout-schema');
-const { exampleSlide } = require('./pptxgen/layout-examples');
+const { canonicalLayoutNames, layoutDefinition } = require('../../scripts/pptxgen/layout-schema');
+const { exampleSlide } = require('../../scripts/pptxgen/layout-examples');
+
+const root = path.resolve(__dirname, '../..');
 
 const MEDIA_SLOT_LAYOUTS = canonicalLayoutNames().filter((name) => name.startsWith('image-'));
 const TEXT_LAYOUTS = canonicalLayoutNames().filter((name) => name.startsWith('text-'));
@@ -29,13 +31,13 @@ const outPath = path.join(tempDir, 'missing-media.pptx');
 fs.writeFileSync(specPath, JSON.stringify(spec, null, 2), 'utf8');
 
 const result = spawnSync(process.execPath, [
-  path.join(__dirname, 'generate-pptx.js'),
+  path.join(root, 'scripts', 'generate-pptx.js'),
   '--spec',
   specPath,
   '--out',
   outPath,
 ], {
-  cwd: path.resolve(__dirname, '..'),
+  cwd: root,
   encoding: 'utf8',
 });
 

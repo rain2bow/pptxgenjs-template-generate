@@ -7,8 +7,8 @@ const {
   layoutDefinition,
   validateCanonicalSpec,
   createRendererSlide,
-} = require('./pptxgen/layout-schema');
-const { exampleSlide } = require('./pptxgen/layout-examples');
+} = require('../../scripts/pptxgen/layout-schema');
+const { exampleSlide } = require('../../scripts/pptxgen/layout-examples');
 
 const names = canonicalLayoutNames();
 assert.equal(names.length, 47, 'canonical layout count changed; update schema tests and all-layout samples');

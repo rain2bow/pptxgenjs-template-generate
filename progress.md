@@ -19,7 +19,7 @@
 - 阶段 1 最终结果：同一份 31 页 canonical spec 在 `cmb`、`swiss`、`magazine` 下均成功生成。
 - 三套全布局文件均通过 `validate-pptx-native.js` 和 `validate-pptx-layout.js`。
 - `npm run check:layout-schema` 通过，覆盖 31 个布局、内部适配、旧 layout 和旧字段迁移错误。
-- `check-media-slot-warnings.js` 已迁移到 7 个 `image-*` 布局并通过。
+- `temp/tests/check-media-slot-warnings.js` 已迁移到 7 个 `image-*` 布局并通过。
 - 阶段 1 已完成，下一步进入 style 选择和全布局 JSON 示例 Markdown 流程。
 - 新增 `--style-guide`，输出 CMB、Swiss、Magazine 三套风格说明；SKILL 要求未指定风格时调用 `askUserQuestion`。
 - 新增 `--layout-examples <style>`，每种 style 均生成 31 个完整 canonical layout JSON 示例且不输出容量区间。

@@ -118,9 +118,9 @@ npm run layouts:magazine
 生成三种 style 共用的全布局排版检查文件：
 
 ```bash
-node assets/template-cmb-all-layouts.js --style cmb
-node assets/template-cmb-all-layouts.js --style swiss
-node assets/template-cmb-all-layouts.js --style magazine
+node temp/tests/template-all-layouts.js --style cmb
+node temp/tests/template-all-layouts.js --style swiss
+node temp/tests/template-all-layouts.js --style magazine
 ```
 
 布局只能通过 JSON 中每页的 `layout` 字段手动修改；生成器不会自动改写 layout。

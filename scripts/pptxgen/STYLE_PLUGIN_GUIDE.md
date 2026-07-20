@@ -110,4 +110,4 @@ node scripts/validate-pptx-layout.js outputs/my-style-sample.pptx
 npm run check:style-plugin
 ```
 
-测试插件位于 `scripts/fixtures/style-plugins/registry-test/`，只用于验证自动发现、样例输出、PPTX 生成和插件隔离，不会出现在默认 style 列表中。
+测试插件位于 `temp/tests/fixtures/style-plugins/registry-test/`，只用于验证自动发现、样例输出、PPTX 生成和插件隔离，不会出现在默认 style 列表中。

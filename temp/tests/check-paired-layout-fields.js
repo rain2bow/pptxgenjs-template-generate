@@ -7,7 +7,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const JSZip = require('jszip');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '../..');
 const generator = path.join(root, 'scripts', 'generate-pptx.js');
 const imagePath = path.join(root, 'assets', 'logos', 'cmb-logo-lockup.png');
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pptx-paired-fields-'));

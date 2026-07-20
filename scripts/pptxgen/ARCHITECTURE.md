@@ -527,7 +527,7 @@ CMB 继续复用 Swiss renderer 的 layout：
 
 - 对应 layout renderer
 - `validateTextSlots()` 中该 layout 的规则
-- 必要时更新 `assets/template-cmb-all-layouts.js`
+- 必要时更新 `temp/tests/template-all-layouts.js`
 - 必要时更新 README/SKILL 说明
 
 ### 12. 内容质量和 layout 多样性提示

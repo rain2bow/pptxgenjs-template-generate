@@ -17,7 +17,7 @@
 
 - [x] **完成**
 - 对外名称统一使用 `deck-*`、`text-*`、`image-*`、`data-*` 前缀。
-- `layout-schema.js` 当前定义 47 个 canonical layouts；`check-layout-schema.js` 强制检查每个名称必须带类别前缀。
+- `layout-schema.js` 当前定义 47 个 canonical layouts；`temp/tests/check-layout-schema.js` 强制检查每个名称必须带类别前缀。
 - 数据页面使用 `data-chart`、`data-dashboard`、`data-table` 等明确名称，避免与图片页混淆。
 
 ### 1.2 不同 style 使用完全一致的 layout 名称和类型
@@ -58,7 +58,7 @@
 
 - [x] **完成**
 - 已建立 19 组 `text-<name>` / `image-<name>` 双向配对，每个定义均包含 reciprocal `counterpart`。
-- 每个 pair 在 `layout-schema.js` 中具有显式 `publicFields` 内容字段契约；`check-layout-schema.js` 会验证两侧契约和示例字段完全一致。
+- 每个 pair 在 `layout-schema.js` 中具有显式 `publicFields` 内容字段契约；`temp/tests/check-layout-schema.js` 会验证两侧契约和示例字段完全一致。
 - `paired-layouts.js` 可在图片页渲染 1-6 张图片及最多 8 个文本项，避免切换后直接丢失常见 `items` 内容。
 - statement/quote 的 text/image 两侧均使用配对 renderer；`callout`、`caption`、`source/cite` 会实际写入 PPTX。
 - `stages`、`highlightIndex`、`highlightLast`、`columnsCount`、`maxItems` 已由通用配对 renderer 消费；不在契约中的内容字段会在两侧一致报错，不再静默忽略。
@@ -67,7 +67,7 @@
 
 - [x] **完成**
 - `text-grid` 带图片会提示改为 `image-grid`；`image-grid` 缺图会提示改为 `text-grid`，其他配对同理。
-- `check-media-slot-warnings.js` 已覆盖 19 个 image layout 缺图和 19 个 text layout 误带图片场景。
+- `temp/tests/check-media-slot-warnings.js` 已覆盖 19 个 image layout 缺图和 19 个 text layout 误带图片场景。
 - 图表仍只使用 `data-chart` / `data-dashboard`，没有纳入 text/image 自动互换。
 
 ## 4. 模板引入优化
@@ -102,7 +102,7 @@
 
 ## 缺口复验与修复结果
 
-原始复验脚本为 `outputs/verify-remaining-gaps.js`；正式回归已固化为 `scripts/check-paired-layout-fields.js` 和 `npm run check:paired-fields`。测试 PPTX 写入系统临时目录并在结束后清理。
+原始复验脚本为 `outputs/verify-remaining-gaps.js`；正式回归已固化为 `temp/tests/check-paired-layout-fields.js` 和 `npm run check:paired-fields`。测试 PPTX 写入系统临时目录并在结束后清理。
 
 ### 动态 style 交互
 

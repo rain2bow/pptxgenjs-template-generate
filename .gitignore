@@ -1,0 +1,14 @@
+/node_modules/
+/outputs/
+/assets/outputs/
+/.idea/
+
+# Keep reusable regression sources in temp/tests, ignore generated temp artifacts.
+/temp/*
+!/temp/tests/
+!/temp/tests/**
+
+*.tmp
+~$*
+.DS_Store
+Thumbs.db

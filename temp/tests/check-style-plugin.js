@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const root = path.resolve(__dirname, '..');
+const root = path.resolve(__dirname, '../..');
 const pluginRoot = path.join(__dirname, 'fixtures', 'style-plugins');
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pptx-style-plugin-'));
 const outPath = path.join(tempDir, 'registry-test.pptx');

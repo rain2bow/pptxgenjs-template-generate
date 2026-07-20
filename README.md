@@ -11,7 +11,7 @@
 
 ## 文件结构与作用
 
-当前版本的核心文件结构如下。`git ls-files` 中未包含的 `outputs/`、`assets/outputs/` 和 `.idea/` 属于本地生成物或 IDE 配置，不是技能运行所必需的源码。
+当前版本的核心文件结构如下。`outputs/`、`assets/outputs/`、`temp/outputs/` 和 `.idea/` 属于本地生成物或 IDE 配置，已由 `.gitignore` 排除。
 
 ```text
 pptxgenjs-template-generate/
@@ -23,7 +23,6 @@ pptxgenjs-template-generate/
 |   |-- docx-to-pptx.js               # extract DOCX text/images into JSON/Markdown and processed assets
 |   |-- validate-pptx-native.js
 |   |-- validate-pptx-layout.js
-|   |-- check-media-slot-warnings.js
 |   |-- spec-to-md.js                 # convert JSON spec to user-facing Markdown outline
 |   `-- pptxgen/
 |       |-- ARCHITECTURE.md           # module and engine guide
@@ -41,10 +40,12 @@ pptxgenjs-template-generate/
 |   |-- template-magazine.js
 |   |-- template-swiss.js
 |   |-- template-cmb.js
-|   |-- template-cmb-all-layouts.js
 |   `-- logos/
 |       |-- cmb-logo-lockup.png
 |       `-- cmb-logo-mark.svg
+|-- temp/
+|   |-- tests/                        # regression scripts, fixtures, and all-layout QA generator
+|   `-- outputs/                      # ignored generated QA files
 |-- outputs/              # local generated files; do not commit
 `-- assets/outputs/       # sample PPTX outputs; do not commit
 ```
@@ -74,16 +75,18 @@ pptxgenjs-template-generate/
 - `scripts/pptxgen/STYLE_PLUGIN_GUIDE.md`：纯新增式 style 插件目录、接口、主题和验证指南。
 - `scripts/validate-pptx-native.js`：校验 PPTX 是否包含原生 PowerPoint 结构，避免输出整页截图型文件。
 - `scripts/validate-pptx-layout.js`：扫描生成后的 PPTX 结构，检查明显的布局冲突、文本覆盖和底部安全区风险。
-- `scripts/check-media-slot-warnings.js`：回归检查所有带图片/媒体槽位的 layout 在没有图片或图表时都会阻断生成。
-- `scripts/check-paired-layout-fields.js`：回归检查动态 style 交互说明、text/image 字段契约和三种 style 的实际文本写入。
+- `temp/tests/check-media-slot-warnings.js`：回归检查所有带图片/媒体槽位的 layout 在没有图片或图表时都会阻断生成。
+- `temp/tests/check-paired-layout-fields.js`：回归检查动态 style 交互说明、text/image 字段契约和三种 style 的实际文本写入。
 - `assets/template-magazine.js`：`magazine` 风格样例 spec，适合作为电子杂志/叙事型页面的输入参考。
 - `assets/template-swiss.js`：`swiss` 风格样例 spec，适合作为数据、科技、方法论页面的输入参考。
 - `assets/template-cmb.js`：招商银行 `cmb` 独立风格样例 spec，内置 CMB logo 配置和金融汇报页面结构。
-- `assets/template-cmb-all-layouts.js`：CMB 全 layout QA 生成入口，用于一次性生成所有支持页面类型，便于人工检查排版。
+- `temp/tests/template-all-layouts.js`：三种内置 style 的全 layout QA 生成入口，用于一次性生成所有支持页面类型，便于人工检查排版。
 - `assets/logos/cmb-logo-lockup.png`：CMB 页眉使用的白底完整 logo。
 - `assets/logos/cmb-logo-mark.svg`：CMB 页眉外装饰和水印使用的透明纯图 logo。
 - `outputs/`：本地测试输出目录，例如临时 spec、normalized JSON 和生成 PPTX。
 - `assets/outputs/`：样例模板脚本默认写入的 PPTX 输出目录。
+- `temp/tests/`：开发期回归测试源码和隔离夹具；这些文件不参与正常生成流程。
+- `temp/outputs/`：全布局 QA 等测试生成物，默认不纳入 Git。
 ## 安装
 
 建议使用 Node.js 18 或更高版本。

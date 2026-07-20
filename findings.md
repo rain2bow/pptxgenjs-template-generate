@@ -49,7 +49,7 @@
 ## 阶段 3 图文配对决策
 
 - canonical layout 扩展为 47 个，其中 19 组 `text-<name>` / `image-<name>` 一一对应；配对定义同时记录 `pairKey` 和双向 `counterpart`。
-- 每对 layout 的 JSON 示例除 `layout` 和 `images` 外字段集合完全一致，`check-layout-schema.js` 会逐对验证，防止后续新增或修改时协议漂移。
+- 每对 layout 的 JSON 示例除 `layout` 和 `images` 外字段集合完全一致，`temp/tests/check-layout-schema.js` 会逐对验证，防止后续新增或修改时协议漂移。
 - 保留原纯文本 renderer 的语义排版；新增 `paired-layouts.js` 为图文对应页提供独立媒体面板和最多 8 项文本卡片，支持 1 到 6 张图片且不丢弃正文项。
 - 原先只有图片版本的 statement、feature、hero、case-study 已补充纯文本版本；原 `image-text` 迁移为语义更明确的 `image-article`。
 - 文本页带 `images` 时直接提示同后缀 `image-*`，图片页缺图时直接提示同后缀 `text-*`；图表类规则保持不变。

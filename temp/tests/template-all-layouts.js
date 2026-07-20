@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 const path = require('node:path');
-const { buildDeck } = require('../scripts/generate-pptx.js');
+const fs = require('node:fs');
+const root = path.resolve(__dirname, '../..');
+const { buildDeck } = require('../../scripts/generate-pptx.js');
 
 const styleArgIndex = process.argv.indexOf('--style');
 const style = styleArgIndex >= 0 ? process.argv[styleArgIndex + 1] : 'cmb';
@@ -118,7 +120,8 @@ const deckSpec = {
   ],
 };
 
-const outFile = path.join(__dirname, 'outputs', `deck-${style}-all-layouts.pptx`);
+const outDir = path.join(root, 'temp', 'outputs');
+const outFile = path.join(outDir, `deck-${style}-all-layouts.pptx`);
 
 main().catch((error) => {
   console.error(error);
@@ -126,7 +129,8 @@ main().catch((error) => {
 });
 
 async function main() {
-  await buildDeck(deckSpec, __dirname, outFile);
+  fs.mkdirSync(outDir, { recursive: true });
+  await buildDeck(deckSpec, root, outFile);
   console.log('\nNext checks:');
   console.log(`  node scripts/validate-pptx-native.js "${outFile}"`);
   console.log(`  node scripts/validate-pptx-layout.js "${outFile}"`);
