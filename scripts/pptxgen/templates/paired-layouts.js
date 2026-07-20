@@ -12,62 +12,76 @@ module.exports = function createPairedLayoutRenderers(api, style) {
     normalizeMediaImages,
     normalizeSections,
     estimateTextHeight,
+    pageHeadY,
+    pageHeadSafeBottom,
   } = api;
+
+  const CONTENT_BOTTOM = 6.28;
+
+  function addPairedHead(slide, ctx, state, data, gap = 0.2) {
+    const headY = pageHeadY(ctx, 0.82);
+    addPageHead(slide, { ...data, headY }, state.fg, style, headY);
+    return pageHeadSafeBottom(ctx, headY, gap);
+  }
 
   function renderPairedStatementText(slide, ctx, state) {
     const data = ctx.slideSpec;
-    addPageHead(slide, data, state.fg, style, 0.82);
+    const contentTop = addPairedHead(slide, ctx, state, data);
     if (data.body) {
       slide.addText(data.body, {
-        x: 0.82, y: 2.55, w: 8.9, h: 1.15,
+        x: 0.82, y: contentTop, w: 8.9, h: 1.15,
         fontFace: FONTS.sansZh, fontSize: 16, color: state.fg,
         transparency: 14, margin: 0.02, valign: 'top',
       });
     }
-    if (data.callout) addCallout(slide, data.callout, 0.82, 4.15, 8.9, 1.05, state.fg, ctx.theme.paperTint || ctx.theme.grey1 || ctx.theme.paper);
+    const calloutY = Math.max(4.15, contentTop + (data.body ? 1.42 : 0));
+    if (data.callout) addCallout(slide, data.callout, 0.82, calloutY, 8.9, 1.05, state.fg, ctx.theme.paperTint || ctx.theme.grey1 || ctx.theme.paper);
     addFoot(slide, ctx, state.fg, style);
   }
 
   function renderPairedStatementMedia(slide, ctx, state) {
     const data = ctx.slideSpec;
-    addPageHead(slide, data, state.fg, style, 0.82);
+    const contentTop = addPairedHead(slide, ctx, state, data);
     if (data.body) {
       slide.addText(data.body, {
-        x: 0.82, y: 2.55, w: 5.7, h: 1.15,
+        x: 0.82, y: contentTop, w: 5.7, h: 1.15,
         fontFace: FONTS.sansZh, fontSize: 16, color: state.fg,
         transparency: 14, margin: 0.02, valign: 'top',
       });
     }
-    if (data.callout) addCallout(slide, data.callout, 0.82, 4.15, 5.7, 1.05, state.fg, ctx.theme.paperTint || ctx.theme.grey1 || ctx.theme.paper);
+    const calloutY = Math.max(4.15, contentTop + (data.body ? 1.42 : 0));
+    if (data.callout) addCallout(slide, data.callout, 0.82, calloutY, 5.7, 1.05, state.fg, ctx.theme.paperTint || ctx.theme.grey1 || ctx.theme.paper);
     const images = normalizeMediaImages(data).slice(0, 1);
-    addImagePanel(slide, ctx, state, images, { x: 7.25, y: 2.18, w: 5.05, h: 3.85 });
+    addImagePanel(slide, ctx, state, images, { x: 7.25, y: contentTop, w: 5.05, h: Math.max(1.2, 6.15 - contentTop) });
     addFoot(slide, ctx, state.fg, style);
   }
 
   function renderPairedQuoteText(slide, ctx, state) {
     const data = ctx.slideSpec;
-    addPageHead(slide, { ...data, title: data.title || data.quote }, state.fg, style, 0.82);
+    const headData = { ...data, title: data.title || data.quote };
+    const contentTop = addPairedHead(slide, ctx, state, headData);
     const quote = data.quote || data.title || '';
     if (quote) {
       slide.addText(quote, {
-        x: 0.82, y: 2.28, w: 10.9, h: 1.45,
+        x: 0.82, y: contentTop, w: 10.9, h: 1.25,
         fontFace: FONTS.sansZh, fontSize: 20, bold: true, color: state.fg,
         margin: 0.02, valign: 'mid',
       });
     }
+    const detailTop = contentTop + 1.5;
     const explanation = data.body || data.cite || data.source || '';
     if (explanation) {
       slide.addText(explanation, {
-        x: 0.86, y: 4.0, w: 7.45, h: 0.62,
+        x: 0.86, y: detailTop, w: 7.45, h: 0.62,
         fontFace: FONTS.sansZh, fontSize: 14, color: state.fg,
         transparency: 20, margin: 0.02, valign: 'top',
       });
     }
-    if (data.callout) addCallout(slide, data.callout, 8.65, 3.9, 3.65, 0.9, state.fg, ctx.theme.paperTint || ctx.theme.grey1 || ctx.theme.paper);
+    if (data.callout) addCallout(slide, data.callout, 8.65, detailTop - 0.1, 3.65, 0.9, state.fg, ctx.theme.paperTint || ctx.theme.grey1 || ctx.theme.paper);
     const attribution = [data.caption, data.source, data.cite].filter(Boolean).join(' · ');
     if (attribution) {
       slide.addText(attribution, {
-        x: 0.86, y: 5.18, w: 8.6, h: 0.32,
+        x: 0.86, y: detailTop + 1.15, w: 8.6, h: 0.32,
         fontFace: FONTS.sansZh, fontSize: 12, color: state.fg,
         transparency: 34, margin: 0,
       });
@@ -77,30 +91,33 @@ module.exports = function createPairedLayoutRenderers(api, style) {
 
   function renderPairedQuoteMedia(slide, ctx, state) {
     const data = ctx.slideSpec;
-    addPageHead(slide, { ...data, title: data.title || data.quote }, state.fg, style, 0.82);
+    const headData = { ...data, title: data.title || data.quote };
+    const contentTop = addPairedHead(slide, ctx, state, headData);
     const quote = data.quote || data.title || '';
     if (quote) {
       slide.addText(quote, {
-        x: 0.82, y: 2.28, w: 6.0, h: 1.38,
+        x: 0.82, y: contentTop, w: 6.0, h: 1.28,
         fontFace: FONTS.sansZh, fontSize: 20, bold: true, color: state.fg,
         margin: 0.02, valign: 'mid',
       });
     }
+    const detailTop = contentTop + 1.52;
     const explanation = data.body || data.cite || data.source || '';
     if (explanation) {
       slide.addText(explanation, {
-        x: 0.86, y: 3.92, w: 5.95, h: 0.62,
+        x: 0.86, y: detailTop, w: 5.95, h: 0.62,
         fontFace: FONTS.sansZh, fontSize: 14, color: state.fg,
         transparency: 20, margin: 0.02, valign: 'top',
       });
     }
-    if (data.callout) addCallout(slide, data.callout, 0.86, 4.82, 5.95, 0.82, state.fg, ctx.theme.paperTint || ctx.theme.grey1 || ctx.theme.paper);
+    if (data.callout) addCallout(slide, data.callout, 0.86, detailTop + 0.86, 5.95, 0.82, state.fg, ctx.theme.paperTint || ctx.theme.grey1 || ctx.theme.paper);
     const images = normalizeMediaImages(data).slice(0, 1);
-    addImagePanel(slide, ctx, state, images, { x: 7.35, y: 2.18, w: 4.95, h: 3.55 });
     const attribution = [data.caption, data.source, data.cite].filter(Boolean).join(' · ');
+    const imageBottom = attribution ? 5.72 : 6.15;
+    addImagePanel(slide, ctx, state, images, { x: 7.35, y: contentTop, w: 4.95, h: Math.max(1.2, imageBottom - contentTop) });
     if (attribution) {
       slide.addText(attribution, {
-        x: 7.35, y: 5.88, w: 4.95, h: 0.34,
+        x: 7.35, y: imageBottom + 0.12, w: 4.95, h: 0.34,
         fontFace: FONTS.sansZh, fontSize: 12, color: state.fg,
         transparency: 34, margin: 0,
       });
@@ -110,18 +127,18 @@ module.exports = function createPairedLayoutRenderers(api, style) {
 
   function renderPairedText(slide, ctx, state) {
     const data = ctx.slideSpec;
-    addPageHead(slide, data, state.fg, style, 0.82);
+    const contentTop = addPairedHead(slide, ctx, state, data);
     const body = data.body || data.note || '';
     const items = normalizeSections(data.items || []).slice(0, Number(data.maxItems) || 8);
     const lead = data.caseTitle || '';
     const stages = normalizeStages(data.stages);
-    let top = lead || body ? 2.82 : 2.28;
+    let top = lead || body ? contentTop + 0.68 : contentTop;
     if (lead) {
-      slide.addText(lead, { x: 0.78, y: 2.12, w: 4.2, h: 0.34, fontFace: FONTS.sansZh, fontSize: 16, bold: true, color: state.fg, margin: 0 });
+      slide.addText(lead, { x: 0.78, y: contentTop, w: 4.2, h: 0.34, fontFace: FONTS.sansZh, fontSize: 16, bold: true, color: state.fg, margin: 0 });
     }
     if (body) {
       slide.addText(body, {
-        x: lead ? 5.05 : 0.78, y: 2.18, w: lead ? 7.45 : 11.72, h: 0.48,
+        x: lead ? 5.05 : 0.78, y: contentTop, w: lead ? 7.45 : 11.72, h: 0.48,
         fontFace: FONTS.sansZh, fontSize: 14, color: state.fg,
         transparency: 18, margin: 0.02, fit: 'shrink', valign: 'top',
       });
@@ -130,21 +147,21 @@ module.exports = function createPairedLayoutRenderers(api, style) {
       addStageStrip(slide, stages, { x: 0.78, y: top, w: 11.72, h: 0.34 }, state);
       top += 0.5;
     }
-    addContentCards(slide, ctx, state, items, { x: 0.78, y: top, w: 11.72, h: 6.28 - top }, data, 3);
+    addContentCards(slide, ctx, state, items, { x: 0.78, y: top, w: 11.72, h: CONTENT_BOTTOM - top }, data, 3);
     addFoot(slide, ctx, state.fg, style);
   }
 
   function renderPairedMedia(slide, ctx, state) {
     const data = ctx.slideSpec;
-    addPageHead(slide, data, state.fg, style, 0.82);
+    const contentTop = addPairedHead(slide, ctx, state, data);
     const images = normalizeMediaImages(data).slice(0, 6);
     const items = normalizeSections(data.items || []).slice(0, Number(data.maxItems) || 8);
     const body = data.body || data.note || data.center || '';
     const lead = data.caseTitle || '';
     const stages = normalizeStages(data.stages);
-    addImagePanel(slide, ctx, state, images, { x: 0.78, y: 2.24, w: 4.18, h: 3.98 });
-    const bodyTop = 2.24;
-    let cardsTop = lead || body ? 2.92 : bodyTop;
+    addImagePanel(slide, ctx, state, images, { x: 0.78, y: contentTop, w: 4.18, h: CONTENT_BOTTOM - contentTop });
+    const bodyTop = contentTop;
+    let cardsTop = lead || body ? contentTop + 0.68 : bodyTop;
     if (lead) {
       slide.addText(lead, { x: 5.36, y: bodyTop, w: 2.35, h: 0.34, fontFace: FONTS.sansZh, fontSize: 16, bold: true, color: state.fg, margin: 0 });
     }
@@ -159,7 +176,7 @@ module.exports = function createPairedLayoutRenderers(api, style) {
       addStageStrip(slide, stages, { x: 5.36, y: cardsTop, w: 7.14, h: 0.34 }, state);
       cardsTop += 0.5;
     }
-    addContentCards(slide, ctx, state, items, { x: 5.36, y: cardsTop, w: 7.14, h: 6.28 - cardsTop }, data, 2);
+    addContentCards(slide, ctx, state, items, { x: 5.36, y: cardsTop, w: 7.14, h: CONTENT_BOTTOM - cardsTop }, data, 2);
     addFoot(slide, ctx, state.fg, style);
   }
 
@@ -204,17 +221,29 @@ module.exports = function createPairedLayoutRenderers(api, style) {
     });
     const title = item.title || item.label || item.name || item.value || `要点 ${index + 1}`;
     const body = itemBody(item);
-    const titleH = estimateTextHeight(title, box.w - 0.4, 16, { min: 0.34, max: 0.62, lineHeight: 1.25, padding: 0.02 });
-    const titleY = box.y + 0.18;
+    const compact = box.h < 1.12;
+    const padX = compact ? 0.16 : 0.2;
+    const padTop = compact ? 0.1 : 0.18;
+    const padBottom = compact ? 0.1 : 0.18;
+    const titleBodyGap = compact ? 0.05 : 0.1;
+    const estimatedTitleH = estimateTextHeight(title, box.w - padX * 2, 16, {
+      min: compact ? 0.26 : 0.34,
+      max: compact ? 0.42 : 0.62,
+      lineHeight: 1.2,
+      padding: 0.01,
+    });
+    const titleH = Math.min(estimatedTitleH, Math.max(0.2, box.h - padTop - padBottom - (body ? titleBodyGap + 0.16 : 0)));
+    const titleY = box.y + padTop;
     slide.addText(title, {
-      x: box.x + 0.2, y: titleY, w: box.w - 0.4, h: titleH,
+      x: box.x + padX, y: titleY, w: box.w - padX * 2, h: titleH,
       fontFace: FONTS.sansZh, fontSize: Math.max(16, READABILITY.minFontSize), bold: true,
       color: colors.text, margin: 0, fit: 'shrink', valign: 'top',
     });
     if (!body) return;
-    const bodyY = titleY + titleH + 0.1;
+    const bodyY = titleY + titleH + titleBodyGap;
+    const bodyH = Math.max(0.05, box.y + box.h - bodyY - padBottom);
     slide.addText(body, {
-      x: box.x + 0.2, y: bodyY, w: box.w - 0.4, h: Math.max(0.32, box.y + box.h - bodyY - 0.18),
+      x: box.x + padX, y: bodyY, w: box.w - padX * 2, h: bodyH,
       fontFace: FONTS.sansZh, fontSize: Math.max(12, READABILITY.minFontSize),
       color: colors.text, transparency: colors.bodyTransparency,
       margin: 0.02, fit: 'shrink', valign: 'top', breakLine: false,

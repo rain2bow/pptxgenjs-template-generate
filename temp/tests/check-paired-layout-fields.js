@@ -6,6 +6,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const JSZip = require('jszip');
+const { canonicalLayoutNames } = require('../../scripts/pptxgen/layout-schema');
+const { exampleSlide } = require('../../scripts/pptxgen/layout-examples');
 
 const root = path.resolve(__dirname, '../..');
 const generator = path.join(root, 'scripts', 'generate-pptx.js');
@@ -38,6 +40,19 @@ async function main() {
     const xml = await slideXml(acceptedOut);
     ['TEXT_STATEMENT_CALLOUT', 'IMAGE_STATEMENT_CALLOUT', 'TEXT_QUOTE_CAPTION', 'IMAGE_QUOTE_CAPTION', 'TEXT_STAGE_MARKER', 'IMAGE_STAGE_MARKER']
       .forEach((marker) => assert(xml.includes(marker), `${style} generated PPTX is missing rendered marker ${marker}`));
+  }
+
+  const subtitleSlides = canonicalLayoutNames()
+    .filter((layout) => layout.startsWith('image-'))
+    .map((layout) => withSubtitleMedia(exampleSlide(layout), layout));
+  for (const style of ['cmb', 'swiss', 'magazine']) {
+    const outPath = runDeck(`paired-subtitle-safe-${style}`, {
+      title: '配对布局副标题安全边界',
+      style,
+      slides: subtitleSlides,
+    }, true);
+    runValidator('scripts/validate-pptx-native.js', outPath);
+    runValidator('scripts/validate-pptx-layout.js', outPath);
   }
 
   const rejected = {
@@ -75,6 +90,17 @@ function runDeck(name, spec, expectSuccess) {
   const output = `${result.stdout || ''}\n${result.stderr || ''}`;
   if (expectSuccess && result.status !== 0) throw new Error(`generation failed:\n${output}`);
   return expectSuccess ? outPath : { status: result.status, output };
+}
+
+function runValidator(script, pptxPath) {
+  const result = spawnSync(process.execPath, [script, pptxPath], { cwd: root, encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(`validation failed (${script}):\n${result.stdout || ''}\n${result.stderr || ''}`);
+}
+
+function withSubtitleMedia(source, layout) {
+  const slide = { ...source, subtitle: `${layout} 副标题安全边界验证` };
+  slide.images = (Array.isArray(source.images) && source.images.length ? source.images : [imagePath]).map(() => imagePath);
+  return slide;
 }
 
 async function slideXml(pptxPath) {
