@@ -41,3 +41,8 @@
 - 新增 `check:style-plugin`：验证正常插件发现、47-layout 示例输出、样例 PPTX、原生/版面检查、损坏插件隔离以及默认 registry 不泄漏 fixture。
 - CMB、Swiss、Magazine 通过新 registry 分别生成 8、6、5 页样例，全部通过原生和布局校验。
 - 阶段 4 已完成，下一步进行全量回归和工作区审计。
+- 最终回归再次生成 CMB、Swiss、Magazine 各 47 页全布局 PPTX，六项 native/layout 验证全部通过。
+- `check:layout-schema`、`check:media-slots`、`check:style-plugin` 全部通过。
+- 三种 style 的布局示例 Markdown 均确认含 47 个页面 JSON 示例。
+- `scripts/pptxgen/` 全部 JS 通过语法检查；旧 layout/旧 style 注册说明扫描无残留。
+- 阶段 5 完成，规划中的全部优化均已按阶段测试和提交。

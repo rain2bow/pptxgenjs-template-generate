@@ -13,7 +13,7 @@
 | 2. 优化选择与样例流程 | completed | style 选择说明；移除 plan/容量 MD 主流程；按 style 生成全布局 JSON 样例 MD | CLI/文档/样例测试；完成后 commit |
 | 3. 补齐图文对应布局 | completed | 纯文本与含图布局成对、除媒体字段外协议一致；缺图/错图提示对应布局 | 配对矩阵、三 style PPTX、错误信息测试；完成后 commit |
 | 4. 模板无损引入机制 | completed | 新 style 通过独立模块注册，不修改已有模板逻辑；模板创建指南 | 用最小测试 style 验证注册、生成和隔离；完成后 commit |
-| 5. 总体验证 | in_progress | 全量回归、文档整理 | 三 style 全布局、关键错误场景、git 状态确认 |
+| 5. 总体验证 | completed | 全量回归、文档整理 | 三 style 全布局、关键错误场景、git 状态确认 |
 
 ## 约束与决策
 

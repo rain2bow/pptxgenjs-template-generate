@@ -63,3 +63,12 @@
 - 内置模板仍使用原文件，由 registry 作为 builtin descriptor 加载，没有迁移或改写模板设计代码。
 - registry 对插件 id、主题和 factory 做加载时校验；损坏插件只被跳过并 warning，不会覆盖同名内置 style 或阻断其他模板。
 - `STYLE_PLUGIN_GUIDE.md` 说明目录结构、最小代码、context/API、canonical layout 要求和验证命令。
+
+## 最终验证结论
+
+- 三种内置 style 均通过新 registry 生成 47 页全布局文件，每份均通过 native 与 layout validator。
+- schema 回归覆盖 47 个 canonical layout 和 19 组双向字段配对；媒体回归覆盖 19 个缺图错误和 19 个文本页误带图片错误。
+- 插件回归覆盖发现、style guide、47-layout 示例、样例 PPTX、损坏插件隔离和 fixture 环境隔离。
+- 三种 style 的最终布局示例 Markdown 均包含 47 个 JSON 示例。
+- `scripts/pptxgen/` 下全部 JS 文件通过 `node --check`，文档不存在 31-layout 或 `image-text` 旧描述。
+- 工作区剩余 `config.js` 仅为任务开始前已有的换行状态；本分支提交未包含它，也未包含输出、依赖或 IDE 文件。
