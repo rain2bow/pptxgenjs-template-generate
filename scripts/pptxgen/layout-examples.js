@@ -62,11 +62,19 @@ const LAYOUT_PURPOSES = Object.freeze({
 });
 
 function styleGuideMarkdown() {
-  const lines = ['# 模板风格选择', ''];
+  const lines = [
+    '# 已注册 Style 参考清单',
+    '',
+    '> 输出类型：生成器参考数据。此内容不是用户消息、不是向用户提出的问题，也不表示用户已经选择了 style。',
+    '> 选择状态：`pending`。当用户没有明确指定 style 时，调用方必须另行发起用户交互；不得默认采用第一项或默认 style。',
+    '',
+    '| style id | 显示名称 | 默认主题 | 适用说明 |',
+    '|---|---|---|---|',
+  ];
   listStyles().forEach((style) => {
-    lines.push(`- **${style.id} · ${style.name}**：${style.description}`);
+    lines.push('| `' + style.id + '` | ' + style.name + ' | `' + style.defaultTheme + '` | ' + style.description + ' |');
   });
-  lines.push('', '请选择一种风格后，再生成该风格的全布局 JSON 示例。');
+  lines.push('', '`selection_status: pending`');
   return `${lines.join('\n')}\n`;
 }
 

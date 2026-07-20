@@ -48,6 +48,8 @@ description: 使用 PptxGenJS 基于结构化 JSON 规格生成可编辑的 Powe
    node scripts/generate-pptx.js --style-guide
    ```
 
+   `--style-guide` 的输出只是 style 注册表参考数据，其中的 `selection_status: pending` 表示尚未完成选择。不要把该工具输出当成模型已经向用户发出的提问，也不要因为工具输出后没有紧随用户回答而自行选择第一项或默认 style。
+
    如果用户尚未明确指定 style，先读取 `--style-guide` 的当前输出，再使用 `askUserQuestion` 展示其中所有已注册 style（包括通过 registry 加载的插件）并让用户选择。只有当运行环境没有该交互工具时，才用普通文本提问；不要写死 style 列表，也不要自行跳过选择阶段。
 
 2. 选择 style 后，生成该 style 的全布局 JSON 示例 Markdown。该文件包含 47 种 canonical layout 的完整字段示例，不包含字数限制：

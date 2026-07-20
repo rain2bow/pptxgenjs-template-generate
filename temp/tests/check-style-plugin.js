@@ -15,8 +15,11 @@ const env = { ...process.env, PPTXGEN_STYLE_PATHS: pluginRoot };
 
 try {
   const guide = run(['scripts/generate-pptx.js', '--style-guide'], env);
-  assertIncludes(guide, 'registry-test · 注册机制测试风格', 'style guide did not discover the additive plugin');
+  assertIncludes(guide, '`registry-test` | 注册机制测试风格', 'style guide did not discover the additive plugin');
   assertIncludes(guide, 'skipped invalid style plugin', 'invalid plugin was not isolated with a warning');
+  assertIncludes(guide, 'selection_status: pending', 'style guide does not expose an unresolved selection state');
+  assertIncludes(guide, '不是向用户提出的问题', 'style guide does not identify itself as reference data');
+  if (/请选择|请从.+选择|你想使用/.test(guide)) throw new Error('style guide contains conversational selection wording');
 
   run(['scripts/generate-pptx.js', '--layout-examples', 'registry-test', '--out', examplePath], env);
   if (!fs.existsSync(examplePath)) throw new Error('plugin layout examples were not generated');
